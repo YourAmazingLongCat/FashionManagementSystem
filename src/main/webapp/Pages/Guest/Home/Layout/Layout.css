@@ -1,0 +1,211 @@
+/* ================= GLOBAL RESET ================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Đảm bảo body chiếm toàn bộ chiều cao màn hình */
+}
+
+/* ================= MAIN CONTAINER ================= */
+.main-container {
+    flex: 1; /* Đẩy footer xuống dưới cùng nếu content quá ngắn */
+    width: 100%;
+    margin-top: 0; 
+}
+
+main {
+    width: 100%;
+    min-height: 50vh;
+}
+
+/* ================= SCROLLING TICKER (DÒNG CHỮ CHẠY) ================= */
+.scrolling-ticker {
+    width: 100%;
+    background-color: #000000; /* Nền đen tuyền */
+    padding: 12px 0;
+    overflow: hidden; /* Giấu phần chữ bị tràn ra ngoài màn hình */
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #333333; /* Vạch ngăn cách mỏng */
+}
+
+.ticker-content {
+    display: inline-block;
+    white-space: nowrap;
+    /* Tốc độ chạy 25s, lặp lại vô tận */
+    animation: tickerScroll 25s linear infinite; 
+}
+
+.ticker-content span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #00ff66; /* Chữ màu xanh neon cực cháy */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 50px; /* Khoảng cách giữa các cụm từ */
+}
+
+/* Khi rê chuột vào dòng chữ thì nó dừng lại */
+.scrolling-ticker:hover .ticker-content {
+    animation-play-state: paused;
+}
+
+/* Hiệu ứng trượt từ phải qua trái mượt mà */
+@keyframes tickerScroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%); 
+    }
+}
+
+/* ================= FOOTER ================= */
+footer {
+    background-color: #000000;
+    color: #ffffff;
+    border-top: 1px solid #222222;
+    padding: 30px 20px;
+    margin-top: auto; /* Tự động đẩy xuống đáy */
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.copyright {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    line-height: 1.6;
+    color: #888888;
+}
+
+/* ================= TOAST NOTIFICATION (Neo-Brutalism Style) ================= */
+.toast-notification {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 20px;
+    min-width: 350px;
+    border: 2px solid #000000;
+    border-radius: 0; /* Xóa bo góc */
+    z-index: 9999;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 1); /* Bóng đổ khối hộp sắc cạnh */
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Toast Thành Công (Nền đen chữ trắng) */
+.toast-success {
+    background-color: #000000;
+    color: #ffffff;
+    border: 2px solid #000000;
+    box-shadow: 6px 6px 0px rgba(200, 200, 200, 0.5); /* Bóng xám nhạt để nổi trên nền sáng */
+}
+
+.toast-success .toast-icon span {
+    color: #ffffff; /* Icon trắng */
+}
+
+.toast-success .toast-close {
+    color: #ffffff;
+}
+
+/* Toast Lỗi (Nền trắng chữ đen) */
+.toast-error {
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    box-shadow: 6px 6px 0px rgba(0, 0, 0, 1);
+}
+
+.toast-error .toast-icon span {
+    color: #000000; /* Icon đen */
+}
+
+.toast-error .toast-close {
+    color: #000000;
+}
+
+/* Nội dung Toast */
+.toast-icon span {
+    font-size: 28px;
+    font-variation-settings: 'FILL' 1; /* Đổ đặc icon */
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+}
+
+.toast-message {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Nút tắt (Close) */
+.toast-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.toast-close:hover {
+    transform: scale(1.2);
+}
+
+/* Hiệu ứng trượt ra / trượt vào */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-hide {
+    animation: slideOutRight 0.4s ease forwards !important;
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}

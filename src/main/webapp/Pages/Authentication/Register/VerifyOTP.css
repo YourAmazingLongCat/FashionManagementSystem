@@ -1,0 +1,165 @@
+/* Nền tối ngầu, làm nổi bật form ở giữa */
+.register-page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #121212; 
+    padding: 20px;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Hộp form mang phong cách Brutalism/Dark Theme */
+.register-container {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    padding: 40px;
+    border: 3px solid #333333;
+    border-radius: 8px;
+    box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.8);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+}
+
+/* Tiêu đề trang */
+.page-title {
+    font-weight: 900;
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: #ffffff;
+    letter-spacing: 2px;
+}
+
+/* Đoạn text hướng dẫn */
+.register-container p {
+    color: #aaaaaa !important; /* Ghi đè màu chữ đen cũ trong JSP */
+    line-height: 1.5;
+}
+
+/* Ô nhập mã OTP cực to, khoảng cách chữ rộng */
+.form-group {
+    margin-bottom: 25px;
+    margin-top: 20px;
+}
+
+#otpCode {
+    width: 100%;
+    background-color: #2a2a2a;
+    color: #ffffff;
+    border: 2px solid #555555;
+    border-radius: 4px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#otpCode::placeholder {
+    color: #666666;
+    letter-spacing: 2px;
+}
+
+/* Hiệu ứng khi click vào ô nhập mã */
+#otpCode:focus {
+    border-color: #ffffff;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Nút bấm Submit */
+.btn-submit {
+    background-color: #ffffff;
+    color: #000000;
+    border: none;
+    border-radius: 4px;
+    padding: 16px 20px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn-submit:hover {
+    background-color: #cccccc;
+    transform: scale(1.02);
+}
+
+/* ========================================= */
+/* CSS CHO TOAST NOTIFICATION (THÔNG BÁO LỖI) */
+/* ========================================= */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border-left: 5px solid #ff3333;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    z-index: 9999;
+    border-radius: 4px;
+    animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-error {
+    border-left-color: #ff3333;
+}
+.toast-error .toast-icon {
+    color: #ff3333;
+}
+
+.toast-icon {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.toast-content {
+    flex-grow: 1;
+    margin-right: 20px;
+}
+
+.toast-title {
+    margin: 0 0 5px 0;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.toast-message {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #cccccc;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+.toast-hide {
+    animation: slideOut 0.4s ease forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
