@@ -1,0 +1,328 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Space Grotesk', sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+}
+
+a {
+    text-decoration: none;
+    color: #000000;
+}
+
+.login-page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 40px;
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0; 
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 30px;
+    letter-spacing: -0.5px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+    position: relative; 
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    transition: color 0.3s ease; 
+}
+
+.form-group label .required {
+    color: #ff0000;
+    margin-left: 2px;
+}
+
+.form-group input:focus + label, 
+.form-group:focus-within label {
+    color: #666666;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    background-color: #f1f1f1;
+    border: none;
+    border-bottom: 2px solid transparent; 
+    border-radius: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    color: #000;
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+
+.form-group input:focus {
+    background-color: #e5e5e5;
+    border-bottom: 2px solid #000000; 
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.btn-submit {
+    background-color: #000000;
+    color: #ffffff;
+    border: none;
+    padding: 15px 40px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    /* 3. HIỆU ỨNG NÚT BẤM MƯỢT MÀ */
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-submit:hover {
+    background-color: #333333;
+    /* Nhấc nhẹ nút lên khi rê chuột */
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.btn-submit:active {
+    /* Nút lún xuống khi click tạo cảm giác vật lý */
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.form-links {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.9rem;
+}
+
+.forgot-link, .register-link {
+    color: #555555;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Hiệu ứng gạch chân chạy từ trái sang phải cho chữ (Cực kỳ Luxury) */
+.forgot-link::after, .register-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 1px;
+    bottom: -2px;
+    left: 0;
+    background-color: #000000;
+    transition: width 0.3s ease;
+}
+
+.forgot-link:hover::after, .register-link:hover::after {
+    width: 100%;
+}
+
+.forgot-link:hover, .register-link:hover {
+    color: #000000;
+}
+
+.separator {
+    color: #999999;
+    font-size: 0.85rem;
+}
+
+/* ================= TOAST NOTIFICATION ================= */
+.toast-notification {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 20px;
+    min-width: 300px;
+    border: 2px solid #000000;
+    background-color: #ffffff;
+    z-index: 9999;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 1);
+    animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-error {
+    border-color: #ff0000;
+}
+.toast-error .toast-icon span {
+    color: #ff0000;
+}
+
+.toast-icon span {
+    font-size: 24px;
+}
+.toast-content {
+    flex: 1;
+}
+.toast-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+.toast-message {
+    font-size: 0.9rem;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.toast-close:hover {
+    transform: scale(1.1);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-hide {
+    animation: slideOutRight 0.4s ease forwards !important;
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* ================= SCROLLING TICKER (DÒNG CHỮ CHẠY BÊN DƯỚI) ================= */
+.scrolling-ticker {
+    position: fixed; /* Cố định nó dính chặt vào đáy màn hình */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #000000; /* Nền đen tuyền */
+    padding: 10px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #333;
+    z-index: 1000;
+}
+
+.ticker-content {
+    display: inline-block;
+    white-space: nowrap;
+    animation: tickerScroll 25s linear infinite;
+}
+
+.ticker-content span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #00ff66; /* Chữ màu xanh neon */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 50px;
+}
+
+.scrolling-ticker:hover .ticker-content {
+    animation-play-state: paused;
+}
+
+@keyframes tickerScroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+
+
+
+}
+
+/* ================= CHỮ SIÊU TO CHẠY Ở TRÊN CỦA LOGIN ================= */
+.login-bg-marquee {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 20px 0;
+    background-color: #ffffff;
+    border-bottom: 2px solid #000000;
+    z-index: 1;
+}
+
+.bg-marquee-track {
+    display: inline-block;
+    white-space: nowrap;
+    animation: scrollHugeBg 20s linear infinite;
+}
+
+.bg-marquee-track span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 9vw !important;
+    font-weight: 900 !important;
+    text-transform: uppercase;
+    color: transparent !important;
+    -webkit-text-stroke: 3px #000000 !important;
+    margin-right: 40px;
+}
+
+@keyframes scrollHugeBg {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}

@@ -1,0 +1,320 @@
+/* ================= TỔNG THỂ TRANG LỌC ================= */
+.search-and-filter-page {
+    display: grid;
+    grid-template-columns: 280px 1fr; /* Sidebar 280px, phần còn lại là content */
+    gap: 40px;
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+/* ================= SIDEBAR (BỘ LỌC) ================= */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.filter-section {
+    border-bottom: 1px solid #000;
+    padding-bottom: 20px;
+}
+
+.filter-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    color: #000;
+}
+
+/* Cấu trúc Checkbox Custom (Vuông vức, không bo góc) */
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.filter-item input {
+    display: none; /* Ẩn checkbox mặc định */
+}
+
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #000;
+    margin-right: 10px;
+    display: inline-block;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.filter-item input:checked + .custom-checkbox {
+    background-color: #000;
+}
+
+/* Tạo dấu tick ảo (chữ V) khi được checked */
+.filter-item input:checked + .custom-checkbox::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.filter-item:hover .filter-label {
+    text-decoration: underline;
+}
+
+/* Bộ lọc giá (Price Range) */
+.price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.price-input-wrapper {
+    flex: 1;
+}
+
+.price-input-wrapper label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.price-input-field {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #000;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    border-radius: 0;
+}
+
+.price-separator {
+    font-weight: 700;
+    margin-top: 20px;
+}
+
+/* Nút Apply & Reset */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    text-align: center;
+    font-weight: 700;
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-apply {
+    background-color: #000;
+    color: #fff;
+    border: 1px solid #000;
+}
+
+.btn-apply:hover {
+    background-color: #333;
+}
+
+.btn-reset {
+    background-color: transparent;
+    color: #000;
+    border: 1px solid #000;
+}
+
+.btn-reset:hover {
+    background-color: #f0f0f0;
+}
+
+/* ================= CONTENT (KẾT QUẢ TÌM KIẾM) ================= */
+.content-area {
+    width: 100%;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 15px;
+    margin-bottom: 30px;
+}
+
+.results-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+}
+
+.results-title span {
+    color: #555;
+    font-style: italic;
+}
+
+.sort-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.results-count {
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.sort-select {
+    padding: 8px 10px;
+    border: 1px solid #000;
+    border-radius: 0;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+}
+
+/* CSS cho Lưới sản phẩm (Tái sử dụng từ Home page) */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+.product-card {
+    background: transparent;
+    border: none;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+}
+
+.product-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: #f8f8f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.product-image {
+    width: 90%;
+    height: 90%;
+    object-fit: contain;
+}
+
+.favorite-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #cccccc;
+}
+
+.favorite-btn:hover { color: #000; }
+.favorite-btn span.active { color: #000; font-variation-settings: 'FILL' 1; }
+
+.product-info {
+    padding-top: 15px;
+}
+
+.product-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    color: #000;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.product-price-row {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Empty Search */
+.empty-search {
+    text-align: center;
+    padding: 60px 20px;
+    color: #555;
+}
+
+.empty-search h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    margin: 15px 0 5px 0;
+}
+
+/* ================= PHÂN TRANG ================= */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #000;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.pagination-info {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.page-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 35px;
+    height: 35px;
+    border: 1px solid #000;
+    background: transparent;
+    color: #000;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.page-btn:hover, .page-btn.active {
+    background: #000;
+    color: #fff;
+}

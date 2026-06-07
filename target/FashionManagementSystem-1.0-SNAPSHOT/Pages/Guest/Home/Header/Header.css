@@ -1,0 +1,184 @@
+/* ================= HEADER TỔNG THỂ ================= */
+.header-guest-page {
+    background-color: #000000; /* Nền đen tuyền */
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    font-family: 'Space Grotesk', sans-serif;
+    border-bottom: 2px solid #333;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* ================= LOGO PEAK VIBE ================= */
+.peak-logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+    transition: transform 0.3s ease;
+}
+
+.peak-logo:hover {
+    transform: scale(1.05) rotate(-1deg);
+}
+
+.peak-logo .logo-text {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -1px;
+}
+
+/* Khối màu đỏ chéo chéo cực ngầu ở giữa */
+.peak-logo .logo-badge {
+    background-color: #ff3333; 
+    color: #ffffff;
+    padding: 2px 10px;
+    font-size: 1.2rem;
+    font-weight: 900;
+    transform: skew(-15deg);
+    box-shadow: 3px 3px 0px rgba(255, 255, 255, 0.2);
+    letter-spacing: 2px;
+}
+
+
+/* ================= NÚT DANH MỤC (CATEGORIES) ================= */
+.categories-dropdown {
+    position: relative;
+}
+
+.categories-btn {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    border-radius: 0; 
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.categories-btn:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+/* ================= MEGA MENU (DROPDOWN) ================= */
+.mega-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #ffffff; 
+    border: 2px solid #000000;
+    margin-top: 10px;
+    padding: 20px;
+    width: max-content;
+    z-index: 1000;
+    box-shadow: 5px 5px 0px rgba(0,0,0,1); 
+}
+
+.mega-grid {
+    display: flex;
+    gap: 30px;
+}
+
+.mega-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mega-list li {
+    margin-bottom: 10px;
+}
+
+.category-card {
+    color: #000000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 5px 0;
+    transition: transform 0.2s;
+}
+
+.category-card:hover {
+    transform: translateX(5px); 
+    color: #ff5a00; 
+}
+
+/* ================= THANH TÌM KIẾM ================= */
+.search-form {
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    background-color: transparent;
+    border: 1px solid #ffffff;
+    border-right: none;
+    color: #ffffff;
+    padding: 8px 15px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    border-radius: 0;
+    width: 250px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.search-input::placeholder {
+    color: #888888;
+}
+
+.search-input:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #ff5a00; 
+}
+
+.search-submit {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
+    border-radius: 0;
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.search-submit:hover {
+    background-color: #cccccc;
+}
+
+/* ================= NÚT ĐĂNG NHẬP ================= */
+.login-btn {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 8px 25px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: 1px solid #ffffff;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+    background-color: transparent;
+    color: #ffce00; 
+    border-color: #ff5a00; 
+    filter: drop-shadow(0 0 8px rgba(255, 90, 0, 0.6)); 
+}
