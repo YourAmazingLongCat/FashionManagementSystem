@@ -5,9 +5,43 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 18px;
     padding: 15px 40px;
     font-family: 'Space Grotesk', sans-serif;
     border-bottom: 2px solid #333;
+    flex-wrap: wrap;
+}
+
+.quick-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.quick-nav-link {
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    transition: all 0.2s ease;
+}
+
+.quick-nav-link:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+.quick-nav-link--accent {
+    background: #7c3aed;
+    border-color: #7c3aed;
+}
+
+.quick-nav-link--accent:hover {
+    background: #ffffff;
+    color: #7c3aed;
 }
 
 a {

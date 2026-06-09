@@ -54,9 +54,8 @@ public class LoginControllers extends HttpServlet {
             
             // Đăng nhập thành công: Lưu thông tin Account vào Session
             HttpSession session = request.getSession();
-            // Đặt tên biến session là "USER" để khớp với header (c:when test="${not empty sessionScope.USER}")
-            session.setAttribute("USER", acc); 
-            
+            session.setAttribute("USER", acc);
+
             // Chuyển hướng về trang chủ
             response.sendRedirect(request.getContextPath() + "/home");
             
