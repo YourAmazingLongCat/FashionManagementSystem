@@ -1,66 +1,61 @@
 package Controllers;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import DALs.CategoryDAO;
+import DALs.FavoriteProductDAO;
+import DALs.ProductDAO;
+import Models.Category;
+import Models.Product;
+import Models.Account;
+import Utils.SessionCartUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.List;
 
 /**
- * Controller xử lý trang chủ (Home) cho Fashion Store
+ * Controller xử lý trang chủ và chi tiết sản phẩm cho khách.
  */
-@WebServlet(name = "HomeControllers", urlPatterns = {"/home"})
+@WebServlet(name = "HomeControllers", urlPatterns = {"/home", "/home/view-detail-product"})
 public class HomeControllers extends HttpServlet {
+
+    private static final int HOME_SECTION_LIMIT = 8;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        // Bắn log ra console của NetBeans để biết code đã chạy vào đây chưa
-        System.out.println("=====> ĐÃ TRUY CẬP VÀO HOMECONTROLLERS <=====");
+        String servletPath = request.getServletPath();
+        if ("/home/view-detail-product".equals(servletPath)) {
+            showProductDetail(request, response);
+            return;
+        }
+        showHome(request, response);
+    }
 
+    private void showHome(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         try {
-            // =========================================================
-            // MOCK DATA: TẠO DỮ LIỆU GIẢ ĐỂ TEST GIAO DIỆN
-            // =========================================================
-            
-            List<Map<String, Object>> categories = new ArrayList<>();
-            categories.add(createCategory(1, "Tops & Tees"));
-            categories.add(createCategory(2, "Bottoms"));
-            categories.add(createCategory(3, "Outerwear"));
-            categories.add(createCategory(4, "Accessories"));
+            CategoryDAO categoryDAO = new CategoryDAO();
+            ProductDAO productDAO = new ProductDAO();
+
+            List<Category> categories = categoryDAO.getAllCategories();
+            List<Product> latestProducts = productDAO.getLatestProducts(HOME_SECTION_LIMIT);
+
             request.setAttribute("categories", categories);
+            request.setAttribute("newArrivals", latestProducts);
+            request.setAttribute("tops", productDAO.getProductsByCategoryName("Tops & Tees", HOME_SECTION_LIMIT));
+            request.setAttribute("outerwear", productDAO.getProductsByCategoryName("Outerwear", HOME_SECTION_LIMIT));
+            request.setAttribute("accessories", productDAO.getProductsByCategoryName("Accessories", HOME_SECTION_LIMIT));
+            request.setAttribute("productDAO", productDAO);
+            request.setAttribute("wishlistProductIds", getFavoriteProductIds(request));
+            request.setAttribute("cartCount", SessionCartUtil.getCartCount(request));
 
-            List<Map<String, Object>> dummyProducts = new ArrayList<>();
-            dummyProducts.add(createProduct(1, "Streetwear Graphic Tee", 350000, "Assets/Images/Design/fake-product.png"));
-            dummyProducts.add(createProduct(2, "Dark Wash Cargo Pants", 650000, "Assets/Images/Design/fake-product.png"));
-            dummyProducts.add(createProduct(3, "Oversized Hoodie", 550000, "Assets/Images/Design/fake-product.png"));
-            dummyProducts.add(createProduct(4, "Minimalist Beanie", 150000, "Assets/Images/Design/fake-product.png"));
-            
-            request.setAttribute("newArrivals", dummyProducts);
-            request.setAttribute("tops", dummyProducts);
-            request.setAttribute("outerwear", dummyProducts);
-            request.setAttribute("accessories", dummyProducts);
-
-            // =========================================================
-            
-            // 3. Chỉ định đường dẫn tới trang nội dung con
             String contentPage = "/Pages/Guest/Home/Content/Content.jsp";
             request.setAttribute("contentPage", contentPage);
-            
-            // 4. Chuyển tiếp tới Layout tổng
-            String layoutPath = "/Pages/Guest/Home/Layout/Layout.jsp";
-            System.out.println("=====> Đang chuyển hướng tới file JSP: " + layoutPath);
-            
-            request.getRequestDispatcher(layoutPath).forward(request, response);
-            
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
         } catch (Exception e) {
-            // Nếu có lỗi đường dẫn hoặc lỗi code, in thẳng ra màn hình web bằng chữ to đùng!
             response.setContentType("text/html;charset=UTF-8");
             response.getWriter().println("<h1>LỖI SERVER TẠI TRANG CHỦ:</h1>");
             response.getWriter().println("<p style='color:red;'>" + e.getMessage() + "</p>");
@@ -68,20 +63,25 @@ public class HomeControllers extends HttpServlet {
         }
     }
 
-    private Map<String, Object> createCategory(int id, String name) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("categoryId", id);
-        map.put("name", name);
-        return map;
-    }
+    private void showProductDetail(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        ProductDAO productDAO = new ProductDAO();
+        String productId = request.getParameter("productId");
+        Product product = productDAO.getProductById(productId);
 
-    private Map<String, Object> createProduct(int id, String name, double price, String image) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("productId", id);
-        map.put("name", name);
-        map.put("price", price);
-        map.put("image", image);
-        return map;
+        if (product == null) {
+            response.sendRedirect(request.getContextPath() + "/home");
+            return;
+        }
+
+        request.setAttribute("product", product);
+        request.setAttribute("displayPrice", productDAO.getDisplayPrice(product));
+        request.setAttribute("relatedProducts", productDAO.getProductsByCategoryName(product.getCategoryName(), 4));
+        request.setAttribute("productDAO", productDAO);
+        request.setAttribute("wishlistProductIds", getFavoriteProductIds(request));
+        request.setAttribute("cartCount", SessionCartUtil.getCartCount(request));
+        request.setAttribute("contentPage", "/Pages/Guest/Home/Content/ProductDetail.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 
     @Override
@@ -93,5 +93,14 @@ public class HomeControllers extends HttpServlet {
     @Override
     public String getServletInfo() {
         return "Home Controller - Fashion Management System";
+    }
+
+    private java.util.Set<String> getFavoriteProductIds(HttpServletRequest request) {
+        Object userObject = request.getSession(false) != null ? request.getSession(false).getAttribute("USER") : null;
+        if (!(userObject instanceof Account)) {
+            return new java.util.LinkedHashSet<>();
+        }
+        Account user = (Account) userObject;
+        return new FavoriteProductDAO().getFavoriteProductIdsByAccountId(user.getAccountId());
     }
 }

@@ -12,6 +12,14 @@
             </div>
         </a>
     </div>
+
+    <nav class="quick-nav">
+        <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
+        <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
+            <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
+        </c:if>
+    </nav>
+    
     <div class="categories-dropdown">
         <button class="categories-btn">
             <span class="material-symbols-outlined">menu</span>
@@ -44,8 +52,8 @@
     </div>
 
     <div class="search-container">
-        <form class="search-form" method="get" action="${pageContext.request.contextPath}/home/search">
-            <input class="search-input" type="text" name="search" placeholder="SEARCH PRODUCTS..." value="${param.search}"/>
+        <form id="headerSearchForm" class="search-form" method="get" action="${pageContext.request.contextPath}/home/search">
+            <input id="headerSearchInput" class="search-input" type="text" name="search" placeholder="SEARCH PRODUCTS..." value="${param.search}" autocomplete="off"/>
             <button class="search-submit" type="submit">
                 <span class="material-symbols-outlined">search</span>
             </button>
@@ -53,6 +61,11 @@
     </div>
     
     <div class="header-actions">
+        <div class="user-logged-info" style="display: flex; align-items: center; gap: 10px; margin-right: 12px;">
+            <span class="user-name-display" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; color: #000000; letter-spacing: 0.5px;">
+                CART (${empty cartCount ? 0 : cartCount})
+            </span>
+        </div>
         <c:choose>
             <c:when test="${not empty sessionScope.USER}">
                 <div class="user-logged-info" style="display: flex; align-items: center; gap: 15px;">
@@ -83,15 +96,25 @@
             menu.style.display = isOpen ? "block" : "none";
         };
 
-        // Click ra ngoài → đóng
         document.addEventListener("click", () => {
             menu.style.display = "none";
             isOpen = false;
         });
 
-        // Click trong menu không bị đóng
         menu.onclick = (e) => {
             e.stopPropagation();
         };
+    }
+
+    const headerSearchForm = document.getElementById('headerSearchForm');
+    const headerSearchInput = document.getElementById('headerSearchInput');
+
+    if (headerSearchForm && headerSearchInput) {
+        headerSearchInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                headerSearchForm.submit();
+            }
+        });
     }
 </script>

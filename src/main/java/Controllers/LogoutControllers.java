@@ -20,8 +20,7 @@ public class LogoutControllers extends HttpServlet {
         
         // 2. Nếu session đang tồn tại, tiến hành hủy nó đi
         if (session != null) {
-            // Hàm invalidate() sẽ xóa sạch sành sanh mọi thứ trong Session (bao gồm cả biến USER)
-            session.invalidate(); 
+            session.invalidate();
         }
         
         // 3. Sau khi xóa phiên đăng nhập, đá người dùng về lại trang chủ

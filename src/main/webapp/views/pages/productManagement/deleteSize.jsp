@@ -1,0 +1,82 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Delete Size</title>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260609-sizes-delete">
+        <style>
+            body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 28%), radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 24%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
+            .form-shell { width: min(980px, calc(100% - 40px)); margin: 28px auto; }
+            .form-panel { background: rgba(255, 255, 255, 0.94); border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 30px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16); overflow: hidden; backdrop-filter: blur(12px); }
+            .form-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 30px; background: linear-gradient(135deg, #fff7f7 0%, #ffe4e6 100%); border-bottom: 1px solid #fecdd3; }
+            .eyebrow { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.74rem; font-weight: 700; color: #dc2626; }
+            .form-panel h1 { margin: 0; font-size: 2.15rem; line-height: 1.12; }
+            .form-subtitle { margin: 14px 0 0; color: #64748b; line-height: 1.7; max-width: 620px; }
+            .danger-chip { display: inline-flex; align-items: center; justify-content: center; padding: 12px 16px; border-radius: 18px; background: #ffffff; border: 1px solid #fecaca; box-shadow: 0 16px 30px rgba(220, 38, 38, 0.12); font-weight: 800; color: #b91c1c; }
+            .form-body { padding: 30px; display: grid; gap: 24px; }
+            .warning-banner { padding: 16px 18px; border-radius: 18px; background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.18); color: #991b1b; font-weight: 600; }
+            .info-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+            .info-card { background: #fffaf9; border: 1px solid #fee2e2; border-radius: 22px; padding: 18px; }
+            .info-card span { display: block; margin-bottom: 8px; color: #64748b; font-size: 0.86rem; font-weight: 600; }
+            .info-card strong { font-size: 1rem; color: #0f172a; }
+            .delete-card { background: linear-gradient(180deg, #ffffff 0%, #fffafa 100%); border: 1px solid #fee2e2; border-radius: 26px; padding: 24px; display: grid; gap: 16px; }
+            .delete-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 1px solid #fee2e2; }
+            .delete-row:last-child { border-bottom: none; padding-bottom: 0; }
+            .delete-row span { color: #64748b; font-weight: 700; }
+            .delete-row strong { text-align: right; }
+            .form-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+            .action-note { color: #64748b; font-size: 0.9rem; }
+            .action-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+            .ghost-btn, .danger-btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 14px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; }
+            .ghost-btn { background: #ffffff; color: #334155; border: 1px solid #dbe3f0; }
+            .danger-btn { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; box-shadow: 0 18px 30px rgba(220, 38, 38, 0.22); }
+            .ghost-btn:hover, .danger-btn:hover { transform: translateY(-2px); }
+            @media (max-width: 900px) { .info-strip { grid-template-columns: 1fr; } }
+            @media (max-width: 768px) { .form-shell { width: min(100% - 20px, 100%); margin: 10px auto; } .form-hero, .delete-row, .form-actions { flex-direction: column; align-items: stretch; } .action-buttons { width: 100%; } .form-body, .form-hero { padding: 20px; } }
+        </style>
+    </head>
+    <body>
+        <div class="form-shell">
+            <section class="form-panel">
+                <div class="form-hero">
+                    <div>
+                        <p class="eyebrow">Admin / Size</p>
+                        <h1>Delete Size</h1>
+                        <p class="form-subtitle">You are about to remove this size from the system. If it is already used by products, the delete will be blocked.</p>
+                    </div>
+                    <div class="danger-chip">Permanent action</div>
+                </div>
+
+                <div class="form-body">
+                    <div class="warning-banner">Please review the size details carefully before confirming this action.</div>
+
+                    <div class="info-strip">
+                        <div class="info-card"><span>Size ID</span><strong>${size.sizeId}</strong></div>
+                        <div class="info-card"><span>Size name</span><strong>${size.sizeName}</strong></div>
+                        <div class="info-card"><span>Category</span><strong>${size.categoryName}</strong></div>
+                    </div>
+
+                    <div class="delete-card">
+                        <div class="delete-row"><span>Size ID</span><strong>${size.sizeId}</strong></div>
+                        <div class="delete-row"><span>Size name</span><strong>${size.sizeName}</strong></div>
+                        <div class="delete-row"><span>Category</span><strong>${size.categoryName}</strong></div>
+                    </div>
+
+                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="form-actions">
+                        <input type="hidden" name="action" value="deleteSize">
+                        <input type="hidden" name="sizeId" value="${size.sizeId}">
+                        <span class="action-note">This action cannot be undone.</span>
+                        <div class="action-buttons">
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=sizes">Cancel</a>
+                            <button type="submit" class="danger-btn">Delete size</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>
