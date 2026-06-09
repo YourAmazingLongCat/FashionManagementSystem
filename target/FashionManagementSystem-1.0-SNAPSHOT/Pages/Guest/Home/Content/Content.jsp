@@ -41,46 +41,6 @@
 
     <section class="product-section">
         <div class="section-header">
-            <h2 class="section-title">BROWSE CATEGORIES</h2>
-        </div>
-        <div class="categories-grid">
-            <a href="${pageContext.request.contextPath}/home/search?type=Top" class="category-link">
-                <div class="category-card">
-                    <div class="product-image-container">
-                        <img class="product-image" src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80" />                          
-                    </div>
-                    <span class="category-name">Tops & Tees</span>
-                </div>
-            </a>
-            <a href="${pageContext.request.contextPath}/home/search?type=Bottom" class="category-link">
-                <div class="category-card">
-                    <div class="product-image-container">
-                        <img class="product-image" src="https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80" />                          
-                    </div>
-                    <span class="category-name">Bottoms</span>
-                </div>
-            </a>
-            <a href="${pageContext.request.contextPath}/home/search?type=Outerwear" class="category-link">
-                <div class="category-card">
-                    <div class="product-image-container">
-                        <img class="product-image" src="https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80" />                          
-                    </div>
-                    <span class="category-name">Outerwear</span>
-                </div>
-            </a>
-            <a href="${pageContext.request.contextPath}/home/search?type=Accessory" class="category-link">
-                <div class="category-card">
-                    <div class="product-image-container">
-                        <img class="product-image" src="https://images.unsplash.com/photo-1523206489230-c012c64b2b48?w=400&q=80" />                          
-                    </div>
-                    <span class="category-name">Accessories</span>
-                </div>
-            </a>
-        </div>
-    </section>
-
-    <section class="product-section">
-        <div class="section-header">
             <h2 class="section-title">NEW ARRIVALS</h2>
             <a class="view-all" href="${pageContext.request.contextPath}/home/search?sort=latest">
                 VIEW ALL <span class="material-symbols-outlined">arrow_forward</span>
@@ -91,20 +51,17 @@
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img class="product-image" src="${p.image}" />
-                            <form action="${pageContext.request.contextPath}/home/customer/toggle-wishlist" method="POST">
-                                <input type="hidden" name="productId" value="${p.productId}" />
-                                <button type="submit" class="favorite-btn">
-                                    <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                        favorite
-                                    </span>
-                                </button>
-                            </form>
+                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
+                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
+                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
+                                    favorite
+                                </span>
+                            </button>
                         </div>
                         <div class="product-info">
                             <div class="product-name">${p.name}</div>
                             <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"/> đ</span>
+                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                             </div>
                         </div>
                     </div>
@@ -125,20 +82,17 @@
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img class="product-image" src="${p.image}" />
-                            <form action="${pageContext.request.contextPath}/home/customer/toggle-wishlist" method="POST">
-                                <input type="hidden" name="productId" value="${p.productId}" />
-                                <button type="submit" class="favorite-btn">
-                                    <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                        favorite
-                                    </span>
-                                </button>
-                            </form>
+                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
+                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
+                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
+                                    favorite
+                                </span>
+                            </button>
                         </div>
                         <div class="product-info">
                             <div class="product-name">${p.name}</div>
                             <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"/> đ</span>
+                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                             </div>
                         </div>
                     </div>
@@ -159,20 +113,17 @@
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img class="product-image" src="${p.image}" />
-                            <form action="${pageContext.request.contextPath}/home/customer/toggle-wishlist" method="POST">
-                                <input type="hidden" name="productId" value="${p.productId}" />
-                                <button type="submit" class="favorite-btn">
-                                    <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                        favorite
-                                    </span>
-                                </button>
-                            </form>
+                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
+                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
+                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
+                                    favorite
+                                </span>
+                            </button>
                         </div>
                         <div class="product-info">
                             <div class="product-name">${p.name}</div>
                             <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"/> đ</span>
+                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                             </div>
                         </div>
                     </div>
@@ -199,20 +150,17 @@
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img class="product-image" src="${p.image}" />
-                            <form action="${pageContext.request.contextPath}/home/customer/toggle-wishlist" method="POST">
-                                <input type="hidden" name="productId" value="${p.productId}" />
-                                <button type="submit" class="favorite-btn">
-                                    <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                        favorite
-                                    </span>
-                                </button>
-                            </form>
+                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
+                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
+                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
+                                    favorite
+                                </span>
+                            </button>
                         </div>
                         <div class="product-info">
                             <div class="product-name">${p.name}</div>
                             <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${p.price}" type="number" groupingUsed="true"/> đ</span>
+                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                             </div>
                         </div>
                     </div>
@@ -221,3 +169,17 @@
         </div>
     </section>
 </div>
+<script>
+    function toggleWishlist(productId, button) {
+        fetch('${pageContext.request.contextPath}/home/customer/toggle-wishlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'productId=' + encodeURIComponent(productId)
+        }).then(response => response.json()).then(data => {
+            const icon = button.querySelector('.material-symbols-outlined');
+            if (icon) {
+                icon.classList.toggle('active', !!data.favorite);
+            }
+        });
+    }
+</script>
