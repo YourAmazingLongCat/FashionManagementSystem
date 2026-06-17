@@ -13,10 +13,7 @@
                 margin: 0;
                 font-family: 'Inter', sans-serif;
                 color: #0f172a;
-                background:
-                    radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 28%),
-                    radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 24%),
-                    linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+                background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
                 min-height: 100vh;
             }
 
@@ -26,12 +23,12 @@
             }
 
             .form-panel {
-                background: rgba(255, 255, 255, 0.94);
+                background: #ffffff;
                 border: 1px solid rgba(226, 232, 240, 0.9);
-                border-radius: 30px;
-                box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+                border-radius: 24px;
+                box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
                 overflow: hidden;
-                backdrop-filter: blur(12px);
+                contain: content;
             }
 
             .form-hero {

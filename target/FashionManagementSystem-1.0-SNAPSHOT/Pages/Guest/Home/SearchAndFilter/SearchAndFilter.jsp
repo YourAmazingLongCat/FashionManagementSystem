@@ -94,6 +94,9 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </button>
+                                        <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="quick-add-btn">
+                                            <span class="material-symbols-outlined">shopping_bag</span>
+                                        </a>
                                     </div>
                                     <div class="product-info">
                                         <div class="product-name">${p.name}</div>
@@ -166,10 +169,14 @@
                 window.location.href = '${pageContext.request.contextPath}/auth/login';
                 return;
             }
-            const icon = button.querySelector('.material-symbols-outlined');
-            if (icon) {
-                icon.classList.toggle('active', !!data.favorite);
+            if (data && data.favorite !== undefined) {
+                const icon = button.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    icon.classList.toggle('active', data.favorite === true);
+                }
             }
+        }).catch(error => {
+            console.error('Wishlist toggle error:', error);
         });
     }
 </script>

@@ -176,10 +176,18 @@
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'productId=' + encodeURIComponent(productId)
         }).then(response => response.json()).then(data => {
-            const icon = button.querySelector('.material-symbols-outlined');
-            if (icon) {
-                icon.classList.toggle('active', !!data.favorite);
+            if (data && data.requiresLogin) {
+                window.location.href = '${pageContext.request.contextPath}/auth/login';
+                return;
             }
+            if (data && data.favorite !== undefined) {
+                const icon = button.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    icon.classList.toggle('active', data.favorite === true);
+                }
+            }
+        }).catch(error => {
+            console.error('Wishlist toggle error:', error);
         });
     }
 </script>

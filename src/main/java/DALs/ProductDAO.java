@@ -2,22 +2,20 @@ package DALs;
 
 import Models.Product;
 import Models.ProductVariant;
-import java.math.BigDecimal;
 import Utils.DBContext;
+
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
-/**
- * Product DAO handling CRUD operations for Products table.
- */
 public class ProductDAO extends DBContext {
 
     public ProductDAO() {
@@ -30,74 +28,422 @@ public class ProductDAO extends DBContext {
 
     public List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description, "
-                + "p.basePrice, p.status, p.createdAt, p.updatedAt, "
-                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS primaryImageUrl "
-                + "FROM Products p "
-                + "INNER JOIN Categories c ON p.categoryId = c.categoryId "
-                + "ORDER BY p.createdAt DESC";
-
         if (!isDatabaseReady()) {
-            System.out.println("getAllProducts error: database connection is not available.");
+            System.out.println("getAllProducts: database not ready");
             return products;
         }
+
+        String sql = """
+            SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description,
+                   p.basePrice, p.status, p.createdAt, p.updatedAt,
+                   (SELECT TOP 1 imageUrl FROM ProductImages WHERE productId = p.productId ORDER BY isPrimary DESC, imageId ASC) AS primaryImageUrl
+            FROM Products p
+            INNER JOIN Categories c ON p.categoryId = c.categoryId
+            ORDER BY p.createdAt DESC
+            """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                Product product = mapProduct(rs);
-                loadProductVariants(product);
-                products.add(product);
+                products.add(mapProduct(rs));
             }
         } catch (SQLException e) {
             System.out.println("getAllProducts error: " + e.getMessage());
+            e.printStackTrace();
         }
 
+        System.out.println("getAllProducts: loaded " + products.size() + " products");
+        loadVariantsForProducts(products);
+        return products;
+    }
+
+    public ProductResult getProductsFiltered(String keyword, String status, String categoryId,
+                                             int page, int pageSize) {
+        List<Product> products = new ArrayList<>();
+        int totalCount = 0;
+
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+
+        System.out.println("getProductsFiltered: page=" + page + ", pageSize=" + pageSize);
+
+        if (!isDatabaseReady()) {
+            System.out.println("getProductsFiltered: database not ready");
+            return new ProductResult(products, 0);
+        }
+
+        totalCount = countProducts(keyword, status, categoryId);
+        System.out.println("getProductsFiltered: totalCount = " + totalCount);
+
+        if (totalCount == 0) {
+            return new ProductResult(products, 0);
+        }
+
+        String sql = buildPaginatedQuery(keyword, status, categoryId);
+        int offset = (page - 1) * pageSize;
+        int limit = pageSize;
+
+        System.out.println("getProductsFiltered: executing query with limit=" + limit + ", offset=" + offset);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            int paramIndex = setQueryParameters(ps, keyword, status, categoryId);
+            ps.setInt(paramIndex++, offset);
+            ps.setInt(paramIndex++, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapProduct(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getProductsFiltered error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        System.out.println("getProductsFiltered: loaded " + products.size() + " products for page " + page);
+        loadVariantsForProducts(products);
+        return new ProductResult(products, totalCount);
+    }
+
+    private int countProducts(String keyword, String status, String categoryId) {
+        String sql = buildCountQuery(keyword, status, categoryId);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            setQueryParameters(ps, keyword, status, categoryId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("totalCount");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("countProducts error: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    private String buildCountQuery(String keyword, String status, String categoryId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) AS totalCount FROM Products p ");
+        sql.append("INNER JOIN Categories c ON p.categoryId = c.categoryId ");
+        sql.append("WHERE 1=1 ");
+
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ?) ");
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append("AND p.status = ? ");
+        }
+        if (categoryId != null && !categoryId.isBlank()) {
+            sql.append("AND p.categoryId = ? ");
+        }
+
+        return sql.toString();
+    }
+
+    private String buildPaginatedQuery(String keyword, String status, String categoryId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("""
+            SELECT * FROM (
+                SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description,
+                       p.basePrice, p.status, p.createdAt, p.updatedAt,
+                       (SELECT TOP 1 imageUrl FROM ProductImages WHERE productId = p.productId ORDER BY isPrimary DESC, imageId ASC) AS primaryImageUrl,
+                       ROW_NUMBER() OVER (ORDER BY p.createdAt DESC) AS rowNum
+                FROM Products p
+                INNER JOIN Categories c ON p.categoryId = c.categoryId
+                WHERE 1=1
+            """);
+
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ?) ");
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append("AND p.status = ? ");
+        }
+        if (categoryId != null && !categoryId.isBlank()) {
+            sql.append("AND p.categoryId = ? ");
+        }
+
+        sql.append("""
+                ) AS productsWithRowNum
+                WHERE rowNum > ? AND rowNum <= ?
+                """);
+
+        return sql.toString();
+    }
+
+    private int setQueryParameters(PreparedStatement ps, String keyword, String status, String categoryId) throws SQLException {
+        int paramIndex = 1;
+
+        if (keyword != null && !keyword.isBlank()) {
+            String searchPattern = "%" + keyword.toLowerCase() + "%";
+            ps.setString(paramIndex++, searchPattern);
+            ps.setString(paramIndex++, searchPattern);
+            ps.setString(paramIndex++, searchPattern);
+        }
+
+        if (status != null && !status.isBlank()) {
+            ps.setString(paramIndex++, status);
+        }
+
+        if (categoryId != null && !categoryId.isBlank()) {
+            ps.setString(paramIndex++, categoryId);
+        }
+
+        return paramIndex;
+    }
+
+    public List<Product> getProductsByCategoryName(String categoryName, int limit) {
+        List<Product> products = new ArrayList<>();
+        if (!isDatabaseReady() || categoryName == null || categoryName.isBlank() || limit <= 0) {
+            return products;
+        }
+
+        String sql = """
+            SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description,
+                   p.basePrice, p.status, p.createdAt, p.updatedAt,
+                   (SELECT TOP 1 imageUrl FROM ProductImages WHERE productId = p.productId ORDER BY isPrimary DESC, imageId ASC) AS primaryImageUrl
+            FROM Products p
+            INNER JOIN Categories c ON p.categoryId = c.categoryId
+            WHERE p.status = 'Available' AND c.name = ?
+            ORDER BY p.createdAt DESC
+            OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, categoryName);
+            ps.setInt(2, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapProduct(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getProductsByCategoryName error: " + e.getMessage());
+        }
+
+        loadVariantsForProducts(products);
         return products;
     }
 
     public Product getProductById(String productId) {
-        String sql = "SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description, "
-                + "p.basePrice, p.status, p.createdAt, p.updatedAt, "
-                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS primaryImageUrl "
-                + "FROM Products p "
-                + "INNER JOIN Categories c ON p.categoryId = c.categoryId "
-                + "WHERE p.productId = ?";
-
-        if (!isDatabaseReady()) {
-            System.out.println("getProductById error: database connection is not available.");
+        if (!isDatabaseReady() || productId == null || productId.isBlank()) {
             return null;
         }
 
+        String sql = """
+            SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description,
+                   p.basePrice, p.status, p.createdAt, p.updatedAt,
+                   (SELECT TOP 1 imageUrl FROM ProductImages WHERE productId = p.productId ORDER BY isPrimary DESC, imageId ASC) AS primaryImageUrl
+            FROM Products p
+            INNER JOIN Categories c ON p.categoryId = c.categoryId
+            WHERE p.productId = ?
+            """;
+
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, productId);
+
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     Product product = mapProduct(rs);
-                    loadProductVariants(product);
+
+                    List<ProductVariant> variants = loadVariantsForProduct(productId);
+                    product.setVariants(variants);
+
+                    int totalStock = 0;
+                    List<String> sizeIds = new ArrayList<>();
+                    List<String> colorIds = new ArrayList<>();
+                    List<String> sizeNames = new ArrayList<>();
+                    List<String> colorNames = new ArrayList<>();
+
+                    for (ProductVariant v : variants) {
+                        totalStock += v.getStockQty();
+                        if (v.getSizeId() != null && !sizeIds.contains(v.getSizeId())) {
+                            sizeIds.add(v.getSizeId());
+                            sizeNames.add(v.getSizeName());
+                        }
+                        if (v.getColorId() != null && !colorIds.contains(v.getColorId())) {
+                            colorIds.add(v.getColorId());
+                            colorNames.add(v.getColorName());
+                        }
+                    }
+
+                    product.setTotalStockQty(totalStock);
+                    product.setSizeIds(sizeIds);
+                    product.setColorIds(colorIds);
+                    product.setSizeNames(sizeNames);
+                    product.setColorNames(colorNames);
+
                     return product;
                 }
             }
         } catch (SQLException e) {
             System.out.println("getProductById error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return null;
     }
 
+    public List<Product> getLatestProducts(int limit) {
+        List<Product> products = new ArrayList<>();
+        if (!isDatabaseReady() || limit <= 0) {
+            return products;
+        }
+
+        String sql = """
+            SELECT p.productId, p.categoryId, c.name AS categoryName, p.name, p.description,
+                   p.basePrice, p.status, p.createdAt, p.updatedAt,
+                   (SELECT TOP 1 imageUrl FROM ProductImages WHERE productId = p.productId ORDER BY isPrimary DESC, imageId ASC) AS primaryImageUrl
+            FROM Products p
+            INNER JOIN Categories c ON p.categoryId = c.categoryId
+            WHERE p.status = 'Available'
+            ORDER BY p.createdAt DESC
+            OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapProduct(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getLatestProducts error: " + e.getMessage());
+        }
+
+        loadVariantsForProducts(products);
+        return products;
+    }
+
+    private List<ProductVariant> loadVariantsForProduct(String productId) {
+        List<ProductVariant> variants = new ArrayList<>();
+
+        String sql = """
+            SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, cl.colorName, cl.hexCode,
+                   pv.sku, pv.stockQty, pv.priceOverride
+            FROM ProductVariants pv
+            INNER JOIN Sizes s ON pv.sizeId = s.sizeId
+            INNER JOIN Colors cl ON pv.colorId = cl.colorId
+            WHERE pv.productId = ?
+            ORDER BY cl.colorName, s.sizeName
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    variants.add(mapVariant(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("loadVariantsForProduct error: " + e.getMessage());
+        }
+
+        return variants;
+    }
+
+    private void loadVariantsForProducts(List<Product> products) {
+        if (products == null || products.isEmpty()) {
+            return;
+        }
+
+        List<String> productIds = new ArrayList<>();
+        for (Product p : products) {
+            if (p.getProductId() != null) {
+                productIds.add(p.getProductId());
+            }
+        }
+
+        if (productIds.isEmpty()) {
+            return;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < productIds.size(); i++) {
+            if (i > 0) placeholders.append(",");
+            placeholders.append("?");
+        }
+
+        String sql = String.format("""
+            SELECT pv.productId, pv.variantId, pv.sizeId, s.sizeName, pv.colorId, cl.colorName, cl.hexCode,
+                   pv.sku, pv.stockQty, pv.priceOverride
+            FROM ProductVariants pv
+            INNER JOIN Sizes s ON pv.sizeId = s.sizeId
+            INNER JOIN Colors cl ON pv.colorId = cl.colorId
+            WHERE pv.productId IN (%s)
+            ORDER BY pv.productId, cl.colorName, s.sizeName
+            """, placeholders.toString());
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < productIds.size(); i++) {
+                ps.setString(i + 1, productIds.get(i));
+            }
+
+            Map<String, Integer> stockMap = new HashMap<>();
+            Map<String, List<String>> sizeIdMap = new HashMap<>();
+            Map<String, List<String>> colorIdMap = new HashMap<>();
+            Map<String, List<String>> sizeNameMap = new HashMap<>();
+            Map<String, List<String>> colorNameMap = new HashMap<>();
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String pid = rs.getString("productId");
+                    String sizeId = rs.getString("sizeId");
+                    String sizeName = rs.getString("sizeName");
+                    String colorId = rs.getString("colorId");
+                    String colorName = rs.getString("colorName");
+
+                    int currentStock = stockMap.getOrDefault(pid, 0);
+                    stockMap.put(pid, currentStock + rs.getInt("stockQty"));
+
+                    sizeIdMap.computeIfAbsent(pid, k -> new ArrayList<>());
+                    if (sizeId != null && !sizeIdMap.get(pid).contains(sizeId)) {
+                        sizeIdMap.get(pid).add(sizeId);
+                        sizeNameMap.computeIfAbsent(pid, k -> new ArrayList<>()).add(sizeName);
+                    }
+
+                    colorIdMap.computeIfAbsent(pid, k -> new ArrayList<>());
+                    if (colorId != null && !colorIdMap.get(pid).contains(colorId)) {
+                        colorIdMap.get(pid).add(colorId);
+                        colorNameMap.computeIfAbsent(pid, k -> new ArrayList<>()).add(colorName);
+                    }
+                }
+            }
+
+            for (Product p : products) {
+                String pid = p.getProductId();
+                p.setTotalStockQty(stockMap.getOrDefault(pid, 0));
+                p.setSizeIds(sizeIdMap.getOrDefault(pid, new ArrayList<>()));
+                p.setColorIds(colorIdMap.getOrDefault(pid, new ArrayList<>()));
+                p.setSizeNames(sizeNameMap.getOrDefault(pid, new ArrayList<>()));
+                p.setColorNames(colorNameMap.getOrDefault(pid, new ArrayList<>()));
+            }
+        } catch (SQLException e) {
+            System.out.println("loadVariantsForProducts error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     public boolean createProduct(Product product) {
-        String sql = "INSERT INTO Products (productId, categoryId, name, description, basePrice, status, createdAt, updatedAt) "
-                + "VALUES (?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        if (!isDatabaseReady() || product == null) {
+            return false;
+        }
 
         if (product.getProductId() == null || product.getProductId().isBlank()) {
             product.setProductId(generateProductId());
         }
 
-        if (!isDatabaseReady()) {
-            System.out.println("createProduct error: database connection is not available.");
-            return false;
-        }
+        String sql = """
+            INSERT INTO Products (productId, categoryId, name, description, basePrice, status, createdAt, updatedAt)
+            VALUES (?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, product.getProductId());
@@ -109,19 +455,22 @@ public class ProductDAO extends DBContext {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("createProduct error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return false;
     }
 
     public boolean updateProduct(Product product) {
-        String sql = "UPDATE Products SET categoryId = ?, name = ?, description = ?, "
-                + "basePrice = ?, status = ?, updatedAt = GETDATE() WHERE productId = ?";
-
-        if (!isDatabaseReady()) {
-            System.out.println("updateProduct error: database connection is not available.");
+        if (!isDatabaseReady() || product == null || product.getProductId() == null) {
             return false;
         }
+
+        String sql = """
+            UPDATE Products
+            SET categoryId = ?, name = ?, description = ?, basePrice = ?, status = ?, updatedAt = GETDATE()
+            WHERE productId = ?
+            """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, product.getCategoryId());
@@ -133,18 +482,18 @@ public class ProductDAO extends DBContext {
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("updateProduct error: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return false;
     }
 
     public boolean deleteProduct(String productId) {
-        String sql = "DELETE FROM Products WHERE productId = ?";
-
-        if (!isDatabaseReady()) {
-            System.out.println("deleteProduct error: database connection is not available.");
+        if (!isDatabaseReady() || productId == null || productId.isBlank()) {
             return false;
         }
+
+        String sql = "DELETE FROM Products WHERE productId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, productId);
@@ -156,80 +505,24 @@ public class ProductDAO extends DBContext {
         return false;
     }
 
-    public List<Product> getLatestProducts(int limit) {
-        List<Product> products = new ArrayList<>();
-        if (!isDatabaseReady() || limit <= 0) {
-            return products;
-        }
-
-        String sql = "SELECT TOP " + limit + " p.productId, p.categoryId, c.name AS categoryName, p.name, p.description, "
-                + "p.basePrice, p.status, p.createdAt, p.updatedAt, "
-                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS primaryImageUrl "
-                + "FROM Products p "
-                + "INNER JOIN Categories c ON p.categoryId = c.categoryId "
-                + "WHERE p.status = 'Available' "
-                + "ORDER BY p.createdAt DESC";
-
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Product product = mapProduct(rs);
-                loadProductVariants(product);
-                products.add(product);
-            }
-        } catch (SQLException e) {
-            System.out.println("getLatestProducts error: " + e.getMessage());
-        }
-
-        return products;
-    }
-
-    public List<Product> getProductsByCategoryName(String categoryName, int limit) {
-        List<Product> products = new ArrayList<>();
-        if (!isDatabaseReady() || categoryName == null || categoryName.isBlank() || limit <= 0) {
-            return products;
-        }
-
-        String sql = "SELECT TOP " + limit + " p.productId, p.categoryId, c.name AS categoryName, p.name, p.description, "
-                + "p.basePrice, p.status, p.createdAt, p.updatedAt, "
-                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS primaryImageUrl "
-                + "FROM Products p "
-                + "INNER JOIN Categories c ON p.categoryId = c.categoryId "
-                + "WHERE p.status = 'Available' AND c.name = ? "
-                + "ORDER BY p.createdAt DESC";
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, categoryName);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Product product = mapProduct(rs);
-                    loadProductVariants(product);
-                    products.add(product);
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println("getProductsByCategoryName error: " + e.getMessage());
-        }
-
-        return products;
-    }
-
     public BigDecimal getDisplayPrice(Product product) {
-        if (product == null) {
+        if (product == null || product.getVariants() == null) {
             return BigDecimal.ZERO;
         }
+
         BigDecimal minPrice = product.getBasePrice();
-        if (product.getVariants() != null) {
-            for (ProductVariant variant : product.getVariants()) {
-                if (variant == null || variant.getPriceOverride() == null) {
-                    continue;
-                }
-                if (minPrice == null || variant.getPriceOverride().compareTo(minPrice) < 0) {
-                    minPrice = variant.getPriceOverride();
-                }
+        if (minPrice == null) {
+            minPrice = BigDecimal.ZERO;
+        }
+
+        for (ProductVariant variant : product.getVariants()) {
+            if (variant != null && variant.getPriceOverride() != null
+                    && variant.getPriceOverride().compareTo(minPrice) < 0) {
+                minPrice = variant.getPriceOverride();
             }
         }
-        return minPrice != null ? minPrice : BigDecimal.ZERO;
+
+        return minPrice;
     }
 
     private Product mapProduct(ResultSet rs) throws SQLException {
@@ -247,40 +540,19 @@ public class ProductDAO extends DBContext {
         return product;
     }
 
-    private void loadProductVariants(Product product) {
-        if (product == null || product.getProductId() == null || product.getProductId().isBlank()) {
-            return;
-        }
-
-        ProductVariantDAO variantDAO = new ProductVariantDAO();
-        List<ProductVariant> variants = variantDAO.getVariantsByProductId(product.getProductId());
-        product.setVariants(variants);
-        product.setTotalStockQty(variantDAO.getTotalStockQty(product.getProductId()));
-
-        Set<String> sizeIds = new LinkedHashSet<>();
-        Set<String> sizeNames = new LinkedHashSet<>();
-        Set<String> colorIds = new LinkedHashSet<>();
-        Set<String> colorNames = new LinkedHashSet<>();
-
-        for (ProductVariant variant : variants) {
-            if (variant.getSizeId() != null) {
-                sizeIds.add(variant.getSizeId());
-            }
-            if (variant.getSizeName() != null) {
-                sizeNames.add(variant.getSizeName());
-            }
-            if (variant.getColorId() != null) {
-                colorIds.add(variant.getColorId());
-            }
-            if (variant.getColorName() != null) {
-                colorNames.add(variant.getColorName());
-            }
-        }
-
-        product.setSizeIds(new ArrayList<>(sizeIds));
-        product.setSizeNames(new ArrayList<>(sizeNames));
-        product.setColorIds(new ArrayList<>(colorIds));
-        product.setColorNames(new ArrayList<>(colorNames));
+    private ProductVariant mapVariant(ResultSet rs) throws SQLException {
+        ProductVariant variant = new ProductVariant();
+        variant.setVariantId(rs.getString("variantId"));
+        variant.setProductId(rs.getString("productId"));
+        variant.setSizeId(rs.getString("sizeId"));
+        variant.setSizeName(rs.getString("sizeName"));
+        variant.setColorId(rs.getString("colorId"));
+        variant.setColorName(rs.getString("colorName"));
+        variant.setColorHexCode(rs.getString("hexCode"));
+        variant.setSku(rs.getString("sku"));
+        variant.setStockQty(rs.getInt("stockQty"));
+        variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
+        return variant;
     }
 
     private LocalDateTime toLocalDateTime(Timestamp timestamp) {
@@ -289,5 +561,11 @@ public class ProductDAO extends DBContext {
 
     private String generateProductId() {
         return "PRD" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+    }
+
+    public record ProductResult(List<Product> products, int totalCount) {
+        public int totalPages(int pageSize) {
+            return (int) Math.ceil((double) totalCount / pageSize);
+        }
     }
 }

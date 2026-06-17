@@ -53,19 +53,24 @@ public class FavoriteProductDAO extends DBContext {
 
     public boolean addFavorite(String accountId, String productId) {
         if (connection == null || isBlank(accountId) || isBlank(productId)) {
+            System.out.println("addFavorite: invalid params - accountId=" + accountId + ", productId=" + productId);
             return false;
         }
         if (isFavorite(accountId, productId)) {
             return true;
         }
+        String newId = generateNextFavoriteId();
         String sql = "INSERT INTO FavoriteProducts (favoriteId, accountId, productId, createdAt) VALUES (?, ?, ?, GETDATE())";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, generateNextFavoriteId());
+            ps.setString(1, newId);
             ps.setString(2, accountId);
             ps.setString(3, productId);
-            return ps.executeUpdate() > 0;
+            int rows = ps.executeUpdate();
+            System.out.println("addFavorite: inserted " + rows + " row(s), id=" + newId);
+            return rows > 0;
         } catch (SQLException ex) {
             System.out.println("addFavorite error: " + ex.getMessage());
+            ex.printStackTrace();
             return false;
         }
     }

@@ -10,9 +10,9 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260609-friendly-admin-en">
         <style>
-            body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 28%), radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 24%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
+            body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
             .product-shell { width: min(1440px, calc(100% - 40px)); margin: 28px auto; display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
-            .sidebar-panel, .content-panel { background: rgba(255, 255, 255, 0.92); border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 30px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16); backdrop-filter: blur(12px); }
+            .sidebar-panel, .content-panel { background: #ffffff; border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 24px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1); contain: content; }
             .sidebar-panel { padding: 28px; display: flex; flex-direction: column; gap: 24px; background: linear-gradient(180deg, #0f172a 0%, #312e81 100%); color: #ffffff; }
             .brand-label, .eyebrow, .sidebar-label, .meta-label { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.74rem; font-weight: 700; }
             .sidebar-panel h1, .hero-panel h2 { margin: 0; font-size: 2rem; line-height: 1.12; }
@@ -46,9 +46,10 @@
             .section-header h3 { margin: 0; font-size: 1.35rem; }
             .section-body { padding: 24px; }
             .product-list { display: grid; gap: 18px; }
-            .product-card { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr) auto; gap: 18px; align-items: stretch; padding: 20px; border: 1px solid #e2e8f0; border-radius: 24px; background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%); box-shadow: 0 16px 30px rgba(15, 23, 42, 0.06); }
+            .product-card { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr) auto; gap: 18px; align-items: stretch; padding: 20px; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04); contain: content; }
+            .product-card:hover { box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1); transform: translateY(-2px); transition: all 0.2s ease; }
             .product-main { display: flex; gap: 16px; min-width: 0; }
-            .thumb, .thumb-empty { width: 88px; height: 88px; border-radius: 22px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); flex-shrink: 0; }
+            .thumb, .thumb-empty { width: 88px; height: 88px; border-radius: 16px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
             .thumb { object-fit: cover; display: block; }
             .thumb-empty { display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.76rem; text-align: center; padding: 10px; }
             .product-copy { min-width: 0; display: grid; gap: 10px; align-content: start; }

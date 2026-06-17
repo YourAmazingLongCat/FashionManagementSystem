@@ -1,7 +1,10 @@
 DALs\ColorDAO.class
 Controllers\ProductManagementServlet$PageSlice.class
 Controllers\LoginControllers.class
+DALs\CartItemDAO.class
+Controllers\DeleteCartItemServlet.class
 DALs\OrderDAO.class
+Models\Product$Builder.class
 Models\ProductVariant.class
 Models\Size.class
 Utils\passwordUtil.class
@@ -14,10 +17,17 @@ Utils\DBContext.class
 Models\Product.class
 Utils\EmailUtils.class
 Models\Account.class
+Controllers\ViewCartServlet.class
 Controllers\ProductExperienceServlet.class
+Models\CartItemView.class
 Controllers\OrderManagementServlet.class
 DALs\ProductImageDAO.class
 DALs\AccountDAO.class
+DALs\ProductDAO$ProductResult.class
+Models\Cart.class
+Controllers\UpdateCartServlet.class
+Controllers\AddToCartServlet.class
+Services\ProductService.class
 DALs\FavoriteProductDAO.class
 Controllers\VerifyOTPControllers.class
 DALs\ColorBootstrapDAO.class
@@ -28,5 +38,6 @@ Models\CartItem.class
 Utils\EmailUtils$1.class
 DALs\CategoryDAO.class
 Models\Order.class
+DALs\CartDAO.class
 DALs\ProductDAO.class
 Controllers\LogoutControllers.class
