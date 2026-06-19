@@ -63,8 +63,13 @@
     <div class="header-actions">
         <a href="${pageContext.request.contextPath}/cart" class="cart-icon-btn" title="View Cart">
             <span class="material-symbols-outlined">shopping_bag</span>
-            <span class="cart-badge" id="cartBadge">${empty cartCount ? 0 : cartCount}</span>
+            <span class="cart-badge" id="cartBadge">${empty sessionScope.cartCount ? 0 : sessionScope.cartCount}</span>
         </a>
+        <c:if test="${not empty sessionScope.USER}">
+            <a href="${pageContext.request.contextPath}/wishlist" class="wishlist-icon-btn" title="My Wishlist">
+                <span class="material-symbols-outlined">favorite</span>
+            </a>
+        </c:if>
         <c:choose>
             <c:when test="${not empty sessionScope.USER}">
                 <div class="user-logged-info" style="display: flex; align-items: center; gap: 15px;">

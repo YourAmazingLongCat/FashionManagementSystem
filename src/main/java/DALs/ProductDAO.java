@@ -493,6 +493,43 @@ public class ProductDAO extends DBContext {
             return false;
         }
 
+        // Delete related Wishlists first
+        String deleteWishlists = "DELETE FROM Wishlists WHERE productId = ?";
+        try (PreparedStatement psWishlist = connection.prepareStatement(deleteWishlists)) {
+            psWishlist.setString(1, productId);
+            psWishlist.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("deleteProduct - deleteWishlists error: " + e.getMessage());
+        }
+
+        // Delete related CartItems
+        String deleteCartItems = "DELETE FROM CartItems WHERE variantId IN (SELECT variantId FROM ProductVariants WHERE productId = ?)";
+        try (PreparedStatement psCart = connection.prepareStatement(deleteCartItems)) {
+            psCart.setString(1, productId);
+            psCart.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("deleteProduct - deleteCartItems error: " + e.getMessage());
+        }
+
+        // Delete ProductVariants
+        String deleteVariants = "DELETE FROM ProductVariants WHERE productId = ?";
+        try (PreparedStatement psVariant = connection.prepareStatement(deleteVariants)) {
+            psVariant.setString(1, productId);
+            psVariant.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("deleteProduct - deleteVariants error: " + e.getMessage());
+        }
+
+        // Delete ProductImages
+        String deleteImages = "DELETE FROM ProductImages WHERE productId = ?";
+        try (PreparedStatement psImage = connection.prepareStatement(deleteImages)) {
+            psImage.setString(1, productId);
+            psImage.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("deleteProduct - deleteImages error: " + e.getMessage());
+        }
+
+        // Finally delete the Product
         String sql = "DELETE FROM Products WHERE productId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -561,6 +598,37 @@ public class ProductDAO extends DBContext {
 
     private String generateProductId() {
         return "PRD" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+    }
+
+    public ProductVariant getVariantById(String variantId) {
+        if (variantId == null || !isDatabaseReady()) return null;
+
+        String sql = """
+            SELECT pv.*, p.basePrice
+            FROM ProductVariants pv
+            JOIN Products p ON pv.productId = p.productId
+            WHERE pv.variantId = ?
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    ProductVariant variant = new ProductVariant();
+                    variant.setVariantId(rs.getString("variantId"));
+                    variant.setProductId(rs.getString("productId"));
+                    variant.setSizeId(rs.getString("sizeId"));
+                    variant.setColorId(rs.getString("colorId"));
+                    variant.setSku(rs.getString("sku"));
+                    variant.setStockQty(rs.getInt("stockQty"));
+                    variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
+                    return variant;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getVariantById error: " + e.getMessage());
+        }
+        return null;
     }
 
     public record ProductResult(List<Product> products, int totalCount) {

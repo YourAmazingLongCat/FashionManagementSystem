@@ -3,12 +3,14 @@ D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\HomeControllers
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\Category.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Utils\SessionCartUtil.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\Account.java
+D:\SWP_Project\FashionManagementSystem\src\main\java\Models\WarehouseTransaction.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\AccountDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\ProductVariant.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\Size.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Utils\passwordUtil.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\Order.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\ColorBootstrapDAO.java
+D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\WarehouseDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\LogoutControllers.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\CartItemDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\RegisterControllers.java
@@ -24,6 +26,7 @@ D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\ProductExperien
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\ProductDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Services\OrderService.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\CartDAO.java
+D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\WishlistDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\CartItemView.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\ProductVariantDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\AddToCartServlet.java
@@ -33,8 +36,10 @@ D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\FavoriteProductDAO.jav
 D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\ViewCartServlet.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\OrderManagementServlet.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Models\Cart.java
+D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\WishlistServlet.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\ColorDAO.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\ProductImageDAO.java
+D:\SWP_Project\FashionManagementSystem\src\main\java\Controllers\WarehouseServlet.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Services\ProductService.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\Utils\DBContext.java
 D:\SWP_Project\FashionManagementSystem\src\main\java\DALs\SizeDAO.java

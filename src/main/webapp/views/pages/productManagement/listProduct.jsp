@@ -120,6 +120,7 @@
                         <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=categories"><span>Categories</span><span class="tab-badge">${totalCategories}</span></a>
                         <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=colors"><span>Colors</span><span class="tab-badge">${totalColors}</span></a>
                         <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=sizes"><span>Sizes</span><span class="tab-badge">${totalSizes}</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/inventory"><span>Warehouse</span><span class="tab-badge">&#128203;</span></a>
                     </div>
                 </div>
                 <a class="home-link" href="${pageContext.request.contextPath}/home">← Back to home</a>

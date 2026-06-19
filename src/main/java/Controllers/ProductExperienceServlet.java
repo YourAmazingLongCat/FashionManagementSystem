@@ -1,9 +1,13 @@
 package Controllers;
 
 import DALs.CategoryDAO;
-import DALs.FavoriteProductDAO;
+import DALs.WishlistDAO;
 import DALs.ProductDAO;
+import DALs.CartDAO;
+import DALs.CartItemDAO;
 import Models.CartItem;
+import Models.CartItemView;
+import Models.Cart;
 import Models.Category;
 import Models.Product;
 import Models.ProductVariant;
@@ -107,7 +111,7 @@ public class ProductExperienceServlet extends HttpServlet {
 
         List<Category> categories = categoryDAO.getAllCategories();
         Set<String> selectedCategoryIds = new LinkedHashSet<>(selectedCategories);
-        Set<String> favoriteProductIds = getFavoriteProductIds(request);
+        Set<String> wishlistProductIds = getWishlistProductIds(request);
 
         request.setAttribute("categories", categories);
         request.setAttribute("selectedCategoryIds", selectedCategoryIds);
@@ -128,8 +132,8 @@ public class ProductExperienceServlet extends HttpServlet {
         request.setAttribute("totalProduct", totalProduct);
         request.setAttribute("query", buildQuery(request));
         request.setAttribute("productDAO", productDAO);
-        request.setAttribute("wishlistProductIds", favoriteProductIds);
-        request.setAttribute("cartCount", SessionCartUtil.getCartCount(request));
+        request.setAttribute("wishlistProductIds", wishlistProductIds);
+        request.setAttribute("cartCount", getCartCount(request));
         request.setAttribute("contentPage", "/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
@@ -143,22 +147,33 @@ public class ProductExperienceServlet extends HttpServlet {
         }
 
         String productId = trim(request.getParameter("productId"));
-        FavoriteProductDAO favoriteProductDAO = new FavoriteProductDAO();
-        boolean favorite;
-        if (favoriteProductDAO.isFavorite(user.getAccountId(), productId)) {
-            favoriteProductDAO.removeFavorite(user.getAccountId(), productId);
-            favorite = false;
+        WishlistDAO wishlistDAO = new WishlistDAO();
+        boolean inWishlist;
+        if (wishlistDAO.isInWishlist(user.getAccountId(), productId)) {
+            wishlistDAO.removeFromWishlist(user.getAccountId(), productId);
+            inWishlist = false;
         } else {
-            favoriteProductDAO.addFavorite(user.getAccountId(), productId);
-            favorite = true;
+            wishlistDAO.addToWishlist(user.getAccountId(), productId);
+            inWishlist = true;
         }
 
-        Set<String> favorites = favoriteProductDAO.getFavoriteProductIdsByAccountId(user.getAccountId());
+        Set<String> wishlist = wishlistDAO.getWishlistProductIdsByAccountId(user.getAccountId());
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"favorite\":" + favorite + ",\"count\":" + favorites.size() + "}");
+        response.getWriter().write("{\"inWishlist\":" + inWishlist + ",\"count\":" + wishlist.size() + "}");
     }
 
     private void addToCart(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Account user = getLoggedInUser(request);
+        
+        // If user is logged in, redirect to proper cart servlet (database cart)
+        if (user != null) {
+            String variantId = trim(request.getParameter("variantId"));
+            String quantity = trim(request.getParameter("quantity"));
+            String productId = trim(request.getParameter("productId"));
+            response.sendRedirect(request.getContextPath() + "/cart/add?variantId=" + variantId + "&quantity=" + quantity + "&productId=" + productId);
+            return;
+        }
+
         String productId = trim(request.getParameter("productId"));
         String variantId = trim(request.getParameter("variantId"));
         int quantity = Math.max(1, parsePositiveInt(request.getParameter("quantity"), 1));
@@ -275,12 +290,27 @@ public class ProductExperienceServlet extends HttpServlet {
         return value == null ? null : value.trim();
     }
 
-    private Set<String> getFavoriteProductIds(HttpServletRequest request) {
+    private int getCartCount(HttpServletRequest request) {
+        Account user = getLoggedInUser(request);
+        if (user != null) {
+            CartDAO cartDAO = new CartDAO();
+            Cart cart = cartDAO.getActiveCart(user.getAccountId());
+            if (cart != null) {
+                CartItemDAO itemDAO = new CartItemDAO();
+                List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+                return items.stream().mapToInt(CartItemView::getQuantity).sum();
+            }
+            return 0;
+        }
+        return SessionCartUtil.getCartCount(request);
+    }
+
+    private Set<String> getWishlistProductIds(HttpServletRequest request) {
         Account user = getLoggedInUser(request);
         if (user == null) {
             return new java.util.LinkedHashSet<>();
         }
-        return new FavoriteProductDAO().getFavoriteProductIdsByAccountId(user.getAccountId());
+        return new WishlistDAO().getWishlistProductIdsByAccountId(user.getAccountId());
     }
 
     private Account getLoggedInUser(HttpServletRequest request) {

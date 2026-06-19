@@ -1,11 +1,15 @@
 package Controllers;
 
+import DALs.CartDAO;
+import DALs.CartItemDAO;
 import DALs.CategoryDAO;
-import DALs.FavoriteProductDAO;
+import DALs.WishlistDAO;
 import DALs.ProductDAO;
+import Models.Account;
+import Models.Cart;
+import Models.CartItemView;
 import Models.Category;
 import Models.Product;
-import Models.Account;
 import Utils.SessionCartUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controller xử lý trang chủ và chi tiết sản phẩm cho khách.
@@ -49,8 +54,8 @@ public class HomeControllers extends HttpServlet {
             request.setAttribute("outerwear", productDAO.getProductsByCategoryName("Outerwear", HOME_SECTION_LIMIT));
             request.setAttribute("accessories", productDAO.getProductsByCategoryName("Accessories", HOME_SECTION_LIMIT));
             request.setAttribute("productDAO", productDAO);
-            request.setAttribute("wishlistProductIds", getFavoriteProductIds(request));
-            request.setAttribute("cartCount", SessionCartUtil.getCartCount(request));
+            request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
+            request.setAttribute("cartCount", getCartCount(request));
 
             String contentPage = "/Pages/Guest/Home/Content/Content.jsp";
             request.setAttribute("contentPage", contentPage);
@@ -78,8 +83,8 @@ public class HomeControllers extends HttpServlet {
         request.setAttribute("displayPrice", productDAO.getDisplayPrice(product));
         request.setAttribute("relatedProducts", productDAO.getProductsByCategoryName(product.getCategoryName(), 4));
         request.setAttribute("productDAO", productDAO);
-        request.setAttribute("wishlistProductIds", getFavoriteProductIds(request));
-        request.setAttribute("cartCount", SessionCartUtil.getCartCount(request));
+        request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
+        request.setAttribute("cartCount", getCartCount(request));
         request.setAttribute("contentPage", "/Pages/Guest/Home/Content/ProductDetail.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
@@ -95,12 +100,33 @@ public class HomeControllers extends HttpServlet {
         return "Home Controller - Fashion Management System";
     }
 
-    private java.util.Set<String> getFavoriteProductIds(HttpServletRequest request) {
+    private int getCartCount(HttpServletRequest request) {
+        // Check if user is logged in
+        Account user = getLoggedInUser(request);
+        if (user != null) {
+            CartDAO cartDAO = new CartDAO();
+            Cart cart = cartDAO.getActiveCart(user.getAccountId());
+            if (cart != null) {
+                CartItemDAO itemDAO = new CartItemDAO();
+                List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+                return items.stream().mapToInt(CartItemView::getQuantity).sum();
+            }
+            return 0;
+        }
+        // Guest user - use session cart
+        return SessionCartUtil.getCartCount(request);
+    }
+
+    private Account getLoggedInUser(HttpServletRequest request) {
         Object userObject = request.getSession(false) != null ? request.getSession(false).getAttribute("USER") : null;
-        if (!(userObject instanceof Account)) {
+        return userObject instanceof Account ? (Account) userObject : null;
+    }
+
+    private java.util.Set<String> getWishlistProductIds(HttpServletRequest request) {
+        Account user = getLoggedInUser(request);
+        if (user == null) {
             return new java.util.LinkedHashSet<>();
         }
-        Account user = (Account) userObject;
-        return new FavoriteProductDAO().getFavoriteProductIdsByAccountId(user.getAccountId());
+        return new WishlistDAO().getWishlistProductIdsByAccountId(user.getAccountId());
     }
 }

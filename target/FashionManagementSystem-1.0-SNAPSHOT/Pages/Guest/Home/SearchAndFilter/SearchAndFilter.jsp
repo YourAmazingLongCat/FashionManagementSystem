@@ -43,9 +43,12 @@
                         <input type="number" class="price-input-field" name="maxPrice" value="${selectedMaxPrice}" placeholder="0" />
                     </div>
                 </div>
+                <div id="priceError" class="price-error" style="display: none;">
+                    Max price cannot be less than min price
+                </div>
             </section>
 
-            <button type="submit" class="btn btn-apply">APPLY FILTERS</button>
+            <button type="submit" class="btn btn-apply" onclick="return validatePriceRange()">APPLY FILTERS</button>
             <a href="${pageContext.request.contextPath}/home/search" class="btn btn-reset">RESET ALL</a>
         </aside>
 
@@ -159,6 +162,25 @@
         }
     }
 
+    function validatePriceRange() {
+        const minPriceInput = document.querySelector('input[name="minPrice"]');
+        const maxPriceInput = document.querySelector('input[name="maxPrice"]');
+        const priceError = document.getElementById('priceError');
+
+        const minPrice = parseFloat(minPriceInput.value) || 0;
+        const maxPrice = parseFloat(maxPriceInput.value) || 0;
+
+        if (maxPrice > 0 && maxPrice < minPrice) {
+            priceError.style.display = 'block';
+            maxPriceInput.style.borderColor = '#dc2626';
+            return false;
+        }
+
+        priceError.style.display = 'none';
+        maxPriceInput.style.borderColor = '';
+        return true;
+    }
+
     function toggleWishlist(productId, button) {
         fetch('${pageContext.request.contextPath}/home/customer/toggle-wishlist', {
             method: 'POST',
@@ -169,10 +191,16 @@
                 window.location.href = '${pageContext.request.contextPath}/auth/login';
                 return;
             }
-            if (data && data.favorite !== undefined) {
+            if (data && data.inWishlist !== undefined) {
                 const icon = button.querySelector('.material-symbols-outlined');
                 if (icon) {
-                    icon.classList.toggle('active', data.favorite === true);
+                    if (data.inWishlist === true) {
+                        icon.textContent = 'favorite';
+                        icon.classList.add('active');
+                    } else {
+                        icon.textContent = 'favorite_border';
+                        icon.classList.remove('active');
+                    }
                 }
             }
         }).catch(error => {

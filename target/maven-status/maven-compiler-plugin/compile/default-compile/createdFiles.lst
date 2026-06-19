@@ -16,6 +16,7 @@ Models\Category.class
 Utils\DBContext.class
 Models\Product.class
 Utils\EmailUtils.class
+Models\WarehouseTransaction.class
 Models\Account.class
 Controllers\ViewCartServlet.class
 Controllers\ProductExperienceServlet.class
@@ -33,11 +34,15 @@ Controllers\VerifyOTPControllers.class
 DALs\ColorBootstrapDAO.class
 Controllers\HomeControllers.class
 Controllers\ProductManagementServlet.class
+DALs\WishlistDAO.class
 Controllers\RegisterControllers.class
 Models\CartItem.class
+Controllers\WishlistServlet.class
 Utils\EmailUtils$1.class
 DALs\CategoryDAO.class
 Models\Order.class
+Controllers\WarehouseServlet.class
+DALs\WarehouseDAO.class
 DALs\CartDAO.class
 DALs\ProductDAO.class
 Controllers\LogoutControllers.class
