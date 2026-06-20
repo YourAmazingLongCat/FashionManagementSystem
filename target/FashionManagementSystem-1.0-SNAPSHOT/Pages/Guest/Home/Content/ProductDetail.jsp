@@ -54,17 +54,18 @@
                 </div>
 
                 <div class="detail-selection-summary">
-                    <div>
+                    <div class="summary-info">
                         <strong id="selectedVariantLabel">Choose color and size</strong>
                         <span id="selectedVariantStock">Available stock will appear here.</span>
                     </div>
-                    <div class="detail-quantity-wrap">
-                        <label for="quantity">Qty</label>
-                        <input id="quantity" name="quantity" type="number" min="1" value="1" class="detail-quantity-input" />
+                    <div class="summary-actions">
+                        <div class="detail-quantity-wrap">
+                            <label for="quantity">Qty</label>
+                            <input id="quantity" name="quantity" type="number" min="1" value="1" class="detail-quantity-input" />
+                        </div>
+                        <button type="submit" class="detail-add-cart-btn" id="addToCartButton" disabled>Add to cart</button>
                     </div>
                 </div>
-
-                <button type="submit" class="detail-add-cart-btn" id="addToCartButton" disabled>Add to cart</button>
             </form>
 
             <div class="variant-table-card">
@@ -82,7 +83,6 @@
                              data-price="${variant.priceOverride != null ? variant.priceOverride : product.basePrice}">
                             <div>
                                 <strong>${variant.colorName} / ${variant.sizeName}</strong>
-                                <span>SKU: ${variant.sku}</span>
                             </div>
                             <div>
                                 <strong><fmt:formatNumber value="${variant.priceOverride != null ? variant.priceOverride : product.basePrice}" type="number" groupingUsed="true"/> đ</strong>

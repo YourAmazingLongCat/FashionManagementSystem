@@ -5,6 +5,7 @@
 package Controllers;
 
 import DALs.OrderDAO;
+import DALs.WarehouseDAO;
 import Models.Order;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -129,6 +130,17 @@ public class OrderManagementServlet extends HttpServlet {
         boolean rs = orderDAO.UpdateOrderById(orderId, userId, orderDate, status, totalAmount);
 
         if (rs) {
+            // Auto-export stock when order is completed
+            if ("Completed".equalsIgnoreCase(status)) {
+                try {
+                    WarehouseDAO warehouseDAO = new WarehouseDAO();
+                    String orderIdStr = "ORD" + String.format("%05d", orderId);
+                    warehouseDAO.deductStockForOrder(orderIdStr);
+                    System.out.println("Auto-export stock for order: " + orderIdStr);
+                } catch (Exception ex) {
+                    System.out.println("Auto-export stock error: " + ex.getMessage());
+                }
+            }
             response.sendRedirect(request.getContextPath() + "/order");
         } else {
             request.setAttribute("error", "Update order error!");

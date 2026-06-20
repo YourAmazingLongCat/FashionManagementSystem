@@ -69,106 +69,8 @@
             </c:forEach>
         </div>
     </section>
-
-    <section class="product-section">
-        <div class="section-header">
-            <h2 class="section-title">TOPS & TEES</h2>
-            <a class="view-all" href="${pageContext.request.contextPath}/home/search?type=Top">
-                VIEW ALL <span class="material-symbols-outlined">arrow_forward</span>
-            </a>
-        </div>
-        <div class="products-grid">
-            <c:forEach var="p" items="${tops}">
-                <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
-                    <div class="product-card">
-                        <div class="product-image-container">
-                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
-                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
-                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                    favorite
-                                </span>
-                            </button>
-                        </div>
-                        <div class="product-info">
-                            <div class="product-name">${p.name}</div>
-                            <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </c:forEach>
-        </div>
-    </section>
-
-    <section class="product-section">
-        <div class="section-header">
-            <h2 class="section-title">PREMIUM OUTERWEAR</h2>
-            <a class="view-all" href="${pageContext.request.contextPath}/home/search?type=Outerwear">
-                VIEW ALL <span class="material-symbols-outlined">arrow_forward</span>
-            </a>
-        </div>
-        <div class="products-grid">
-            <c:forEach var="p" items="${outerwear}">
-                <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
-                    <div class="product-card">
-                        <div class="product-image-container">
-                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
-                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
-                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                    favorite
-                                </span>
-                            </button>
-                        </div>
-                        <div class="product-info">
-                            <div class="product-name">${p.name}</div>
-                            <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </c:forEach>
-        </div>
-    </section>
-
-    <section class="product-section">
-        <div class="section-header">
-            <h2 class="section-title">STREET ACCESSORIES</h2>
-            <div class="container-button">
-                <div class="filter-buttons">
-                    <a class="btn-headphone" href="${pageContext.request.contextPath}/home/search?type=Hat">HATS</a>
-                    <a class="btn-headphone" href="${pageContext.request.contextPath}/home/search?type=Bag">BAGS</a>
-                </div>
-                <a class="view-all" href="${pageContext.request.contextPath}/home/search?type=Hat&type=Bag">
-                    VIEW ALL <span class="material-symbols-outlined">arrow_forward</span>
-                </a>
-            </div>
-        </div>
-        <div class="products-grid">
-            <c:forEach var="p" items="${accessories}">
-                <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
-                    <div class="product-card">
-                        <div class="product-image-container">
-                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
-                            <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
-                                <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
-                                    favorite
-                                </span>
-                            </button>
-                        </div>
-                        <div class="product-info">
-                            <div class="product-name">${p.name}</div>
-                            <div class="product-price-row">
-                                <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </c:forEach>
-        </div>
-    </section>
 </div>
+
 <script>
     function toggleWishlist(productId, button) {
         fetch('${pageContext.request.contextPath}/home/customer/toggle-wishlist', {
@@ -176,10 +78,24 @@
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'productId=' + encodeURIComponent(productId)
         }).then(response => response.json()).then(data => {
-            const icon = button.querySelector('.material-symbols-outlined');
-            if (icon) {
-                icon.classList.toggle('active', !!data.favorite);
+            if (data && data.requiresLogin) {
+                window.location.href = '${pageContext.request.contextPath}/auth/login';
+                return;
             }
+            if (data && data.inWishlist !== undefined) {
+                const icon = button.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    if (data.inWishlist === true) {
+                        icon.textContent = 'favorite';
+                        icon.classList.add('active');
+                    } else {
+                        icon.textContent = 'favorite_border';
+                        icon.classList.remove('active');
+                    }
+                }
+            }
+        }).catch(error => {
+            console.error('Wishlist toggle error:', error);
         });
     }
 </script>

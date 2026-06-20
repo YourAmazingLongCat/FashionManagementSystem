@@ -2,9 +2,6 @@ package Controllers;
 
 import DALs.CategoryDAO;
 import DALs.ColorDAO;
-import DALs.ProductDAO;
-import DALs.ProductImageDAO;
-import DALs.ProductVariantDAO;
 import DALs.SizeDAO;
 import Models.Account;
 import Models.Category;
@@ -12,6 +9,7 @@ import Models.Color;
 import Models.Product;
 import Models.ProductVariant;
 import Models.Size;
+import Services.ProductService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -19,6 +17,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -36,8 +35,20 @@ import java.util.UUID;
 public class ProductManagementServlet extends HttpServlet {
 
     private static final List<String> VALID_STATUSES = Arrays.asList("Available", "OutOfStock", "Inactive");
-    private static final int PRODUCT_PAGE_SIZE = 8;
-    private static final int MANAGEMENT_PAGE_SIZE = 8;
+    private static final int DEFAULT_PAGE_SIZE = 8;
+
+    private ProductService productService;
+    private CategoryDAO categoryDAO;
+    private ColorDAO colorDAO;
+    private SizeDAO sizeDAO;
+
+    @Override
+    public void init() {
+        productService = new ProductService();
+        categoryDAO = new CategoryDAO();
+        colorDAO = new ColorDAO();
+        sizeDAO = new SizeDAO();
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -47,8 +58,7 @@ public class ProductManagementServlet extends HttpServlet {
             return;
         }
 
-        String action = request.getParameter("action") != null
-                ? request.getParameter("action") : "list";
+        String action = getAction(request);
 
         if (isProductImageRequest(request)) {
             serveProductImage(request, response);
@@ -56,48 +66,20 @@ public class ProductManagementServlet extends HttpServlet {
         }
 
         switch (action) {
-            case "create":
-                showCreateForm(request, response);
-                break;
-            case "edit":
-                showEditForm(request, response);
-                break;
-            case "delete":
-                showDeleteForm(request, response);
-                break;
-            case "sizesByCategory":
-                writeSizesByCategoryJson(request, response);
-                break;
-            case "createCategory":
-                showCategoryForm(request, response, new Category(), "createCategory", "Thêm nhóm sản phẩm");
-                break;
-            case "editCategory":
-                showEditCategoryForm(request, response);
-                break;
-            case "deleteCategory":
-                showDeleteCategoryForm(request, response);
-                break;
-            case "createColor":
-                showColorForm(request, response, new Color(), "createColor", "Thêm màu sắc");
-                break;
-            case "editColor":
-                showEditColorForm(request, response);
-                break;
-            case "deleteColor":
-                showDeleteColorForm(request, response);
-                break;
-            case "createSize":
-                showSizeForm(request, response, new Size(), "createSize", "Thêm kích cỡ");
-                break;
-            case "editSize":
-                showEditSizeForm(request, response);
-                break;
-            case "deleteSize":
-                showDeleteSizeForm(request, response);
-                break;
-            default:
-                showProductList(request, response);
-                break;
+            case "create" -> showCreateForm(request, response);
+            case "edit" -> showEditForm(request, response);
+            case "delete" -> showDeleteForm(request, response);
+            case "sizesByCategory" -> writeSizesByCategoryJson(request, response);
+            case "createCategory" -> showCategoryForm(request, response, new Category(), "createCategory", "Thêm nhóm sản phẩm");
+            case "editCategory" -> showEditCategoryForm(request, response);
+            case "deleteCategory" -> showDeleteCategoryForm(request, response);
+            case "createColor" -> showColorForm(request, response, new Color(), "createColor", "Thêm màu sắc");
+            case "editColor" -> showEditColorForm(request, response);
+            case "deleteColor" -> showDeleteColorForm(request, response);
+            case "createSize" -> showSizeForm(request, response, new Size(), "createSize", "Thêm kích cỡ");
+            case "editSize" -> showEditSizeForm(request, response);
+            case "deleteSize" -> showDeleteSizeForm(request, response);
+            default -> showProductList(request, response);
         }
     }
 
@@ -109,102 +91,59 @@ public class ProductManagementServlet extends HttpServlet {
             return;
         }
 
-        String action = request.getParameter("action") != null
-                ? request.getParameter("action") : "";
+        String action = getAction(request);
 
         switch (action) {
-            case "create":
-                createProduct(request, response);
-                break;
-            case "edit":
-                updateProduct(request, response);
-                break;
-            case "delete":
-                deleteProduct(request, response);
-                break;
-            case "createCategory":
-                createCategory(request, response);
-                break;
-            case "editCategory":
-                updateCategory(request, response);
-                break;
-            case "deleteCategory":
-                deleteCategory(request, response);
-                break;
-            case "createColor":
-                createColor(request, response);
-                break;
-            case "editColor":
-                updateColor(request, response);
-                break;
-            case "deleteColor":
-                deleteColor(request, response);
-                break;
-            case "createSize":
-                createSize(request, response);
-                break;
-            case "editSize":
-                updateSize(request, response);
-                break;
-            case "deleteSize":
-                deleteSize(request, response);
-                break;
-            default:
-                response.sendRedirect(request.getContextPath() + "/admin/products");
-                break;
+            case "create" -> createProduct(request, response);
+            case "edit" -> updateProduct(request, response);
+            case "delete" -> deleteProduct(request, response);
+            case "createCategory" -> createCategory(request, response);
+            case "editCategory" -> updateCategory(request, response);
+            case "deleteCategory" -> deleteCategory(request, response);
+            case "createColor" -> createColor(request, response);
+            case "editColor" -> updateColor(request, response);
+            case "deleteColor" -> deleteColor(request, response);
+            case "createSize" -> createSize(request, response);
+            case "editSize" -> updateSize(request, response);
+            case "deleteSize" -> deleteSize(request, response);
+            default -> redirectToList(request, response);
         }
     }
 
     private void showProductList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        ProductDAO productDAO = new ProductDAO();
-        CategoryDAO categoryDAO = new CategoryDAO();
-        ColorDAO colorDAO = new ColorDAO();
-        SizeDAO sizeDAO = new SizeDAO();
-        if (!productDAO.isDatabaseReady()) {
+        if (!productService.isDatabaseReady()) {
             request.setAttribute("error", "Không thể kết nối cơ sở dữ liệu. Vui lòng kiểm tra lại cấu hình DB.");
         }
 
-        List<Product> allProducts = productDAO.getAllProducts();
+        String keyword = getTrimmedParam(request, "keyword");
+        String statusFilter = getTrimmedParam(request, "statusFilter");
+        String categoryFilter = getTrimmedParam(request, "categoryFilter");
+        String activeTab = getTrimmedParam(request, "tab", "products");
+        int currentPage = parsePositiveInt(request.getParameter("page"), 1);
+
+        DALs.ProductDAO.ProductResult productResult = productService.getProducts(
+                keyword, statusFilter, categoryFilter, currentPage, DEFAULT_PAGE_SIZE
+        );
+
         List<Category> allCategories = categoryDAO.getAllCategories();
         List<Color> allColors = colorDAO.getAllColors();
         List<Size> allSizes = sizeDAO.getAllSizes();
-        String keyword = trim(request.getParameter("keyword"));
-        String statusFilter = trim(request.getParameter("statusFilter"));
-        String categoryFilter = trim(request.getParameter("categoryFilter"));
-        String activeTab = trim(request.getParameter("tab"));
-        if (activeTab == null || activeTab.isBlank()) {
-            activeTab = "products";
-        }
-        int currentPage = parsePositiveInt(request.getParameter("page"), 1);
 
-        if (keyword != null && !keyword.isBlank()) {
-            String normalizedKeyword = keyword.toLowerCase();
-            allProducts.removeIf(product -> (product.getName() == null || !product.getName().toLowerCase().contains(normalizedKeyword))
-                    && (product.getDescription() == null || !product.getDescription().toLowerCase().contains(normalizedKeyword))
-                    && (product.getCategoryName() == null || !product.getCategoryName().toLowerCase().contains(normalizedKeyword)));
-        }
-        if (statusFilter != null && !statusFilter.isBlank()) {
-            allProducts.removeIf(product -> product.getStatus() == null || !statusFilter.equalsIgnoreCase(product.getStatus()));
-        }
-        if (categoryFilter != null && !categoryFilter.isBlank()) {
-            allProducts.removeIf(product -> product.getCategoryId() == null || !categoryFilter.equals(product.getCategoryId()));
-        }
-
-        PageSlice<Product> productPage = paginate(allProducts, currentPage, PRODUCT_PAGE_SIZE);
-        PageSlice<Category> categoryPage = paginate(allCategories, currentPage, MANAGEMENT_PAGE_SIZE);
-        PageSlice<Color> colorPage = paginate(allColors, currentPage, MANAGEMENT_PAGE_SIZE);
-        PageSlice<Size> sizePage = paginate(allSizes, currentPage, MANAGEMENT_PAGE_SIZE);
+        PageSlice<Category> categoryPage = paginate(allCategories, currentPage, DEFAULT_PAGE_SIZE);
+        PageSlice<Color> colorPage = paginate(allColors, currentPage, DEFAULT_PAGE_SIZE);
+        PageSlice<Size> sizePage = paginate(allSizes, currentPage, DEFAULT_PAGE_SIZE);
 
         PageSlice<?> activePage = switch (activeTab) {
             case "categories" -> categoryPage;
             case "colors" -> colorPage;
             case "sizes" -> sizePage;
-            default -> productPage;
+            default -> new PageSlice<>(productResult.products(), currentPage,
+                    productResult.totalPages(DEFAULT_PAGE_SIZE), productResult.totalCount());
         };
 
-        request.setAttribute("products", productPage.items());
-        request.setAttribute("totalProducts", allProducts.size());
+        request.setAttribute("products", productResult.products());
+        request.setAttribute("totalProducts", productResult.totalCount());
         request.setAttribute("categoryItems", categoryPage.items());
         request.setAttribute("totalCategories", allCategories.size());
         request.setAttribute("allCategoryItems", allCategories);
@@ -215,43 +154,43 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("currentPage", activePage.currentPage());
         request.setAttribute("totalPages", activePage.totalPages());
         request.setAttribute("productQuery", buildProductManagementQuery(request));
+
         request.getRequestDispatcher("/views/pages/productManagement/listProduct.jsp").forward(request, response);
     }
 
     private void showCreateForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        Product product = new Product();
-        loadReferenceData(request, null);
-        request.setAttribute("product", product);
+        request.setAttribute("product", new Product());
         request.setAttribute("formAction", "create");
         request.setAttribute("pageTitle", "Thêm sản phẩm");
+        loadReferenceData(request, null);
         request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }
 
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String productId = request.getParameter("id");
-        Product product = new ProductDAO().getProductById(productId);
+        Product product = productService.getProduct(productId);
 
         if (product == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?message=Product-not-found&messageType=error");
+            redirectWithMessage(request, response, "Product-not-found", "error");
             return;
         }
 
-        loadReferenceData(request, product.getCategoryId());
         request.setAttribute("product", product);
         request.setAttribute("formAction", "edit");
         request.setAttribute("pageTitle", "Cập nhật sản phẩm");
+        loadReferenceData(request, product.getCategoryId());
         request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }
 
     private void showDeleteForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String productId = request.getParameter("id");
-        Product product = new ProductDAO().getProductById(productId);
+        Product product = productService.getProduct(productId);
 
         if (product == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?message=Product not found&messageType=error");
+            redirectWithMessage(request, response, "Product-not-found", "error");
             return;
         }
 
@@ -259,297 +198,324 @@ public class ProductManagementServlet extends HttpServlet {
         request.getRequestDispatcher("/views/pages/productManagement/deleteProduct.jsp").forward(request, response);
     }
 
-    private void showEditCategoryForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Category category = new CategoryDAO().getCategoryById(request.getParameter("id"));
+    private void createProduct(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Product product = buildProductFromRequest(request, false);
+        String error = validateProduct(product);
+
+        if (error != null) {
+            forwardWithError(request, response, product, "create", "Thêm sản phẩm", error);
+            return;
+        }
+
+        boolean created = productService.createProduct(product);
+        if (created) {
+            redirectWithMessage(request, response, "Product-created-successfully", "success");
+        } else {
+            forwardWithError(request, response, product, "create", "Thêm sản phẩm", "Unable-to-create-product");
+        }
+    }
+
+    private void updateProduct(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Product product = buildProductFromRequest(request, true);
+        String error = validateProduct(product);
+
+        if (error != null) {
+            forwardWithError(request, response, product, "edit", "Cập nhật sản phẩm", error);
+            return;
+        }
+
+        boolean updated = productService.updateProduct(product);
+        if (updated) {
+            redirectWithMessage(request, response, "Product-updated-successfully", "success");
+        } else {
+            forwardWithError(request, response, product, "edit", "Cập nhật sản phẩm", "Unable-to-update-product");
+        }
+    }
+
+    private void deleteProduct(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String productId = request.getParameter("productId");
+
+        if (productId == null || productId.isBlank()) {
+            redirectWithMessage(request, response, "Invalid-product-id", "error");
+            return;
+        }
+
+        boolean deleted = productService.deleteProduct(productId);
+        String message = deleted ? "Product-deleted-successfully" : "Unable-to-delete-product-in-use";
+        String type = deleted ? "success" : "error";
+        redirectWithMessage(request, response, message, type);
+    }
+
+    private void showEditCategoryForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Category category = categoryDAO.getCategoryById(request.getParameter("id"));
         if (category == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=categories&message=Category-not-found&messageType=error");
+            redirectWithTab(request, response, "categories", "Category-not-found", "error");
             return;
         }
         showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
     }
 
-    private void showDeleteCategoryForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Category category = new CategoryDAO().getCategoryById(request.getParameter("id"));
+    private void showDeleteCategoryForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Category category = categoryDAO.getCategoryById(request.getParameter("id"));
         if (category == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=categories&message=Category not found&messageType=error");
+            redirectWithTab(request, response, "categories", "Category-not-found", "error");
             return;
         }
         request.setAttribute("category", category);
         request.getRequestDispatcher("/views/pages/productManagement/deleteCategory.jsp").forward(request, response);
     }
 
-    private void showCategoryForm(HttpServletRequest request, HttpServletResponse response, Category category, String formAction, String pageTitle) throws ServletException, IOException {
+    private void showCategoryForm(HttpServletRequest request, HttpServletResponse response,
+                                 Category category, String formAction, String pageTitle)
+            throws ServletException, IOException {
         request.setAttribute("category", category);
         request.setAttribute("formAction", formAction);
         request.setAttribute("pageTitle", pageTitle);
         request.getRequestDispatcher("/views/pages/productManagement/categoryForm.jsp").forward(request, response);
     }
 
-    private void showEditColorForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Color color = new ColorDAO().getColorById(request.getParameter("id"));
+    private void createCategory(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Category category = buildCategoryFromRequest(request);
+        String error = validateCategory(category);
+
+        if (error != null) {
+            request.setAttribute("error", error);
+            showCategoryForm(request, response, category, "createCategory", "Thêm nhóm sản phẩm");
+            return;
+        }
+
+        boolean created = categoryDAO.createCategory(category);
+        if (created) {
+            redirectWithTab(request, response, "categories", "Category-created-successfully", "success");
+        } else {
+            request.setAttribute("error", "Unable-to-create-category");
+            showCategoryForm(request, response, category, "createCategory", "Thêm nhóm sản phẩm");
+        }
+    }
+
+    private void updateCategory(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Category category = buildCategoryFromRequest(request);
+        String error = validateCategory(category);
+
+        if (error != null) {
+            request.setAttribute("error", error);
+            showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
+            return;
+        }
+
+        boolean updated = categoryDAO.updateCategory(category);
+        if (updated) {
+            redirectWithTab(request, response, "categories", "Category-updated-successfully", "success");
+        } else {
+            request.setAttribute("error", "Unable-to-update-category");
+            showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
+        }
+    }
+
+    private void deleteCategory(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String categoryId = request.getParameter("categoryId");
+        if (categoryId == null || categoryId.isBlank()) {
+            redirectWithTab(request, response, "categories", "Invalid-category-id", "error");
+            return;
+        }
+
+        boolean deleted = categoryDAO.deleteCategory(categoryId);
+        String message = deleted ? "Category-deleted-successfully" : "Unable-to-delete-category-in-use";
+        String type = deleted ? "success" : "error";
+        redirectWithTab(request, response, "categories", message, type);
+    }
+
+    private void showEditColorForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Color color = colorDAO.getColorById(request.getParameter("id"));
         if (color == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=colors&message=Color-not-found&messageType=error");
+            redirectWithTab(request, response, "colors", "Color-not-found", "error");
             return;
         }
         showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
     }
 
-    private void showDeleteColorForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Color color = new ColorDAO().getColorById(request.getParameter("id"));
+    private void showDeleteColorForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Color color = colorDAO.getColorById(request.getParameter("id"));
         if (color == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=colors&message=Color-not-found&messageType=error");
+            redirectWithTab(request, response, "colors", "Color-not-found", "error");
             return;
         }
         request.setAttribute("color", color);
         request.getRequestDispatcher("/views/pages/productManagement/deleteColor.jsp").forward(request, response);
     }
 
-    private void showColorForm(HttpServletRequest request, HttpServletResponse response, Color color, String formAction, String pageTitle) throws ServletException, IOException {
+    private void showColorForm(HttpServletRequest request, HttpServletResponse response,
+                             Color color, String formAction, String pageTitle)
+            throws ServletException, IOException {
         request.setAttribute("color", color);
         request.setAttribute("formAction", formAction);
         request.setAttribute("pageTitle", pageTitle);
         request.getRequestDispatcher("/views/pages/productManagement/colorForm.jsp").forward(request, response);
     }
 
-    private void showEditSizeForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Size size = new SizeDAO().getSizeById(request.getParameter("id"));
+    private void createColor(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Color color = buildColorFromRequest(request);
+        String error = validateColor(color);
+
+        if (error != null) {
+            request.setAttribute("error", error);
+            showColorForm(request, response, color, "createColor", "Thêm màu sắc");
+            return;
+        }
+
+        boolean created = colorDAO.createColor(color);
+        if (created) {
+            redirectWithTab(request, response, "colors", "Color-created-successfully", "success");
+        } else {
+            request.setAttribute("error", "Unable-to-create-color");
+            showColorForm(request, response, color, "createColor", "Thêm màu sắc");
+        }
+    }
+
+    private void updateColor(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Color color = buildColorFromRequest(request);
+        String error = validateColor(color);
+
+        if (error != null) {
+            request.setAttribute("error", error);
+            showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
+            return;
+        }
+
+        boolean updated = colorDAO.updateColor(color);
+        if (updated) {
+            redirectWithTab(request, response, "colors", "Color-updated-successfully", "success");
+        } else {
+            request.setAttribute("error", "Unable-to-update-color");
+            showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
+        }
+    }
+
+    private void deleteColor(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String colorId = request.getParameter("colorId");
+        if (colorId == null || colorId.isBlank()) {
+            redirectWithTab(request, response, "colors", "Invalid-color-id", "error");
+            return;
+        }
+
+        boolean deleted = colorDAO.deleteColor(colorId);
+        String message = deleted ? "Color-deleted-successfully" : "Unable-to-delete-color-in-use";
+        String type = deleted ? "success" : "error";
+        redirectWithTab(request, response, "colors", message, type);
+    }
+
+    private void showEditSizeForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Size size = sizeDAO.getSizeById(request.getParameter("id"));
         if (size == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=sizes&message=Size-not-found&messageType=error");
+            redirectWithTab(request, response, "sizes", "Size-not-found", "error");
             return;
         }
         showSizeForm(request, response, size, "editSize", "Cập nhật kích cỡ");
     }
 
-    private void showDeleteSizeForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Size size = new SizeDAO().getSizeById(request.getParameter("id"));
+    private void showDeleteSizeForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Size size = sizeDAO.getSizeById(request.getParameter("id"));
         if (size == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=sizes&message=Size not found&messageType=error");
+            redirectWithTab(request, response, "sizes", "Size-not-found", "error");
             return;
         }
         request.setAttribute("size", size);
         request.getRequestDispatcher("/views/pages/productManagement/deleteSize.jsp").forward(request, response);
     }
 
-    private void showSizeForm(HttpServletRequest request, HttpServletResponse response, Size size, String formAction, String pageTitle) throws ServletException, IOException {
+    private void showSizeForm(HttpServletRequest request, HttpServletResponse response,
+                             Size size, String formAction, String pageTitle)
+            throws ServletException, IOException {
         request.setAttribute("size", size);
         request.setAttribute("formAction", formAction);
         request.setAttribute("pageTitle", pageTitle);
-        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+        request.setAttribute("categories", categoryDAO.getAllCategories());
         request.getRequestDispatcher("/views/pages/productManagement/sizeForm.jsp").forward(request, response);
     }
 
-    private void createProduct(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Product product = buildProductFromRequest(request, false);
-        String errorMessage = validateProduct(product);
-        if (errorMessage != null) {
-            loadReferenceData(request, product.getCategoryId());
-            request.setAttribute("product", product);
-            request.setAttribute("formAction", "create");
-            request.setAttribute("pageTitle", "Thêm sản phẩm");
-            request.setAttribute("error", errorMessage);
-            request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
-            return;
-        }
+    private void createSize(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Size size = buildSizeFromRequest(request);
+        String error = validateSize(size);
 
-        boolean created = new ProductDAO().createProduct(product);
-        if (created && persistProductExtras(product, true)) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?message=Product-created-successfully&messageType=success");
-        } else {
-            loadReferenceData(request, product.getCategoryId());
-            request.setAttribute("product", product);
-            request.setAttribute("formAction", "create");
-            request.setAttribute("pageTitle", "Add Product");
-            request.setAttribute("error", "Unable-to-create-product");
-            request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
-        }
-    }
-
-    private void updateProduct(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Product product = buildProductFromRequest(request, true);
-        String errorMessage = validateProduct(product);
-        if (errorMessage != null) {
-            loadReferenceData(request, product.getCategoryId());
-            request.setAttribute("product", product);
-            request.setAttribute("formAction", "edit");
-            request.setAttribute("pageTitle", "Cập nhật sản phẩm");
-            request.setAttribute("error", errorMessage);
-            request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
-            return;
-        }
-
-        boolean updated = new ProductDAO().updateProduct(product);
-        if (updated && persistProductExtras(product, false)) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?message=Product-updated-successfully&messageType=success");
-        } else {
-            loadReferenceData(request, product.getCategoryId());
-            request.setAttribute("product", product);
-            request.setAttribute("formAction", "edit");
-            request.setAttribute("pageTitle", "Update Product");
-            request.setAttribute("error", "Unable-to-update-product");
-            request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
-        }
-    }
-
-    private void deleteProduct(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String productId = request.getParameter("productId");
-        if (productId == null || productId.isBlank()) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?message=Invalid-product-id&messageType=error");
-            return;
-        }
-        boolean deleted = new ProductDAO().deleteProduct(productId);
-        response.sendRedirect(request.getContextPath() + (deleted
-                ? "/admin/products?message=Product-deleted-successfully&messageType=success"
-                : "/admin/products?message=Unable-to-delete-product-in-use&messageType=error"));
-    }
-
-    private void createCategory(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Category category = buildCategoryFromRequest(request, false);
-        String errorMessage = validateCategory(category);
-        if (errorMessage != null) {
-            request.setAttribute("error", errorMessage);
-            showCategoryForm(request, response, category, "createCategory", "Thêm nhóm sản phẩm");
-            return;
-        }
-        boolean created = new CategoryDAO().createCategory(category);
-        if (created) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=categories&message=Category-created-successfully&messageType=success");
-        } else {
-            request.setAttribute("error", "Unable-to-create-category");
-            showCategoryForm(request, response, category, "createCategory", "Add Category");
-        }
-    }
-
-    private void updateCategory(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Category category = buildCategoryFromRequest(request, true);
-        String errorMessage = validateCategory(category);
-        if (errorMessage != null) {
-            request.setAttribute("error", errorMessage);
-            showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
-            return;
-        }
-        boolean updated = new CategoryDAO().updateCategory(category);
-        if (updated) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=categories&message=Category-updated-successfully&messageType=success");
-        } else {
-            request.setAttribute("error", "Unable-to-update-category");
-            showCategoryForm(request, response, category, "editCategory", "Update Category");
-        }
-    }
-
-    private void deleteCategory(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String categoryId = request.getParameter("categoryId");
-        if (categoryId == null || categoryId.isBlank()) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=categories&message=Invalid-category-id&messageType=error");
-            return;
-        }
-        boolean deleted = new CategoryDAO().deleteCategory(categoryId);
-        response.sendRedirect(request.getContextPath() + (deleted
-                ? "/admin/products?tab=categories&message=Category-deleted-successfully&messageType=success"
-                : "/admin/products?tab=categories&message=Unable-to-delete-category-in-use&messageType=error"));
-    }
-
-    private void createColor(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Color color = buildColorFromRequest(request, false);
-        String errorMessage = validateColor(color);
-        if (errorMessage != null) {
-            request.setAttribute("error", errorMessage);
-            showColorForm(request, response, color, "createColor", "Thêm màu sắc");
-            return;
-        }
-        boolean created = new ColorDAO().createColor(color);
-        if (created) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=colors&message=Color-created-successfully&messageType=success");
-        } else {
-            request.setAttribute("error", "Unable-to-create-color");
-            showColorForm(request, response, color, "createColor", "Add Color");
-        }
-    }
-
-    private void updateColor(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Color color = buildColorFromRequest(request, true);
-        String errorMessage = validateColor(color);
-        if (errorMessage != null) {
-            request.setAttribute("error", errorMessage);
-            showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
-            return;
-        }
-        boolean updated = new ColorDAO().updateColor(color);
-        if (updated) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=colors&message=Color-updated-successfully&messageType=success");
-        } else {
-            request.setAttribute("error", "Unable-to-update-color");
-            showColorForm(request, response, color, "editColor", "Update Color");
-        }
-    }
-
-    private void deleteColor(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String colorId = request.getParameter("colorId");
-        if (colorId == null || colorId.isBlank()) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=colors&message=Invalid-color-id&messageType=error");
-            return;
-        }
-        boolean deleted = new ColorDAO().deleteColor(colorId);
-        response.sendRedirect(request.getContextPath() + (deleted
-                ? "/admin/products?tab=colors&message=Color-deleted-successfully&messageType=success"
-                : "/admin/products?tab=colors&message=Unable-to-delete-color-in-use&messageType=error"));
-    }
-
-    private void createSize(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Size size = buildSizeFromRequest(request, false);
-        String errorMessage = validateSize(size);
-        if (errorMessage != null) {
-            request.setAttribute("error", errorMessage);
+        if (error != null) {
+            request.setAttribute("error", error);
             showSizeForm(request, response, size, "createSize", "Thêm kích cỡ");
             return;
         }
-        boolean created = new SizeDAO().createSize(size);
+
+        boolean created = sizeDAO.createSize(size);
         if (created) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=sizes&message=Size-created-successfully&messageType=success");
+            redirectWithTab(request, response, "sizes", "Size-created-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-create-size");
-            showSizeForm(request, response, size, "createSize", "Add Size");
+            showSizeForm(request, response, size, "createSize", "Thêm kích cỡ");
         }
     }
 
-    private void updateSize(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Size size = buildSizeFromRequest(request, true);
-        String errorMessage = validateSize(size);
-        if (errorMessage != null) {
-            request.setAttribute("error", errorMessage);
+    private void updateSize(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        Size size = buildSizeFromRequest(request);
+        String error = validateSize(size);
+
+        if (error != null) {
+            request.setAttribute("error", error);
             showSizeForm(request, response, size, "editSize", "Cập nhật kích cỡ");
             return;
         }
-        boolean updated = new SizeDAO().updateSize(size);
+
+        boolean updated = sizeDAO.updateSize(size);
         if (updated) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=sizes&message=Size-updated-successfully&messageType=success");
+            redirectWithTab(request, response, "sizes", "Size-updated-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-update-size");
-            showSizeForm(request, response, size, "editSize", "Update Size");
+            showSizeForm(request, response, size, "editSize", "Cập nhật kích cỡ");
         }
     }
 
-    private void deleteSize(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void deleteSize(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
         String sizeId = request.getParameter("sizeId");
         if (sizeId == null || sizeId.isBlank()) {
-            response.sendRedirect(request.getContextPath() + "/admin/products?tab=sizes&message=Invalid-size-id&messageType=error");
+            redirectWithTab(request, response, "sizes", "Invalid-size-id", "error");
             return;
         }
-        boolean deleted = new SizeDAO().deleteSize(sizeId);
-        response.sendRedirect(request.getContextPath() + (deleted
-                ? "/admin/products?tab=sizes&message=Size-deleted-successfully&messageType=success"
-                : "/admin/products?tab=sizes&message=Unable-to-delete-size-in-use&messageType=error"));
+
+        boolean deleted = sizeDAO.deleteSize(sizeId);
+        String message = deleted ? "Size-deleted-successfully" : "Unable-to-delete-size-in-use";
+        String type = deleted ? "success" : "error";
+        redirectWithTab(request, response, "sizes", message, type);
     }
 
-    private Product buildProductFromRequest(HttpServletRequest request, boolean includeId) throws IOException, ServletException {
+    private Product buildProductFromRequest(HttpServletRequest request, boolean includeId)
+            throws IOException, ServletException {
         Product product = new Product();
-        if (includeId) product.setProductId(trim(request.getParameter("productId")));
-        product.setCategoryId(trim(request.getParameter("categoryId")));
-        product.setName(trim(request.getParameter("name")));
-        product.setDescription(trim(request.getParameter("description")));
-        product.setStatus(trim(request.getParameter("status")));
-        product.setPrimaryImageUrl(trim(request.getParameter("existingImageUrl")));
 
-        String priceValue = normalizeCurrencyValue(trim(request.getParameter("basePrice")));
+        if (includeId) {
+            product.setProductId(getTrimmedParam(request, "productId"));
+        }
+        product.setCategoryId(getTrimmedParam(request, "categoryId"));
+        product.setName(getTrimmedParam(request, "name"));
+        product.setDescription(getTrimmedParam(request, "description"));
+        product.setStatus(getTrimmedParam(request, "status"));
+        product.setPrimaryImageUrl(getTrimmedParam(request, "existingImageUrl"));
+
+        String priceValue = normalizeCurrencyValue(getTrimmedParam(request, "basePrice"));
         try {
             product.setBasePrice(priceValue != null ? new BigDecimal(priceValue) : null);
         } catch (NumberFormatException ex) {
@@ -562,47 +528,49 @@ public class ProductManagementServlet extends HttpServlet {
         Part imagePart = getImagePartSafely(request);
         if (imagePart != null && imagePart.getSize() > 0) {
             String uploadedImageUrl = saveImageFile(request, imagePart);
-            if (uploadedImageUrl != null) product.setPrimaryImageUrl(uploadedImageUrl);
+            if (uploadedImageUrl != null) {
+                product.setPrimaryImageUrl(uploadedImageUrl);
+            }
         }
+
         return product;
     }
 
-    private Category buildCategoryFromRequest(HttpServletRequest request, boolean includeId) {
+    private Category buildCategoryFromRequest(HttpServletRequest request) {
         Category category = new Category();
-        if (includeId) category.setCategoryId(trim(request.getParameter("categoryId")));
-        category.setName(trim(request.getParameter("name")));
-        category.setDescription(trim(request.getParameter("description")));
+        category.setCategoryId(getTrimmedParam(request, "categoryId"));
+        category.setName(getTrimmedParam(request, "name"));
+        category.setDescription(getTrimmedParam(request, "description"));
         return category;
     }
 
-    private Color buildColorFromRequest(HttpServletRequest request, boolean includeId) {
+    private Color buildColorFromRequest(HttpServletRequest request) {
         Color color = new Color();
-        if (includeId) color.setColorId(trim(request.getParameter("colorId")));
-        color.setColorName(trim(request.getParameter("colorName")));
-        color.setHexCode(normalizeHex(trim(request.getParameter("hexCode"))));
+        color.setColorId(getTrimmedParam(request, "colorId"));
+        color.setColorName(getTrimmedParam(request, "colorName"));
+        color.setHexCode(normalizeHex(getTrimmedParam(request, "hexCode")));
         return color;
     }
 
-    private Size buildSizeFromRequest(HttpServletRequest request, boolean includeId) {
+    private Size buildSizeFromRequest(HttpServletRequest request) {
         Size size = new Size();
-        if (includeId) size.setSizeId(trim(request.getParameter("sizeId")));
-        size.setSizeName(trim(request.getParameter("sizeName")));
-        size.setCategoryId(trim(request.getParameter("categoryId")));
+        size.setSizeId(getTrimmedParam(request, "sizeId"));
+        size.setSizeName(getTrimmedParam(request, "sizeName"));
+        size.setCategoryId(getTrimmedParam(request, "categoryId"));
         return size;
     }
 
     private String validateProduct(Product product) {
-        if (product.getCategoryId() == null || product.getCategoryId().isBlank()) return "Vui lòng chọn nhóm sản phẩm.";
-        if (product.getName() == null || product.getName().isBlank()) return "Vui lòng nhập tên sản phẩm.";
+        if (isBlank(product.getCategoryId())) return "Vui lòng chọn nhóm sản phẩm.";
+        if (isBlank(product.getName())) return "Vui lòng nhập tên sản phẩm.";
         if (product.getName().length() > 200) return "Tên sản phẩm không được vượt quá 200 ký tự.";
         if (product.getBasePrice() == null) return "Vui lòng nhập giá bán hợp lệ.";
         if (product.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) return "Giá bán phải lớn hơn 0.";
-        if (product.getStatus() == null || !VALID_STATUSES.contains(product.getStatus())) return "Trạng thái không hợp lệ.";
+        if (!VALID_STATUSES.contains(product.getStatus())) return "Trạng thái không hợp lệ.";
         if (product.getVariants() == null || product.getVariants().isEmpty()) return "Vui lòng thêm ít nhất một lựa chọn bán hàng cho sản phẩm.";
         for (ProductVariant variant : product.getVariants()) {
-            if (variant.getSizeId() == null || variant.getSizeId().isBlank()) return "Mỗi lựa chọn phải có kích cỡ.";
-            if (variant.getColorId() == null || variant.getColorId().isBlank()) return "Mỗi lựa chọn phải có màu sắc.";
-            if (variant.getSku() == null || variant.getSku().isBlank()) return "Mỗi lựa chọn phải có mã hàng.";
+            if (isBlank(variant.getSizeId())) return "Mỗi lựa chọn phải có kích cỡ.";
+            if (isBlank(variant.getColorId())) return "Mỗi lựa chọn phải có màu sắc.";
             if (variant.getStockQty() < 0) return "Số lượng tồn không được âm.";
             if (variant.getPriceOverride() != null && variant.getPriceOverride().compareTo(BigDecimal.ZERO) < 0) return "Giá bán riêng không được âm.";
         }
@@ -610,78 +578,51 @@ public class ProductManagementServlet extends HttpServlet {
     }
 
     private String validateCategory(Category category) {
-        if (category.getName() == null || category.getName().isBlank()) return "Vui lòng nhập tên nhóm sản phẩm.";
+        if (isBlank(category.getName())) return "Vui lòng nhập tên nhóm sản phẩm.";
         if (category.getName().length() > 200) return "Tên nhóm sản phẩm không được vượt quá 200 ký tự.";
         return null;
     }
 
     private String validateColor(Color color) {
-        if (color.getColorName() == null || color.getColorName().isBlank()) return "Vui lòng nhập tên màu sắc.";
+        if (isBlank(color.getColorName())) return "Vui lòng nhập tên màu sắc.";
         if (color.getColorName().length() > 100) return "Tên màu sắc không được vượt quá 100 ký tự.";
         if (color.getHexCode() == null || !color.getHexCode().matches("^#[0-9A-Fa-f]{6}$")) return "Vui lòng chọn màu hợp lệ.";
         return null;
     }
 
     private String validateSize(Size size) {
-        if (size.getSizeName() == null || size.getSizeName().isBlank()) return "Vui lòng nhập tên kích cỡ.";
+        if (isBlank(size.getSizeName())) return "Vui lòng nhập tên kích cỡ.";
         if (size.getSizeName().length() > 50) return "Tên kích cỡ không được vượt quá 50 ký tự.";
-        if (size.getCategoryId() == null || size.getCategoryId().isBlank()) return "Vui lòng chọn nhóm sản phẩm cho kích cỡ này.";
+        if (isBlank(size.getCategoryId())) return "Vui lòng chọn nhóm sản phẩm cho kích cỡ này.";
         return null;
     }
 
     private void loadReferenceData(HttpServletRequest request, String categoryId) {
-        CategoryDAO categoryDAO = new CategoryDAO();
-        List<Category> categories = categoryDAO.getAllCategories();
-        request.setAttribute("categories", categories);
+        request.setAttribute("categories", categoryDAO.getAllCategories());
         request.setAttribute("statuses", VALID_STATUSES);
-        request.setAttribute("sizes", new SizeDAO().getSizesByCategoryId(categoryId));
-        request.setAttribute("allSizes", new SizeDAO().getAllSizes());
-        request.setAttribute("colors", new ColorDAO().getAllColors());
+        request.setAttribute("sizes", sizeDAO.getSizesByCategoryId(categoryId));
+        request.setAttribute("allSizes", sizeDAO.getAllSizes());
+        request.setAttribute("colors", colorDAO.getAllColors());
     }
 
-    private void writeSizesByCategoryJson(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String categoryId = trim(request.getParameter("categoryId"));
-        List<Size> sizes = new SizeDAO().getSizesByCategoryId(categoryId);
+    private void writeSizesByCategoryJson(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String categoryId = getTrimmedParam(request, "categoryId");
+        List<Size> sizes = sizeDAO.getSizesByCategoryId(categoryId);
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < sizes.size(); i++) {
+            if (i > 0) json.append(",");
             Size size = sizes.get(i);
-            if (i > 0) {
-                json.append(",");
-            }
-            json.append("{\"sizeId\":\"")
-                    .append(escapeJson(size.getSizeId()))
-                    .append("\",\"sizeName\":\"")
-                    .append(escapeJson(size.getSizeName()))
+            json.append("{\"sizeId\":\"").append(escapeJson(size.getSizeId()))
+                    .append("\",\"sizeName\":\"").append(escapeJson(size.getSizeName()))
                     .append("\"}");
         }
         json.append("]");
         response.getWriter().write(json.toString());
-    }
-
-    private String escapeJson(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    private boolean persistProductExtras(Product product, boolean deleteProductOnFailure) {
-        if (product == null || product.getProductId() == null || product.getProductId().isBlank()) return false;
-        ProductImageDAO imageDAO = new ProductImageDAO();
-        ProductVariantDAO variantDAO = new ProductVariantDAO();
-        ProductDAO productDAO = new ProductDAO();
-        boolean imageSaved = true;
-        if (product.getPrimaryImageUrl() != null && !product.getPrimaryImageUrl().isBlank()) {
-            imageSaved = imageDAO.upsertPrimaryImage(product.getProductId(), product.getPrimaryImageUrl());
-        }
-        boolean variantsSaved = variantDAO.replaceVariants(product.getProductId(), product.getVariants());
-        if (deleteProductOnFailure && (!imageSaved || !variantsSaved)) {
-            productDAO.deleteProduct(product.getProductId());
-        }
-        return imageSaved && variantsSaved;
     }
 
     private List<ProductVariant> readVariantsFromRequest(HttpServletRequest request) {
@@ -695,7 +636,9 @@ public class ProductManagementServlet extends HttpServlet {
         if ((sizeIds == null || sizeIds.length == 0) && (colorIds == null || colorIds.length == 0)) {
             String[] selectedSizeIds = request.getParameterValues("selectedSizeId");
             String[] selectedColorIds = request.getParameterValues("selectedColorId");
-            if (selectedSizeIds != null && selectedColorIds != null && selectedSizeIds.length > 0 && selectedColorIds.length > 0) {
+
+            if (selectedSizeIds != null && selectedColorIds != null
+                    && selectedSizeIds.length > 0 && selectedColorIds.length > 0) {
                 List<String> sizeIdList = new ArrayList<>();
                 List<String> colorIdList = new ArrayList<>();
                 List<String> skuList = new ArrayList<>();
@@ -754,6 +697,7 @@ public class ProductManagementServlet extends HttpServlet {
         List<String> sizeIds = new ArrayList<>();
         List<String> colorIds = new ArrayList<>();
         int totalStockQty = 0;
+
         if (product.getVariants() != null) {
             for (ProductVariant variant : product.getVariants()) {
                 if (variant.getSizeId() != null && !sizeIds.contains(variant.getSizeId())) sizeIds.add(variant.getSizeId());
@@ -761,66 +705,37 @@ public class ProductManagementServlet extends HttpServlet {
                 totalStockQty += Math.max(0, variant.getStockQty());
             }
         }
+
         product.setSizeIds(sizeIds);
         product.setColorIds(colorIds);
         product.setTotalStockQty(totalStockQty);
     }
 
-    private int maxLength(String[]... arrays) {
-        int max = 0;
-        for (String[] array : arrays) if (array != null && array.length > max) max = array.length;
-        return max;
-    }
-
-    private String getArrayValue(String[] values, int index) {
-        if (values == null || index < 0 || index >= values.length) return null;
-        return trim(values[index]);
-    }
-
-    private boolean isAllBlank(String... values) {
-        for (String value : values) if (value != null && !value.isBlank()) return false;
-        return true;
-    }
-
-    private int parseInteger(String rawValue) {
-        if (rawValue == null || rawValue.isBlank()) return 0;
-        try { return Integer.parseInt(rawValue.trim()); } catch (NumberFormatException ex) { return -1; }
-    }
-
-    private BigDecimal parseBigDecimal(String rawValue) {
-        if (rawValue == null || rawValue.isBlank()) return null;
-        try { return new BigDecimal(rawValue); } catch (NumberFormatException ex) { return null; }
-    }
-
-    private String normalizeCurrencyValue(String rawValue) {
-        if (rawValue == null || rawValue.isBlank()) return null;
-        return rawValue.replace("đ", "").replace("₫", "").replace("VND", "").replace("vnd", "").replace(".", "").replace(",", "").replaceAll("\\s+", "").trim();
-    }
-
-    private String normalizeHex(String rawHex) {
-        if (rawHex == null || rawHex.isBlank()) return null;
-        String hex = rawHex.trim().toUpperCase();
-        if (!hex.startsWith("#")) hex = "#" + hex;
-        return hex;
-    }
-
     private Part getImagePartSafely(HttpServletRequest request) {
-        try { return request.getPart("productImage"); } catch (Exception ex) { return null; }
+        try {
+            return request.getPart("productImage");
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private String saveImageFile(HttpServletRequest request, Part imagePart) throws IOException {
         String rawSubmittedFileName = imagePart.getSubmittedFileName();
         if (rawSubmittedFileName == null || rawSubmittedFileName.isBlank()) return null;
+
         String submittedFileName = Paths.get(rawSubmittedFileName).getFileName().toString();
         if (submittedFileName.isBlank()) return null;
+
         String extension = "";
         int dotIndex = submittedFileName.lastIndexOf('.');
         if (dotIndex >= 0) extension = submittedFileName.substring(dotIndex);
+
         String storedFileName = "product-" + UUID.randomUUID().toString().replace("-", "") + extension;
         Path uploadDir = resolveUploadDirectory();
         Files.createDirectories(uploadDir);
         Path destination = uploadDir.resolve(storedFileName);
         imagePart.write(destination.toAbsolutePath().toString());
+
         return request.getContextPath() + "/assets/product-images/" + storedFileName;
     }
 
@@ -828,24 +743,24 @@ public class ProductManagementServlet extends HttpServlet {
         String realPath = requestSafeRealPath();
         if (realPath != null && !realPath.isBlank()) {
             Path deployedAssetsDir = Paths.get(realPath, "assets", "product-images");
-            Path parent = deployedAssetsDir.getParent();
-            if (parent != null) {
-                return deployedAssetsDir;
-            }
+            if (deployedAssetsDir.getParent() != null) return deployedAssetsDir;
         }
+
         String projectRoot = System.getProperty("user.dir");
         if (projectRoot != null && !projectRoot.isBlank()) {
             Path projectAssetsDir = Paths.get(projectRoot, "src", "main", "webapp", "assets", "product-images");
-            Path parent = projectAssetsDir.getParent();
-            if (parent != null && Files.exists(parent)) {
-                return projectAssetsDir;
-            }
+            if (projectAssetsDir.getParent() != null && Files.exists(projectAssetsDir.getParent())) return projectAssetsDir;
         }
+
         return Paths.get(System.getProperty("java.io.tmpdir"), "fashion-management-system", "product-images");
     }
 
     private String requestSafeRealPath() {
-        try { return getServletContext().getRealPath("/"); } catch (Exception ex) { return null; }
+        try {
+            return getServletContext().getRealPath("/");
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private boolean isProductImageRequest(HttpServletRequest request) {
@@ -856,37 +771,8 @@ public class ProductManagementServlet extends HttpServlet {
                 || ("/admin/products".equals(servletPath) && pathInfo != null && pathInfo.startsWith("/assets/product-images/"));
     }
 
-    private <T> PageSlice<T> paginate(List<T> items, int requestedPage, int pageSize) {
-        int totalItems = items.size();
-        int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / pageSize));
-        int currentPage = Math.min(Math.max(1, requestedPage), totalPages);
-        int fromIndex = Math.max(0, (currentPage - 1) * pageSize);
-        int toIndex = Math.min(totalItems, fromIndex + pageSize);
-        List<T> pageItems = items.subList(fromIndex, toIndex);
-        return new PageSlice<>(pageItems, currentPage, totalPages, totalItems);
-    }
-
-    private int parsePositiveInt(String value, int fallback) {
-        try {
-            int parsed = Integer.parseInt(value);
-            return parsed > 0 ? parsed : fallback;
-        } catch (Exception ex) {
-            return fallback;
-        }
-    }
-
-    private String buildProductManagementQuery(HttpServletRequest request) {
-        return request.getParameterMap().entrySet().stream()
-                .filter(entry -> !"page".equals(entry.getKey()))
-                .flatMap(entry -> Arrays.stream(entry.getValue()).map(value -> entry.getKey() + "=" + value))
-                .reduce((left, right) -> left + "&" + right)
-                .orElse("");
-    }
-
-    private record PageSlice<T>(List<T> items, int currentPage, int totalPages, int totalItems) {
-    }
-
-    private void serveProductImage(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void serveProductImage(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
         String imageName = extractRequestedImageName(request);
         if (imageName == null || imageName.isBlank()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -908,38 +794,170 @@ public class ProductManagementServlet extends HttpServlet {
 
     private String extractRequestedImageName(HttpServletRequest request) {
         String path = request.getPathInfo();
-        if (path == null || path.isBlank()) {
-            path = request.getServletPath();
-        }
-        if (path == null || path.isBlank()) {
-            return null;
-        }
+        if (path == null || path.isBlank()) path = request.getServletPath();
+        if (path == null || path.isBlank()) return null;
 
         int lastSlashIndex = path.lastIndexOf('/');
-        if (lastSlashIndex < 0 || lastSlashIndex == path.length() - 1) {
-            return null;
-        }
+        if (lastSlashIndex < 0 || lastSlashIndex == path.length() - 1) return null;
         return Paths.get(path.substring(lastSlashIndex + 1)).getFileName().toString();
     }
 
-    private boolean isAdmin(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Object userObject = request.getSession(false) != null ? request.getSession(false).getAttribute("USER") : null;
+    private <T> PageSlice<T> paginate(List<T> items, int requestedPage, int pageSize) {
+        int totalItems = items.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / pageSize));
+        int currentPage = Math.min(Math.max(1, requestedPage), totalPages);
+        int fromIndex = Math.max(0, (currentPage - 1) * pageSize);
+        int toIndex = Math.min(totalItems, fromIndex + pageSize);
+        List<T> pageItems = fromIndex < toIndex ? items.subList(fromIndex, toIndex) : List.of();
+        return new PageSlice<>(pageItems, currentPage, totalPages, totalItems);
+    }
+
+    private record PageSlice<T>(List<T> items, int currentPage, int totalPages, int totalItems) {
+        public List<T> items() { return items; }
+        public int currentPage() { return currentPage; }
+        public int totalPages() { return totalPages; }
+    }
+
+    private boolean isAdmin(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        Object userObject = request.getSession(false) != null
+                ? request.getSession(false).getAttribute("USER") : null;
+
         if (!(userObject instanceof Account)) {
-            System.out.println("[ProductManagementServlet] Access denied: USER session missing or invalid");
+            System.out.println("[ProductManagementServlet] Access denied: USER session missing");
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return false;
         }
+
         Account account = (Account) userObject;
-        System.out.println("[ProductManagementServlet] Session role = " + account.getRole() + ", email = " + account.getEmail());
         if (account.getRole() == null || !account.getRole().equalsIgnoreCase("Admin")) {
-            System.out.println("[ProductManagementServlet] Access denied: non-admin user redirected to home");
+            System.out.println("[ProductManagementServlet] Access denied: non-admin user");
             response.sendRedirect(request.getContextPath() + "/home");
             return false;
+        }
+
+        return true;
+    }
+
+    private String getAction(HttpServletRequest request) {
+        String action = request.getParameter("action");
+        return action != null ? action : "list";
+    }
+
+    private String getTrimmedParam(HttpServletRequest request, String param) {
+        return getTrimmedParam(request, param, null);
+    }
+
+    private String getTrimmedParam(HttpServletRequest request, String param, String defaultValue) {
+        String value = request.getParameter(param);
+        return value != null ? value.trim() : defaultValue;
+    }
+
+    private int maxLength(String[]... arrays) {
+        int max = 0;
+        for (String[] array : arrays) {
+            if (array != null && array.length > max) max = array.length;
+        }
+        return max;
+    }
+
+    private String getArrayValue(String[] values, int index) {
+        if (values == null || index < 0 || index >= values.length) return null;
+        return getTrimmed(values[index]);
+    }
+
+    private boolean isAllBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) return false;
         }
         return true;
     }
 
-    private String trim(String value) {
-        return value == null ? null : value.trim();
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String getTrimmed(String value) {
+        return value != null ? value.trim() : null;
+    }
+
+    private int parseInteger(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) return 0;
+        try {
+            return Integer.parseInt(rawValue.trim());
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    private BigDecimal parseBigDecimal(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) return null;
+        try {
+            return new BigDecimal(rawValue);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String normalizeCurrencyValue(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) return null;
+        return rawValue.replace("đ", "").replace("₫", "").replace("VND", "").replace("vnd", "")
+                .replace(".", "").replace(",", "").replaceAll("\\s+", "").trim();
+    }
+
+    private String normalizeHex(String rawHex) {
+        if (rawHex == null || rawHex.isBlank()) return null;
+        String hex = rawHex.trim().toUpperCase();
+        if (!hex.startsWith("#")) hex = "#" + hex;
+        return hex;
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private int parsePositiveInt(String value, int fallback) {
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed > 0 ? parsed : fallback;
+        } catch (Exception ex) {
+            return fallback;
+        }
+    }
+
+    private String buildProductManagementQuery(HttpServletRequest request) {
+        return request.getParameterMap().entrySet().stream()
+                .filter(entry -> !"page".equals(entry.getKey()))
+                .flatMap(entry -> Arrays.stream(entry.getValue()).map(value -> entry.getKey() + "=" + value))
+                .reduce((left, right) -> left + "&" + right)
+                .orElse("");
+    }
+
+    private void redirectToList(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.sendRedirect(request.getContextPath() + "/admin/products");
+    }
+
+    private void redirectWithMessage(HttpServletRequest request, HttpServletResponse response,
+                                    String message, String type) throws IOException {
+        response.sendRedirect(request.getContextPath() + "/admin/products?message=" + message + "&messageType=" + type);
+    }
+
+    private void redirectWithTab(HttpServletRequest request, HttpServletResponse response,
+                                String tab, String message, String type) throws IOException {
+        response.sendRedirect(request.getContextPath() + "/admin/products?tab=" + tab
+                + "&message=" + message + "&messageType=" + type);
+    }
+
+    private void forwardWithError(HttpServletRequest request, HttpServletResponse response,
+                                  Product product, String formAction, String pageTitle, String error)
+            throws ServletException, IOException {
+        loadReferenceData(request, product.getCategoryId());
+        request.setAttribute("product", product);
+        request.setAttribute("formAction", formAction);
+        request.setAttribute("pageTitle", pageTitle);
+        request.setAttribute("error", error);
+        request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }
 }

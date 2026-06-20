@@ -9,10 +9,10 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260609-friendly-colors-en">
         <style>
-            body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: radial-gradient(circle at top left, rgba(124, 58, 237, 0.18), transparent 28%), radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 24%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
+            body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
             .form-shell { width: min(1080px, calc(100% - 40px)); margin: 28px auto; }
-            .form-panel { background: rgba(255, 255, 255, 0.94); border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 30px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16); overflow: hidden; backdrop-filter: blur(12px); }
-            .form-hero { padding: 30px; background: linear-gradient(135deg, #ffffff 0%, #ede9fe 100%); border-bottom: 1px solid #e2e8f0; }
+            .form-panel { background: #ffffff; border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 24px; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1); overflow: hidden; contain: content; }
+            .form-hero { padding: 30px; background: #ffffff; border-bottom: 1px solid #e2e8f0; }
             .eyebrow { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.74rem; font-weight: 700; color: #7c3aed; }
             .form-panel h1 { margin: 0; font-size: 2.15rem; line-height: 1.12; }
             .form-body { padding: 30px; display: grid; gap: 24px; }

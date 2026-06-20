@@ -8,12 +8,15 @@ import DALs.CartDAO;
 import DALs.CartItemDAO;
 import Models.Account;
 import Models.Cart;
+import Models.CartItemView;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -44,17 +47,18 @@ public class ViewCartServlet extends HttpServlet {
 
         if (cart != null) {
 
-            request.setAttribute(
-                    "cartItems",
-                    itemDAO.getCartItems(cart.getCartId()));
+            List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+            request.setAttribute("cartItems", items);
+            request.setAttribute("total", itemDAO.getCartTotal(cart.getCartId()));
 
-            request.setAttribute(
-                    "total",
-                    itemDAO.getCartTotal(cart.getCartId()));
+            // Update cart count in session for header display
+            int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
+            request.getSession().setAttribute("cartCount", cartCount);
 
         } else {
-
+            request.setAttribute("cartItems", new ArrayList<>());
             request.setAttribute("total", 0);
+            request.getSession().setAttribute("cartCount", 0);
         }
 
         request.getRequestDispatcher(

@@ -92,14 +92,12 @@ public class CartItemDAO extends DBContext {
                 + "s.sizeName, "
                 + "c.colorName, "
                 + "ISNULL(pv.priceOverride, p.basePrice) AS price, "
-                + "pi.imageUrl "
+                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS imageUrl "
                 + "FROM CartItems ci "
                 + "JOIN ProductVariants pv ON ci.variantId = pv.variantId "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "LEFT JOIN ProductImages pi ON p.productId = pi.productId "
-                + "AND pi.isPrimary = 1 "
                 + "WHERE ci.cartId=?";
 
         try {
@@ -126,7 +124,6 @@ public class CartItemDAO extends DBContext {
                 item.setPrice(price);
                 item.setQuantity(quantity);
 
-                // 🔥 FIX QUAN TRỌNG: tính subtotal
                 item.setSubtotal(price * quantity);
 
                 list.add(item);

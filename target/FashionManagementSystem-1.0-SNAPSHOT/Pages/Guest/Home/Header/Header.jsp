@@ -61,11 +61,15 @@
     </div>
     
     <div class="header-actions">
-        <div class="user-logged-info" style="display: flex; align-items: center; gap: 10px; margin-right: 12px;">
-            <span class="user-name-display" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; color: #000000; letter-spacing: 0.5px;">
-                CART (${empty cartCount ? 0 : cartCount})
-            </span>
-        </div>
+        <a href="${pageContext.request.contextPath}/cart" class="cart-icon-btn" title="View Cart">
+            <span class="material-symbols-outlined">shopping_bag</span>
+            <span class="cart-badge" id="cartBadge">${empty sessionScope.cartCount ? 0 : sessionScope.cartCount}</span>
+        </a>
+        <c:if test="${not empty sessionScope.USER}">
+            <a href="${pageContext.request.contextPath}/wishlist" class="wishlist-icon-btn" title="My Wishlist">
+                <span class="material-symbols-outlined">favorite</span>
+            </a>
+        </c:if>
         <c:choose>
             <c:when test="${not empty sessionScope.USER}">
                 <div class="user-logged-info" style="display: flex; align-items: center; gap: 15px;">

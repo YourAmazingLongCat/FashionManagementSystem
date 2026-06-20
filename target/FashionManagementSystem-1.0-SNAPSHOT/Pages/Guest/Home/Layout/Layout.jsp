@@ -18,6 +18,7 @@
             <%@ include file="/Pages/Guest/Home/Layout/Layout.css" %>
             <%@ include file="/Pages/Guest/Home/Header/Header.css" %>
             <%@ include file="/Pages/Guest/Home/Content/Content.css" %>
+            <%@ include file="/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css" %>
         </style>
     </head>
     <body>
