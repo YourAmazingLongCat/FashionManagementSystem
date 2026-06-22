@@ -6,7 +6,7 @@ package Controllers;
 
 import Models.Order;
 import Models.OrderItem;
-import Models.User;
+import Models.Account;
 import DALs.OrderDAO;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class OrderReviewServlet extends HttpServlet {
             return;
         }
 
-        User user = (User) session.getAttribute("user");
+        Account user = (Account) session.getAttribute("user");
 
         if (user == null) {
             response.sendRedirect(request.getContextPath() + "/LoginServlet");

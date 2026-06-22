@@ -78,7 +78,7 @@ public class OrderDAO extends DBContext {
             
             if (rs.next()) {
                 return rs.getInt(1); 
-            } 
+            }
             
         } catch (SQLException e) {
             System.out.println("createOrder error: " + e);
@@ -116,22 +116,22 @@ public class OrderDAO extends DBContext {
         return false;
     }
     
-//    public void AddOrderItems(int orderId, List<Cart> cart){
-//        String query = "INSERT INTO OrderItems (OrderID, ProductID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)";
-//        try {
-//            PreparedStatement stmt = connection.prepareStatement(query);
-//            
-//            for (Cart item : cart) {
-//                stmt.setInt(1, orderId);
-//                stmt.setInt(2, item.getProductID());
-//                stmt.setInt(3, item.getQuantity());
-//                stmt.setDouble(4, item.getProductPrice());
-//                stmt.addBatch();
-//            }
-//            
-//            stmt.executeBatch();
-//        } catch (SQLException e) {
-//            System.out.println("deleteOrderById error: " + e);
-//        }
-//    }
+    public void AddOrderItems(int orderId, List<Cart> cart){
+        String query = "INSERT INTO OrderItems (OrderID, ProductID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)";
+        try {
+            PreparedStatement stmt = connection.prepareStatement(query);
+            
+            for (Cart item : cart) {
+                stmt.setInt(1, orderId);
+                stmt.setInt(2, item.getProductID());
+                stmt.setInt(3, item.getQuantity());
+                stmt.setDouble(4, item.getProductPrice());
+                stmt.addBatch();
+            }
+            
+            stmt.executeBatch();
+        } catch (SQLException e) {
+            System.out.println("deleteOrderById error: " + e);
+        }
+    }
 }
