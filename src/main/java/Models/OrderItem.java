@@ -1,25 +1,21 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package Models;
 
-/**
- *
- * @author CE181629 - Ngo Manh Quan
- */
+import java.math.BigDecimal;
+
 public class OrderItem {
+
     private String orderItemId;
     private String orderId;
     private String variantId;
     private int quantity;
-    private double unitPrice;
-    private double discountAmount;
+    private BigDecimal unitPrice;
+    private BigDecimal discountAmount;
 
     public OrderItem() {
     }
 
-    public OrderItem(String orderItemId, String orderId, String variantId, int quantity, double unitPrice, double discountAmount) {
+    public OrderItem(String orderItemId, String orderId, String variantId,
+            int quantity, BigDecimal unitPrice, BigDecimal discountAmount) {
         this.orderItemId = orderItemId;
         this.orderId = orderId;
         this.variantId = variantId;
@@ -60,22 +56,25 @@ public class OrderItem {
         this.quantity = quantity;
     }
 
-    public double getUnitPrice() {
+    public BigDecimal getUnitPrice() {
         return unitPrice;
     }
 
-    public void setUnitPrice(double unitPrice) {
+    public void setUnitPrice(BigDecimal unitPrice) {
         this.unitPrice = unitPrice;
     }
 
-    public double getDiscountAmount() {
+    public BigDecimal getDiscountAmount() {
         return discountAmount;
     }
 
-    public void setDiscountAmount(double discountAmount) {
+    public void setDiscountAmount(BigDecimal discountAmount) {
         this.discountAmount = discountAmount;
     }
-    
-    
-    
+
+    public BigDecimal getSubTotal() {
+        BigDecimal price = unitPrice == null ? BigDecimal.ZERO : unitPrice;
+        BigDecimal discount = discountAmount == null ? BigDecimal.ZERO : discountAmount;
+        return price.multiply(BigDecimal.valueOf(quantity)).subtract(discount);
+    }
 }

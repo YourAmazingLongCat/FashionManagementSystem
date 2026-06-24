@@ -1,119 +1,105 @@
-<%-- 
-    Document   : checkout
-    Created on : Jun 22, 2026, 10:51:06 PM
-    Author     : CE181629 - Ngo Manh Quan
---%>
-
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.math.BigDecimal" %>
+<%@ page import="java.text.NumberFormat" %>
+<%@ page import="java.util.Locale" %>
+<%@ page import="Models.CartItem" %>
+<%!
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+%>
+<%
+    List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
+    String errorMessage = (String) request.getAttribute("errorMessage");
+    NumberFormat currency = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+    BigDecimal totalAmount = BigDecimal.ZERO;
+    if (cart != null) {
+        for (CartItem item : cart) {
+            if (item != null && item.getUnitPrice() != null) {
+                totalAmount = totalAmount.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            }
+        }
+    }
+%>
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Thanh toán | Shopee Style</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <link href="${pageContext.request.contextPath}/Pages/Customer/checkout.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/order-ui.css">
 </head>
-<body>
-
-<div class="container py-5">
-    <h3 class="mb-4">💳 Thanh Toán</h3>
-
-    <c:if test="${not empty error}">
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            ⚠️ ${error}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<body class="order-page">
+<div class="order-shell">
+    <div class="order-topbar">
+        <div>
+            <div class="order-breadcrumb">Customer / Checkout</div>
+            <h1 class="order-title">Checkout</h1>
+            <p class="order-subtitle">Confirm your shipping information before placing the order.</p>
         </div>
-    </c:if>
+        <a class="order-btn order-btn-light" href="<%= request.getContextPath() %>/Pages/Customer/Cart.jsp">Back to cart</a>
+    </div>
 
-    <form id="checkoutForm" action="${pageContext.request.contextPath}/CheckoutServlet" method="post">
-        <div class="row">
-            
-            <div class="col-md-7">
-                
-                <div class="checkout-section">
-                    <div class="section-title text-shopee">
-                        📍 Thông Tin Nhận Hàng
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Số điện thoại nhận hàng</label>
-                        <input type="tel" name="phone" class="form-control" placeholder="Nhập số điện thoại..." required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Địa chỉ chi tiết</label>
-                        <textarea name="shippingAddress" class="form-control" rows="3" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." required></textarea>
-                    </div>
-                </div>
+    <% if (errorMessage != null) { %>
+        <div class="order-alert order-alert-error"><%= errorMessage %></div>
+    <% } %>
 
-                <div class="checkout-section">
-                    <div class="section-title">
-                        📦 Sản phẩm đã chọn
+    <div class="order-grid order-grid-2">
+        <form class="order-card order-card-pad" action="<%= request.getContextPath() %>/customer/checkout" method="post">
+            <h2 class="order-section-title">Shipping information</h2>
+
+            <div class="order-form-row">
+                <label class="order-label" for="shippingAddress">Shipping address</label>
+                <textarea class="order-textarea" id="shippingAddress" name="shippingAddress" required placeholder="Enter your full address..."></textarea>
+            </div>
+
+            <div class="order-form-row">
+                <label class="order-label" for="phone">Phone number</label>
+                <input class="order-input" id="phone" type="tel" name="phone" required placeholder="Example: 0901234567">
+            </div>
+
+            <button class="order-btn order-btn-primary" type="submit" style="width: 100%;">Place order</button>
+        </form>
+
+        <aside class="order-card order-card-pad">
+            <h2 class="order-section-title">Order summary</h2>
+
+            <div class="order-items">
+                <% if (cart == null || cart.isEmpty()) { %>
+                    <div class="order-empty">
+                        <h3>Your cart is empty</h3>
+                        <p>Add products before checkout.</p>
                     </div>
-                    <div class="product-list">
-                        <c:forEach items="${checkoutItems}" var="item">
-                            <div class="product-item">
-                                <img src="${item.imageUrl}" class="product-img">
-                                <div style="flex: 1;">
-                                    <div class="fw-medium text-truncate" style="max-width: 300px;">${item.productName}</div>
-                                    <small class="text-muted">Phân loại: ${item.sizeName} / ${item.colorName}</small>
-                                </div>
-                                <div class="text-muted small">x${item.quantity}</div>
-                                <div class="fw-semibold text-end" style="min-width: 90px;">${item.subtotal}₫</div>
+                <% } else { %>
+                    <% for (CartItem item : cart) { %>
+                        <div class="order-item-card">
+                            <div class="order-item-thumb">PR</div>
+                            <div>
+                                <div class="order-item-name">Variant <%= safe(item.getVariantId()) %></div>
+                                <div class="order-muted">Quantity: <%= item.getQuantity() %> × <%= currency.format(item.getUnitPrice()) %></div>
                             </div>
-                        </c:forEach>
-                    </div>
-                </div>
-
+                            <div class="order-price"><%= currency.format(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))) %></div>
+                        </div>
+                    <% } %>
+                <% } %>
             </div>
 
-            <div class="col-md-5">
-                <div class="checkout-section sticky-panel">
-                    <div class="section-title border-bottom pb-2">
-                        💰 Tổng kết đơn hàng
-                    </div>
-                    
-                    <div class="mt-3">
-                        <div class="price-row">
-                            <span>Tổng tiền hàng:</span>
-                            <span>${total}₫</span>
-                        </div>
-                        <div class="price-row">
-                            <span>Phí vận chuyển:</span>
-                            <span class="text-success">Miễn phí</span>
-                        </div>
-                        <hr>
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <span class="fw-bold">Tổng thanh toán:</span>
-                            <h3 class="text-shopee m-0 fw-bold">${total}₫</h3>
-                        </div>
-                    </div>
-
-                    <button type="submit" id="btnSubmitOrder" class="btn btn-shopee w-100 rounded">
-                        Đặt Hàng Ngay
-                    </button>
-                    
-                    <div class="text-center mt-3">
-                        <a href="${pageContext.request.contextPath}/Pages/Customer/Cart.jsp" class="text-decoration-none small text-muted">
-                            ← Quay lại chỉnh sửa giỏ hàng
-                        </a>
-                    </div>
-                </div>
+            <div style="height: 18px"></div>
+            <div class="order-summary-row">
+                <span>Subtotal</span>
+                <strong><%= currency.format(totalAmount) %></strong>
             </div>
-
-        </div>
-    </form>
+            <div class="order-summary-row">
+                <span>Shipping fee</span>
+                <strong>0 ₫</strong>
+            </div>
+            <div class="order-summary-row">
+                <span>Total</span>
+                <span class="order-summary-total"><%= currency.format(totalAmount) %></span>
+            </div>
+        </aside>
+    </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-    document.getElementById('checkoutForm').addEventListener('submit', function() {
-        const btn = document.getElementById('btnSubmitOrder');
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý đơn hàng...`;
-    });
-</script>
 </body>
 </html>
