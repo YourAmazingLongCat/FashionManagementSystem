@@ -1,68 +1,86 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package Models;
 
-/**
- *
- * @author CE181629 - Ngo Manh Quan
- */
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 public class Order {
-    private int orderId;
-    private int userId;
-    private String orderDate;
-    private String status;
-    private double totalAmount;
+
+    private String orderId;
+    private String customerId;
+    private String orderStatus;
+    private String shippingAddress;
+    private String phone;
+    private LocalDateTime placedAt;
+    private BigDecimal totalAmount;
 
     public Order() {
     }
 
-    public Order(int orderId, int userId, String orderDate, String status, int totalAmount) {
+    public Order(String orderId, String customerId, String orderStatus,
+            String shippingAddress, String phone, LocalDateTime placedAt,
+            BigDecimal totalAmount) {
         this.orderId = orderId;
-        this.userId = userId;
-        this.orderDate = orderDate;
-        this.status = status;
+        this.customerId = customerId;
+        this.orderStatus = orderStatus;
+        this.shippingAddress = shippingAddress;
+        this.phone = phone;
+        this.placedAt = placedAt;
         this.totalAmount = totalAmount;
     }
 
-    public int getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(int orderId) {
+    public void setOrderId(String orderId) {
         this.orderId = orderId;
     }
 
-    public int getUserId() {
-        return userId;
+    public String getCustomerId() {
+        return customerId;
     }
 
-    public void setUserId(int userId) {
-        this.userId = userId;
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
     }
 
-    public String getOrderDate() {
-        return orderDate;
+    public String getOrderStatus() {
+        return orderStatus;
     }
 
-    public void setOrderDate(String orderDate) {
-        this.orderDate = orderDate;
+    public void setOrderStatus(String orderStatus) {
+        this.orderStatus = orderStatus;
     }
 
-    public String getStatus() {
-        return status;
+    public String getShippingAddress() {
+        return shippingAddress;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setShippingAddress(String shippingAddress) {
+        this.shippingAddress = shippingAddress;
     }
 
-    public double getTotalAmount() {
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public LocalDateTime getPlacedAt() {
+        return placedAt;
+    }
+
+    public void setPlacedAt(LocalDateTime placedAt) {
+        this.placedAt = placedAt;
+    }
+
+    public BigDecimal getTotalAmount() {
         return totalAmount;
     }
 
-    public void setTotalAmount(double totalAmount) {
+    public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
     }
 }
