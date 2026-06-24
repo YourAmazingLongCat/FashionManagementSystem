@@ -279,14 +279,14 @@
                         </div>
                     </div>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="delete-form">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="delete-form">
                         <input type="hidden" name="action" value="deleteCategory">
                         <input type="hidden" name="categoryId" value="${category.categoryId}">
 
                         <div class="form-actions">
                             <div class="action-note">Go back if you want to keep this category available for products.</div>
                             <div class="action-buttons">
-                                <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=categories">Back to categories</a>
+                                <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=categories">Back to categories</a>
                                 <button type="submit" class="danger-btn">Delete category</button>
                             </div>
                         </div>

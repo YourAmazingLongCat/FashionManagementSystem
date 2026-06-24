@@ -66,12 +66,12 @@
                         <div class="delete-row"><span>Category</span><strong>${size.categoryName}</strong></div>
                     </div>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="form-actions">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="form-actions">
                         <input type="hidden" name="action" value="deleteSize">
                         <input type="hidden" name="sizeId" value="${size.sizeId}">
                         <span class="action-note">This action cannot be undone.</span>
                         <div class="action-buttons">
-                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=sizes">Cancel</a>
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=sizes">Cancel</a>
                             <button type="submit" class="danger-btn">Delete size</button>
                         </div>
                     </form>

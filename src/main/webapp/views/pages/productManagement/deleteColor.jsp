@@ -86,12 +86,12 @@
                         </div>
                     </div>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="form-actions">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="form-actions">
                         <input type="hidden" name="action" value="deleteColor">
                         <input type="hidden" name="colorId" value="${color.colorId}">
                         <span class="action-note">This action cannot be undone.</span>
                         <div class="action-buttons">
-                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=colors">Cancel</a>
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=colors">Cancel</a>
                             <button type="submit" class="danger-btn">Delete color</button>
                         </div>
                     </form>

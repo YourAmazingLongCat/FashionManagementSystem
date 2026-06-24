@@ -282,14 +282,14 @@
                         </div>
                     </div>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="delete-form">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="delete-form">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="productId" value="${product.productId}">
 
                         <div class="form-actions">
                             <div class="action-note">You can go back if you want to keep this product in the catalog.</div>
                             <div class="action-buttons">
-                                <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=products">Back to products</a>
+                                <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=products">Back to products</a>
                                 <button type="submit" class="danger-btn">Delete product</button>
                             </div>
                         </div>

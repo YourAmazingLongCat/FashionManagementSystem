@@ -3,10 +3,13 @@ package Services;
 import DALs.ProductDAO;
 import DALs.ProductImageDAO;
 import DALs.ProductVariantDAO;
+import Controllers.ProductManagementServlet;
 import Models.Product;
 import Models.ProductVariant;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 public class ProductService {
@@ -22,10 +25,16 @@ public class ProductService {
     }
 
     public ProductDAO.ProductResult getProducts(String keyword, String status, String categoryId, int page, int pageSize) {
+        return getProducts(keyword, status, categoryId, null, null, null, page, pageSize);
+    }
+
+    public ProductDAO.ProductResult getProducts(String keyword, String status, String categoryId,
+                                              String skuFilter, String sizeFilter, String colorFilter,
+                                              int page, int pageSize) {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
         if (pageSize > 100) pageSize = 100;
-        return productDAO.getProductsFiltered(keyword, status, categoryId, page, pageSize);
+        return productDAO.getProductsFiltered(keyword, status, categoryId, skuFilter, sizeFilter, colorFilter, page, pageSize);
     }
 
     public Product getProduct(String productId) {
@@ -43,24 +52,40 @@ public class ProductService {
         if (!isValidForCreate(product)) return false;
         boolean productCreated = productDAO.createProduct(product);
         if (!productCreated) return false;
-        return saveProductExtras(product);
+        return saveProductExtras(product, false);
     }
 
     public boolean updateProduct(Product product) {
         if (!isValidForUpdate(product)) return false;
         Product existing = productDAO.getProductById(product.getProductId());
         if (existing == null) return false;
+
+        String oldImageUrl = existing.getPrimaryImageUrl();
         boolean productUpdated = productDAO.updateProduct(product);
         if (!productUpdated) return false;
-        return saveProductExtras(product);
+
+        boolean result = saveProductExtras(product, true);
+
+        if (result && product.getPrimaryImageUrl() != null
+                && !product.getPrimaryImageUrl().isBlank()
+                && (oldImageUrl == null || !oldImageUrl.equals(product.getPrimaryImageUrl()))) {
+            deleteOldImageFile(oldImageUrl);
+        }
+
+        return result;
     }
 
     public boolean deleteProduct(String productId) {
         if (productId == null || productId.isBlank()) return false;
-        return productDAO.deleteProduct(productId);
+        Product existing = productDAO.getProductById(productId);
+        boolean result = productDAO.deleteProduct(productId);
+        if (result && existing != null && existing.getPrimaryImageUrl() != null) {
+            deleteOldImageFile(existing.getPrimaryImageUrl());
+        }
+        return result;
     }
 
-    private boolean saveProductExtras(Product product) {
+    private boolean saveProductExtras(Product product, boolean isUpdate) {
         if (product == null || product.getProductId() == null) return false;
 
         boolean imageSaved = true;
@@ -76,6 +101,25 @@ public class ProductService {
         }
 
         return imageSaved && variantsSaved;
+    }
+
+    private void deleteOldImageFile(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) return;
+
+        try {
+            String fileName = imageDAO.getImageFileNameByUrl(imageUrl);
+            if (fileName == null || fileName.isBlank()) return;
+
+            Path uploadDir = ProductManagementServlet.getExternalUploadDirectory();
+            Path imagePath = uploadDir.resolve(fileName).normalize();
+
+            if (Files.exists(imagePath) && Files.isRegularFile(imagePath)) {
+                Files.delete(imagePath);
+                System.out.println("Deleted old image file: " + imagePath);
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to delete old image file: " + e.getMessage());
+        }
     }
 
     private boolean isValidForCreate(Product product) {

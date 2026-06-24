@@ -199,7 +199,7 @@
                         <div class="alert">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="category-form">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="category-form">
                         <input type="hidden" name="action" value="${formAction}">
                         <c:if test="${formAction eq 'editCategory'}">
                             <input type="hidden" name="categoryId" value="${category.categoryId}">
@@ -228,7 +228,7 @@
                         </section>
 
                         <div class="form-actions">
-                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=categories">Back to categories</a>
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=categories">Back to categories</a>
                             <button type="submit" class="primary-btn">${formAction eq 'editCategory' ? 'Save changes' : 'Create category'}</button>
                         </div>
                     </form>

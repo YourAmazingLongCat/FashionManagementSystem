@@ -54,7 +54,7 @@
                         <div class="alert">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="color-form">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="color-form">
                         <input type="hidden" name="action" value="${formAction}">
                         <c:if test="${formAction eq 'editColor'}">
                             <input type="hidden" name="colorId" value="${color.colorId}">
@@ -89,7 +89,7 @@
                         </section>
 
                         <div class="form-actions">
-                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=colors">Back</a>
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=colors">Back</a>
                             <button type="submit" class="primary-btn">${formAction eq 'editColor' ? 'Save changes' : 'Add color'}</button>
                         </div>
                     </form>

@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@WebServlet(name = "ProductManagementServlet", urlPatterns = {"/admin/products", "/assets/product-images/*"})
+@WebServlet(name = "ProductManagementServlet", urlPatterns = {"/staff/products", "/assets/product-images/*"})
 @MultipartConfig
 public class ProductManagementServlet extends HttpServlet {
 
@@ -54,29 +54,29 @@ public class ProductManagementServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!isAdmin(request, response)) {
-            return;
-        }
-
-        String action = getAction(request);
-
         if (isProductImageRequest(request)) {
             serveProductImage(request, response);
             return;
         }
+
+        if (!isStaff(request, response)) {
+            return;
+        }
+
+        String action = getAction(request);
 
         switch (action) {
             case "create" -> showCreateForm(request, response);
             case "edit" -> showEditForm(request, response);
             case "delete" -> showDeleteForm(request, response);
             case "sizesByCategory" -> writeSizesByCategoryJson(request, response);
-            case "createCategory" -> showCategoryForm(request, response, new Category(), "createCategory", "Thêm nhóm sản phẩm");
+            case "createCategory" -> showCategoryForm(request, response, new Category(), "createCategory", "Add Category");
             case "editCategory" -> showEditCategoryForm(request, response);
             case "deleteCategory" -> showDeleteCategoryForm(request, response);
-            case "createColor" -> showColorForm(request, response, new Color(), "createColor", "Thêm màu sắc");
+            case "createColor" -> showColorForm(request, response, new Color(), "createColor", "Add Color");
             case "editColor" -> showEditColorForm(request, response);
             case "deleteColor" -> showDeleteColorForm(request, response);
-            case "createSize" -> showSizeForm(request, response, new Size(), "createSize", "Thêm kích cỡ");
+            case "createSize" -> showSizeForm(request, response, new Size(), "createSize", "Add Size");
             case "editSize" -> showEditSizeForm(request, response);
             case "deleteSize" -> showDeleteSizeForm(request, response);
             default -> showProductList(request, response);
@@ -87,7 +87,7 @@ public class ProductManagementServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        if (!isAdmin(request, response)) {
+        if (!isStaff(request, response)) {
             return;
         }
 
@@ -113,7 +113,7 @@ public class ProductManagementServlet extends HttpServlet {
     private void showProductList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         if (!productService.isDatabaseReady()) {
-            request.setAttribute("error", "Không thể kết nối cơ sở dữ liệu. Vui lòng kiểm tra lại cấu hình DB.");
+            request.setAttribute("error", "Unable to connect to database. Please check DB configuration.");
         }
 
         String keyword = getTrimmedParam(request, "keyword");
@@ -162,7 +162,7 @@ public class ProductManagementServlet extends HttpServlet {
             throws ServletException, IOException {
         request.setAttribute("product", new Product());
         request.setAttribute("formAction", "create");
-        request.setAttribute("pageTitle", "Thêm sản phẩm");
+        request.setAttribute("pageTitle", "Add Product");
         loadReferenceData(request, null);
         request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }
@@ -179,7 +179,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         request.setAttribute("product", product);
         request.setAttribute("formAction", "edit");
-        request.setAttribute("pageTitle", "Cập nhật sản phẩm");
+        request.setAttribute("pageTitle", "Update Product");
         loadReferenceData(request, product.getCategoryId());
         request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }
@@ -204,7 +204,7 @@ public class ProductManagementServlet extends HttpServlet {
         String error = validateProduct(product);
 
         if (error != null) {
-            forwardWithError(request, response, product, "create", "Thêm sản phẩm", error);
+            forwardWithError(request, response, product, "create", "Add Product", error);
             return;
         }
 
@@ -212,7 +212,7 @@ public class ProductManagementServlet extends HttpServlet {
         if (created) {
             redirectWithMessage(request, response, "Product-created-successfully", "success");
         } else {
-            forwardWithError(request, response, product, "create", "Thêm sản phẩm", "Unable-to-create-product");
+            forwardWithError(request, response, product, "create", "Add Product", "Unable-to-create-product");
         }
     }
 
@@ -222,7 +222,7 @@ public class ProductManagementServlet extends HttpServlet {
         String error = validateProduct(product);
 
         if (error != null) {
-            forwardWithError(request, response, product, "edit", "Cập nhật sản phẩm", error);
+            forwardWithError(request, response, product, "edit", "Update Product", error);
             return;
         }
 
@@ -230,7 +230,7 @@ public class ProductManagementServlet extends HttpServlet {
         if (updated) {
             redirectWithMessage(request, response, "Product-updated-successfully", "success");
         } else {
-            forwardWithError(request, response, product, "edit", "Cập nhật sản phẩm", "Unable-to-update-product");
+            forwardWithError(request, response, product, "edit", "Update Product", "Unable-to-update-product");
         }
     }
 
@@ -256,7 +256,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "categories", "Category-not-found", "error");
             return;
         }
-        showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
+        showCategoryForm(request, response, category, "editCategory", "Update Category");
     }
 
     private void showDeleteCategoryForm(HttpServletRequest request, HttpServletResponse response)
@@ -286,7 +286,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         if (error != null) {
             request.setAttribute("error", error);
-            showCategoryForm(request, response, category, "createCategory", "Thêm nhóm sản phẩm");
+            showCategoryForm(request, response, category, "createCategory", "Add Category");
             return;
         }
 
@@ -295,7 +295,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "categories", "Category-created-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-create-category");
-            showCategoryForm(request, response, category, "createCategory", "Thêm nhóm sản phẩm");
+            showCategoryForm(request, response, category, "createCategory", "Add Category");
         }
     }
 
@@ -306,7 +306,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         if (error != null) {
             request.setAttribute("error", error);
-            showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
+            showCategoryForm(request, response, category, "editCategory", "Update Category");
             return;
         }
 
@@ -315,7 +315,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "categories", "Category-updated-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-update-category");
-            showCategoryForm(request, response, category, "editCategory", "Cập nhật nhóm sản phẩm");
+            showCategoryForm(request, response, category, "editCategory", "Update Category");
         }
     }
 
@@ -340,7 +340,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "colors", "Color-not-found", "error");
             return;
         }
-        showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
+        showColorForm(request, response, color, "editColor", "Update Color");
     }
 
     private void showDeleteColorForm(HttpServletRequest request, HttpServletResponse response)
@@ -370,7 +370,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         if (error != null) {
             request.setAttribute("error", error);
-            showColorForm(request, response, color, "createColor", "Thêm màu sắc");
+            showColorForm(request, response, color, "createColor", "Add Color");
             return;
         }
 
@@ -379,7 +379,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "colors", "Color-created-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-create-color");
-            showColorForm(request, response, color, "createColor", "Thêm màu sắc");
+            showColorForm(request, response, color, "createColor", "Add Color");
         }
     }
 
@@ -390,7 +390,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         if (error != null) {
             request.setAttribute("error", error);
-            showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
+            showColorForm(request, response, color, "editColor", "Update Color");
             return;
         }
 
@@ -399,7 +399,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "colors", "Color-updated-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-update-color");
-            showColorForm(request, response, color, "editColor", "Cập nhật màu sắc");
+            showColorForm(request, response, color, "editColor", "Update Color");
         }
     }
 
@@ -424,7 +424,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "sizes", "Size-not-found", "error");
             return;
         }
-        showSizeForm(request, response, size, "editSize", "Cập nhật kích cỡ");
+        showSizeForm(request, response, size, "editSize", "Update Size");
     }
 
     private void showDeleteSizeForm(HttpServletRequest request, HttpServletResponse response)
@@ -455,7 +455,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         if (error != null) {
             request.setAttribute("error", error);
-            showSizeForm(request, response, size, "createSize", "Thêm kích cỡ");
+            showSizeForm(request, response, size, "createSize", "Add Size");
             return;
         }
 
@@ -464,7 +464,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "sizes", "Size-created-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-create-size");
-            showSizeForm(request, response, size, "createSize", "Thêm kích cỡ");
+            showSizeForm(request, response, size, "createSize", "Add Size");
         }
     }
 
@@ -475,7 +475,7 @@ public class ProductManagementServlet extends HttpServlet {
 
         if (error != null) {
             request.setAttribute("error", error);
-            showSizeForm(request, response, size, "editSize", "Cập nhật kích cỡ");
+            showSizeForm(request, response, size, "editSize", "Update Size");
             return;
         }
 
@@ -484,7 +484,7 @@ public class ProductManagementServlet extends HttpServlet {
             redirectWithTab(request, response, "sizes", "Size-updated-successfully", "success");
         } else {
             request.setAttribute("error", "Unable-to-update-size");
-            showSizeForm(request, response, size, "editSize", "Cập nhật kích cỡ");
+            showSizeForm(request, response, size, "editSize", "Update Size");
         }
     }
 
@@ -561,39 +561,39 @@ public class ProductManagementServlet extends HttpServlet {
     }
 
     private String validateProduct(Product product) {
-        if (isBlank(product.getCategoryId())) return "Vui lòng chọn nhóm sản phẩm.";
-        if (isBlank(product.getName())) return "Vui lòng nhập tên sản phẩm.";
-        if (product.getName().length() > 200) return "Tên sản phẩm không được vượt quá 200 ký tự.";
-        if (product.getBasePrice() == null) return "Vui lòng nhập giá bán hợp lệ.";
-        if (product.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) return "Giá bán phải lớn hơn 0.";
-        if (!VALID_STATUSES.contains(product.getStatus())) return "Trạng thái không hợp lệ.";
-        if (product.getVariants() == null || product.getVariants().isEmpty()) return "Vui lòng thêm ít nhất một lựa chọn bán hàng cho sản phẩm.";
+        if (isBlank(product.getCategoryId())) return "Please select a category.";
+        if (isBlank(product.getName())) return "Please enter product name.";
+        if (product.getName().length() > 200) return "Product name cannot exceed 200 characters.";
+        if (product.getBasePrice() == null) return "Please enter a valid base price.";
+        if (product.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) return "Base price must be greater than 0.";
+        if (!VALID_STATUSES.contains(product.getStatus())) return "Invalid status.";
+        if (product.getVariants() == null || product.getVariants().isEmpty()) return "Please add at least one sales variant for the product.";
         for (ProductVariant variant : product.getVariants()) {
-            if (isBlank(variant.getSizeId())) return "Mỗi lựa chọn phải có kích cỡ.";
-            if (isBlank(variant.getColorId())) return "Mỗi lựa chọn phải có màu sắc.";
-            if (variant.getStockQty() < 0) return "Số lượng tồn không được âm.";
-            if (variant.getPriceOverride() != null && variant.getPriceOverride().compareTo(BigDecimal.ZERO) < 0) return "Giá bán riêng không được âm.";
+            if (isBlank(variant.getSizeId())) return "Each variant must have a size.";
+            if (isBlank(variant.getColorId())) return "Each variant must have a color.";
+            if (variant.getStockQty() < 0) return "Stock quantity cannot be negative.";
+            if (variant.getPriceOverride() != null && variant.getPriceOverride().compareTo(BigDecimal.ZERO) < 0) return "Price override cannot be negative.";
         }
         return null;
     }
 
     private String validateCategory(Category category) {
-        if (isBlank(category.getName())) return "Vui lòng nhập tên nhóm sản phẩm.";
-        if (category.getName().length() > 200) return "Tên nhóm sản phẩm không được vượt quá 200 ký tự.";
+        if (isBlank(category.getName())) return "Please enter category name.";
+        if (category.getName().length() > 200) return "Category name cannot exceed 200 characters.";
         return null;
     }
 
     private String validateColor(Color color) {
-        if (isBlank(color.getColorName())) return "Vui lòng nhập tên màu sắc.";
-        if (color.getColorName().length() > 100) return "Tên màu sắc không được vượt quá 100 ký tự.";
-        if (color.getHexCode() == null || !color.getHexCode().matches("^#[0-9A-Fa-f]{6}$")) return "Vui lòng chọn màu hợp lệ.";
+        if (isBlank(color.getColorName())) return "Please enter color name.";
+        if (color.getColorName().length() > 100) return "Color name cannot exceed 100 characters.";
+        if (color.getHexCode() == null || !color.getHexCode().matches("^#[0-9A-Fa-f]{6}$")) return "Please select a valid color.";
         return null;
     }
 
     private String validateSize(Size size) {
-        if (isBlank(size.getSizeName())) return "Vui lòng nhập tên kích cỡ.";
-        if (size.getSizeName().length() > 50) return "Tên kích cỡ không được vượt quá 50 ký tự.";
-        if (isBlank(size.getCategoryId())) return "Vui lòng chọn nhóm sản phẩm cho kích cỡ này.";
+        if (isBlank(size.getSizeName())) return "Please enter size name.";
+        if (size.getSizeName().length() > 50) return "Size name cannot exceed 50 characters.";
+        if (isBlank(size.getCategoryId())) return "Please select a category for this size.";
         return null;
     }
 
@@ -731,28 +731,37 @@ public class ProductManagementServlet extends HttpServlet {
         if (dotIndex >= 0) extension = submittedFileName.substring(dotIndex);
 
         String storedFileName = "product-" + UUID.randomUUID().toString().replace("-", "") + extension;
-        Path uploadDir = resolveUploadDirectory();
+
+        // Luu vao Assets/Images/Product
+        String realPath = request.getServletContext().getRealPath("/");
+        Path uploadDir = Paths.get(realPath, "Assets", "Images", "Product");
         Files.createDirectories(uploadDir);
         Path destination = uploadDir.resolve(storedFileName);
         imagePart.write(destination.toAbsolutePath().toString());
 
-        return request.getContextPath() + "/assets/product-images/" + storedFileName;
+        String imageUrl = "/Assets/Images/Product/" + storedFileName;
+        System.out.println("[ProductManagementServlet] Image saved: " + destination.toAbsolutePath());
+        System.out.println("[ProductManagementServlet] Image URL: " + imageUrl);
+        System.out.println("[ProductManagementServlet] File exists: " + Files.exists(destination));
+        return imageUrl;
     }
 
-    private Path resolveUploadDirectory() {
-        String realPath = requestSafeRealPath();
-        if (realPath != null && !realPath.isBlank()) {
-            Path deployedAssetsDir = Paths.get(realPath, "assets", "product-images");
-            if (deployedAssetsDir.getParent() != null) return deployedAssetsDir;
+    public static Path getExternalUploadDirectory() {
+        String externalPath = System.getProperty("fashion.upload.path");
+        if (externalPath != null && !externalPath.isBlank()) {
+            return Paths.get(externalPath, "product-images");
         }
 
-        String projectRoot = System.getProperty("user.dir");
-        if (projectRoot != null && !projectRoot.isBlank()) {
-            Path projectAssetsDir = Paths.get(projectRoot, "src", "main", "webapp", "assets", "product-images");
-            if (projectAssetsDir.getParent() != null && Files.exists(projectAssetsDir.getParent())) return projectAssetsDir;
+        String userHome = System.getProperty("user.home");
+        if (userHome != null && !userHome.isBlank()) {
+            return Paths.get(userHome, ".fashion-system", "product-images");
         }
 
         return Paths.get(System.getProperty("java.io.tmpdir"), "fashion-management-system", "product-images");
+    }
+
+    private Path resolveUploadDirectory() {
+        return getExternalUploadDirectory();
     }
 
     private String requestSafeRealPath() {
@@ -768,18 +777,21 @@ public class ProductManagementServlet extends HttpServlet {
         String pathInfo = request.getPathInfo();
         return "/assets/product-images".equals(servletPath)
                 || (servletPath != null && servletPath.startsWith("/assets/product-images"))
-                || ("/admin/products".equals(servletPath) && pathInfo != null && pathInfo.startsWith("/assets/product-images/"));
+                || ("/staff/products".equals(servletPath) && pathInfo != null && pathInfo.startsWith("/assets/product-images/"));
     }
 
     private void serveProductImage(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         String imageName = extractRequestedImageName(request);
+        System.out.println("[ProductManagementServlet] serveProductImage called, imageName: " + imageName);
         if (imageName == null || imageName.isBlank()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
 
-        Path imagePath = resolveUploadDirectory().resolve(imageName).normalize();
+        Path imagePath = getExternalUploadDirectory().resolve(imageName).normalize();
+        System.out.println("[ProductManagementServlet] Image path: " + imagePath.toAbsolutePath());
+        System.out.println("[ProductManagementServlet] File exists: " + Files.exists(imagePath));
         if (!Files.exists(imagePath) || !Files.isRegularFile(imagePath)) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
@@ -818,7 +830,7 @@ public class ProductManagementServlet extends HttpServlet {
         public int totalPages() { return totalPages; }
     }
 
-    private boolean isAdmin(HttpServletRequest request, HttpServletResponse response)
+    private boolean isStaff(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         Object userObject = request.getSession(false) != null
                 ? request.getSession(false).getAttribute("USER") : null;
@@ -830,8 +842,9 @@ public class ProductManagementServlet extends HttpServlet {
         }
 
         Account account = (Account) userObject;
-        if (account.getRole() == null || !account.getRole().equalsIgnoreCase("Admin")) {
-            System.out.println("[ProductManagementServlet] Access denied: non-admin user");
+        String role = account.getRole();
+        if (role == null || (!role.equalsIgnoreCase("Staff"))) {
+            System.out.println("[ProductManagementServlet] Access denied: non-staff user");
             response.sendRedirect(request.getContextPath() + "/home");
             return false;
         }
@@ -936,17 +949,17 @@ public class ProductManagementServlet extends HttpServlet {
 
     private void redirectToList(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
-        response.sendRedirect(request.getContextPath() + "/admin/products");
+        response.sendRedirect(request.getContextPath() + "/staff/products");
     }
 
     private void redirectWithMessage(HttpServletRequest request, HttpServletResponse response,
                                     String message, String type) throws IOException {
-        response.sendRedirect(request.getContextPath() + "/admin/products?message=" + message + "&messageType=" + type);
+        response.sendRedirect(request.getContextPath() + "/staff/products?message=" + message + "&messageType=" + type);
     }
 
     private void redirectWithTab(HttpServletRequest request, HttpServletResponse response,
                                 String tab, String message, String type) throws IOException {
-        response.sendRedirect(request.getContextPath() + "/admin/products?tab=" + tab
+        response.sendRedirect(request.getContextPath() + "/staff/products?tab=" + tab
                 + "&message=" + message + "&messageType=" + type);
     }
 

@@ -73,7 +73,7 @@
                         <span>Stock Out</span>
                     </a>
                 </div>
-                <a class="back-link" href="${pageContext.request.contextPath}/admin/products">
+                <a class="back-link" href="${pageContext.request.contextPath}/staff/products">
                     &#8592; Back
                 </a>
             </aside>

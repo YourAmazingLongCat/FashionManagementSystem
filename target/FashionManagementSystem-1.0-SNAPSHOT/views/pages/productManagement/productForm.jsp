@@ -34,8 +34,10 @@
             textarea { resize: vertical; min-height: 180px; }
             .price-input-wrap { position: relative; }
             .price-suffix { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #64748b; font-weight: 700; pointer-events: none; }
-            .image-preview { width: 140px; height: 140px; border-radius: 20px; object-fit: cover; border: 1px solid #dbe3f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; color: #94a3b8; overflow: hidden; }
+            .image-preview { width: 140px; height: 140px; border-radius: 20px; object-fit: cover; border: 1px solid #dbe3f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; color: #94a3b8; overflow: hidden; flex-shrink: 0; }
             .image-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+            .image-section-grid { align-items: start; }
+            .image-preview-group { align-self: start; }
             .variants-list { display: grid; gap: 16px; }
             .variant-row { border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; background: #ffffff; display: grid; gap: 16px; }
             .variant-row-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -70,7 +72,7 @@
                         <div class="alert alert-error">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="product-form" enctype="multipart/form-data">
+                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="${formAction}">
                         <input type="hidden" name="existingImageUrl" value="${product.primaryImageUrl}">
                         <c:if test="${formAction eq 'edit'}">
@@ -137,17 +139,17 @@
 
                         <section class="form-section">
                             <div class="section-heading"><h3>Image</h3></div>
-                            <div class="form-grid">
+                            <div class="form-grid image-section-grid">
                                 <div class="form-group">
                                     <label for="productImage">Upload image</label>
                                     <input id="productImage" name="productImage" type="file" accept="image/*">
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group image-preview-group">
                                     <label>Current image</label>
                                     <div id="imagePreview" class="image-preview" data-existing-src="${product.primaryImageUrl}">
                                         <c:choose>
                                             <c:when test="${not empty product.primaryImageUrl}">
-                                                <img src="${product.primaryImageUrl}" alt="Product image preview">
+                                                <img src="${pageContext.request.contextPath}${product.primaryImageUrl}" alt="Product image preview">
                                             </c:when>
                                             <c:otherwise>
                                                 <span>No image</span>
@@ -167,7 +169,7 @@
                         </section>
 
                         <div class="form-actions">
-                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=products">Back to products</a>
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=products">Back to products</a>
                             <button type="submit" class="primary-btn">${formAction eq 'edit' ? 'Save changes' : 'Create product'}</button>
                         </div>
                     </form>
@@ -304,6 +306,8 @@
                     imagePreview.appendChild(text);
                 };
 
+                const ctx = '${pageContext.request.contextPath}';
+
                 bindCurrencyInput(document.getElementById('basePrice'));
 
                 const categorySelect = document.getElementById('categoryId');
@@ -432,7 +436,8 @@
                     productImageInput.addEventListener('change', () => {
                         const file = productImageInput.files && productImageInput.files[0];
                         if (!file) {
-                            setImagePreview(imagePreview.dataset.existingSrc || '');
+                            const existingSrc = imagePreview.dataset.existingSrc || '';
+                            setImagePreview(existingSrc ? ctx + existingSrc : '');
                             return;
                         }
 
@@ -457,7 +462,7 @@
                     addVariantRow();
                 }
 
-                setImagePreview(imagePreview ? imagePreview.dataset.existingSrc || '' : '');
+                setImagePreview(imagePreview && imagePreview.dataset.existingSrc ? ctx + imagePreview.dataset.existingSrc : '');
                 renumberVariantRows();
                 updateEmptyState();
             })();

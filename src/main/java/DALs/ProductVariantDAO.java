@@ -59,12 +59,35 @@ public class ProductVariantDAO extends DBContext {
             return false;
         }
 
+        // Get existing variant IDs before deleting
+        List<String> oldVariantIds = new ArrayList<>();
+        String getOldSql = "SELECT variantId FROM ProductVariants WHERE productId = ?";
+        String deleteCartSql = "DELETE FROM CartItems WHERE variantId = ?";
         String deleteSql = "DELETE FROM ProductVariants WHERE productId = ?";
         String insertSql = "INSERT INTO ProductVariants (variantId, productId, sizeId, colorId, sku, stockQty, priceOverride, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
 
         try {
             connection.setAutoCommit(false);
 
+            // Get old variant IDs
+            try (PreparedStatement psGet = connection.prepareStatement(getOldSql)) {
+                psGet.setString(1, productId);
+                try (ResultSet rs = psGet.executeQuery()) {
+                    while (rs.next()) {
+                        oldVariantIds.add(rs.getString("variantId"));
+                    }
+                }
+            }
+
+            // Delete cart items referencing old variants first
+            try (PreparedStatement psDeleteCart = connection.prepareStatement(deleteCartSql)) {
+                for (String variantId : oldVariantIds) {
+                    psDeleteCart.setString(1, variantId);
+                    psDeleteCart.executeUpdate();
+                }
+            }
+
+            // Delete old variants
             try (PreparedStatement psDelete = connection.prepareStatement(deleteSql)) {
                 psDelete.setString(1, productId);
                 psDelete.executeUpdate();
