@@ -1,98 +1,81 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.text.NumberFormat" %>
-<%@ page import="java.time.format.DateTimeFormatter" %>
-<%@ page import="java.util.Locale" %>
-<%@ page import="Models.Order" %>
-<%!
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-    private String badgeClass(String status) {
-        if (status == null) return "order-badge-pending";
-        return "order-badge-" + status.toLowerCase();
-    }
-%>
-<%
-    List<Order> listOrders = (List<Order>) request.getAttribute("listOrders");
-    String keyword = (String) request.getAttribute("keyword");
-    String errorMessage = (String) request.getAttribute("errorMessage");
-    String successMessage = (String) request.getAttribute("successMessage");
-    NumberFormat currency = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-    DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-%>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order History</title>
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/order-ui.css">
-</head>
-<body class="order-page">
-<div class="order-shell">
-    <div class="order-topbar">
-        <div>
-            <div class="order-breadcrumb">Customer / Orders</div>
-            <h1 class="order-title">My Orders</h1>
-            <p class="order-subtitle">Track your purchases, review details, and cancel orders when allowed.</p>
-        </div>
-        <a class="order-btn order-btn-light" href="<%= request.getContextPath() %>/Pages/Customer/Cart.jsp">Back to cart</a>
-    </div>
-
-    <% if (errorMessage != null) { %>
-        <div class="order-alert order-alert-error"><%= errorMessage %></div>
-    <% } %>
-    <% if (successMessage != null) { %>
-        <div class="order-alert order-alert-success"><%= successMessage %></div>
-    <% } %>
-
-    <form class="order-search" action="<%= request.getContextPath() %>/customer/order-history" method="get">
-        <input type="text" name="keyword" value="<%= safe(keyword) %>" placeholder="Search by order ID, status, or phone...">
-        <button class="order-btn order-btn-primary" type="submit">Search</button>
-    </form>
-
-    <div style="height: 20px"></div>
-
-    <div class="order-table-wrap">
-        <% if (listOrders == null || listOrders.isEmpty()) { %>
-            <div class="order-empty">
-                <h3>No orders found</h3>
-                <p>Your orders will appear here after checkout.</p>
+<div class="content-page order-page">
+    <div class="order-container">
+        <section class="order-hero">
+            <div>
+                <p class="order-eyebrow">Customer / Orders</p>
+                <h1 class="order-title">My Orders</h1>
+                <p class="order-subtitle">
+                    Track your purchases, view details, and cancel eligible orders before they are shipped.
+                </p>
             </div>
-        <% } else { %>
-            <table class="order-table">
-                <thead>
-                    <tr>
-                        <th>Order</th>
-                        <th>Date</th>
-                        <th>Phone</th>
-                        <th>Status</th>
-                        <th>Total</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <% for (Order order : listOrders) { %>
-                    <tr>
-                        <td>
-                            <div class="order-id"><%= order.getOrderId() %></div>
-                            <div class="order-muted"><%= safe(order.getShippingAddress()) %></div>
-                        </td>
-                        <td><%= order.getPlacedAt() == null ? "N/A" : order.getPlacedAt().format(dateFormat) %></td>
-                        <td><%= safe(order.getPhone()) %></td>
-                        <td><span class="order-badge <%= badgeClass(order.getOrderStatus()) %>"><%= order.getOrderStatus() %></span></td>
-                        <td class="order-price"><%= order.getTotalAmount() == null ? "0 ₫" : currency.format(order.getTotalAmount()) %></td>
-                        <td>
-                            <a class="order-btn order-btn-light" href="<%= request.getContextPath() %>/customer/order-detail?orderId=<%= order.getOrderId() %>">View</a>
-                        </td>
-                    </tr>
-                <% } %>
-                </tbody>
-            </table>
-        <% } %>
+            <div class="order-actions-row">
+                <a class="order-btn order-btn-primary" href="${pageContext.request.contextPath}/home">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Continue shopping
+                </a>
+            </div>
+        </section>
+
+        <form class="order-search-form" method="get" action="${pageContext.request.contextPath}/customer/order-history">
+            <input class="order-search-input" type="text" name="keyword" value="${keyword}" placeholder="Search by order ID, status, or phone..." />
+            <button class="order-btn order-btn-primary" type="submit">
+                <span class="material-symbols-outlined">search</span>
+                Search
+            </button>
+        </form>
+
+        <c:choose>
+            <c:when test="${empty listOrders}">
+                <div class="order-panel order-empty">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    <h3>No orders found</h3>
+                    <p>Your completed checkout orders will appear here.</p>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="order-table-wrap">
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Date</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="order" items="${listOrders}">
+                                <tr>
+                                    <td>
+                                        <div class="order-code">${order.orderId}</div>
+                                        <div class="order-muted">${order.shippingAddress}</div>
+                                    </td>
+                                    <td>${order.placedAt}</td>
+                                    <td>${order.phone}</td>
+                                    <td>
+                                        <span class="order-status status-${fn:toLowerCase(order.orderStatus)}">${order.orderStatus}</span>
+                                    </td>
+                                    <td class="order-price">
+                                        <fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> đ
+                                    </td>
+                                    <td>
+                                        <a class="order-btn" href="${pageContext.request.contextPath}/customer/order-detail?orderId=${order.orderId}">
+                                            View
+                                        </a>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </c:otherwise>
+        </c:choose>
     </div>
 </div>
-</body>
-</html>

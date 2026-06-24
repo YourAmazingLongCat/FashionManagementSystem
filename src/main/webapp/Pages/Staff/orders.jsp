@@ -1,127 +1,105 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.text.NumberFormat" %>
-<%@ page import="java.time.format.DateTimeFormatter" %>
-<%@ page import="java.util.Locale" %>
-<%@ page import="Models.Order" %>
-<%!
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-    private String badgeClass(String status) {
-        if (status == null) return "order-badge-pending";
-        return "order-badge-" + status.toLowerCase();
-    }
-%>
-<%
-    List<Order> listOrders = (List<Order>) request.getAttribute("listOrders");
-    String keyword = (String) request.getAttribute("keyword");
-    String errorMessage = (String) request.getAttribute("errorMessage");
-    String successMessage = (String) request.getAttribute("successMessage");
-    NumberFormat currency = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-    DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+<div class="content-page order-page">
+    <div class="order-container">
+        <c:set var="totalOrders" value="${0}" />
+        <c:set var="pendingOrders" value="${0}" />
+        <c:set var="shippingOrders" value="${0}" />
+        <c:forEach var="order" items="${listOrders}">
+            <c:set var="totalOrders" value="${totalOrders + 1}" />
+            <c:if test="${order.orderStatus eq 'Pending'}">
+                <c:set var="pendingOrders" value="${pendingOrders + 1}" />
+            </c:if>
+            <c:if test="${order.orderStatus eq 'Shipping'}">
+                <c:set var="shippingOrders" value="${shippingOrders + 1}" />
+            </c:if>
+        </c:forEach>
 
-    int total = listOrders == null ? 0 : listOrders.size();
-    int pending = 0;
-    int shipping = 0;
-    int delivered = 0;
-    if (listOrders != null) {
-        for (Order order : listOrders) {
-            if ("Pending".equals(order.getOrderStatus())) pending++;
-            if ("Shipping".equals(order.getOrderStatus())) shipping++;
-            if ("Delivered".equals(order.getOrderStatus())) delivered++;
-        }
-    }
-%>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Orders</title>
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/order-ui.css">
-</head>
-<body class="order-page">
-<div class="order-shell">
-    <div class="order-topbar">
-        <div>
-            <div class="order-breadcrumb">Staff / Order Management</div>
-            <h1 class="order-title">Orders</h1>
-            <p class="order-subtitle">Manage customer orders, confirm requests, and update shipping status.</p>
-        </div>
-        <a class="order-btn order-btn-light" href="<%= request.getContextPath() %>/staff/orders">Refresh</a>
-    </div>
-
-    <% if (errorMessage != null) { %>
-        <div class="order-alert order-alert-error"><%= errorMessage %></div>
-    <% } %>
-    <% if (successMessage != null) { %>
-        <div class="order-alert order-alert-success"><%= successMessage %></div>
-    <% } %>
-
-    <div class="order-grid order-grid-3">
-        <div class="order-stat-card">
-            <div class="order-stat-label">Total orders</div>
-            <div class="order-stat-value"><%= total %></div>
-        </div>
-        <div class="order-stat-card">
-            <div class="order-stat-label">Pending</div>
-            <div class="order-stat-value"><%= pending %></div>
-        </div>
-        <div class="order-stat-card">
-            <div class="order-stat-label">Shipping / Delivered</div>
-            <div class="order-stat-value"><%= shipping + delivered %></div>
-        </div>
-    </div>
-
-    <div style="height: 20px"></div>
-
-    <form class="order-search" action="<%= request.getContextPath() %>/staff/search-orders" method="get">
-        <input type="text" name="keyword" value="<%= safe(keyword) %>" placeholder="Search by order ID, customer ID, status, or phone...">
-        <button class="order-btn order-btn-primary" type="submit">Search</button>
-    </form>
-
-    <div style="height: 20px"></div>
-
-    <div class="order-table-wrap">
-        <% if (listOrders == null || listOrders.isEmpty()) { %>
-            <div class="order-empty">
-                <h3>No orders found</h3>
-                <p>Orders matching your filters will appear here.</p>
+        <section class="order-hero">
+            <div>
+                <p class="order-eyebrow">Staff / Orders</p>
+                <h1 class="order-title">Order Management</h1>
+                <p class="order-subtitle">
+                    Review customer orders, confirm pending orders, and update shipping progress.
+                </p>
             </div>
-        <% } else { %>
-            <table class="order-table">
-                <thead>
-                    <tr>
-                        <th>Order</th>
-                        <th>Customer</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Total</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <% for (Order order : listOrders) { %>
-                    <tr>
-                        <td>
-                            <div class="order-id"><%= order.getOrderId() %></div>
-                            <div class="order-muted"><%= safe(order.getPhone()) %></div>
-                        </td>
-                        <td><%= safe(order.getCustomerId()) %></td>
-                        <td><%= order.getPlacedAt() == null ? "N/A" : order.getPlacedAt().format(dateFormat) %></td>
-                        <td><span class="order-badge <%= badgeClass(order.getOrderStatus()) %>"><%= order.getOrderStatus() %></span></td>
-                        <td class="order-price"><%= order.getTotalAmount() == null ? "0 ₫" : currency.format(order.getTotalAmount()) %></td>
-                        <td>
-                            <a class="order-btn order-btn-light" href="<%= request.getContextPath() %>/staff/order-detail?orderId=<%= order.getOrderId() %>">Manage</a>
-                        </td>
-                    </tr>
-                <% } %>
-                </tbody>
-            </table>
-        <% } %>
+            <div class="order-actions-row">
+                <a class="order-btn" href="${pageContext.request.contextPath}/home">
+                    <span class="material-symbols-outlined">storefront</span>
+                    Storefront
+                </a>
+            </div>
+        </section>
+
+        <div class="order-grid order-grid-3" style="margin-bottom: 28px;">
+            <div class="order-stat-card">
+                <span class="order-stat-label">Total orders</span>
+                <span class="order-stat-value">${totalOrders}</span>
+            </div>
+            <div class="order-stat-card">
+                <span class="order-stat-label">Pending</span>
+                <span class="order-stat-value">${pendingOrders}</span>
+            </div>
+            <div class="order-stat-card">
+                <span class="order-stat-label">Shipping</span>
+                <span class="order-stat-value">${shippingOrders}</span>
+            </div>
+        </div>
+
+        <form class="order-search-form" method="get" action="${pageContext.request.contextPath}/staff/search-orders">
+            <input class="order-search-input" type="text" name="keyword" value="${keyword}" placeholder="Search by order ID, customer ID, phone, or status..." />
+            <button class="order-btn order-btn-primary" type="submit">
+                <span class="material-symbols-outlined">search</span>
+                Search
+            </button>
+        </form>
+
+        <c:choose>
+            <c:when test="${empty listOrders}">
+                <div class="order-panel order-empty">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                    <h3>No orders found</h3>
+                    <p>Orders will appear here after customers complete checkout.</p>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="order-table-wrap">
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="order" items="${listOrders}">
+                                <tr>
+                                    <td>
+                                        <div class="order-code">${order.orderId}</div>
+                                        <div class="order-muted">${order.shippingAddress}</div>
+                                    </td>
+                                    <td>${order.customerId}</td>
+                                    <td>${order.placedAt}</td>
+                                    <td>${order.phone}</td>
+                                    <td><span class="order-status status-${fn:toLowerCase(order.orderStatus)}">${order.orderStatus}</span></td>
+                                    <td class="order-price"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> đ</td>
+                                    <td>
+                                        <a class="order-btn" href="${pageContext.request.contextPath}/staff/order-detail?orderId=${order.orderId}">Manage</a>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </c:otherwise>
+        </c:choose>
     </div>
 </div>
-</body>
-</html>

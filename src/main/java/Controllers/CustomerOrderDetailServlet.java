@@ -15,6 +15,9 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "CustomerOrderDetailServlet", urlPatterns = {"/customer/order-detail"})
 public class CustomerOrderDetailServlet extends HttpServlet {
 
+    private static final String LAYOUT_PAGE = "/Pages/Guest/Home/Layout/Layout.jsp";
+    private static final String ORDER_DETAIL_PAGE = "/Pages/Customer/orderDetail.jsp";
+
     private OrderService orderService;
 
     @Override
@@ -26,33 +29,66 @@ public class CustomerOrderDetailServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
-        String customerId = (String) session.getAttribute("customerId");
+        String customerId = getCustomerId(session);
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
-        String orderId = request.getParameter("orderId");
-
+        String orderId = trim(request.getParameter("orderId"));
         if (isEmpty(orderId)) {
+            session.setAttribute("errorMessage", "Missing order ID.");
             response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
         Order order = orderService.viewOrderDetailForCustomer(customerId, orderId);
-
         if (order == null) {
-            request.setAttribute("errorMessage", "Order not found or you do not have permission to view this order.");
-            request.getRequestDispatcher("/Pages/Customer/orderDetail.jsp").forward(request, response);
+            request.setAttribute("errorMessage", "Order not found.");
+            forwardLayout(request, response, ORDER_DETAIL_PAGE);
             return;
         }
 
         List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId);
-
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        request.getRequestDispatcher("/Pages/Customer/orderDetail.jsp").forward(request, response);
+        forwardLayout(request, response, ORDER_DETAIL_PAGE);
+    }
+
+    private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
+            throws ServletException, IOException {
+        request.setAttribute("contentPage", contentPage);
+        request.getRequestDispatcher(LAYOUT_PAGE).forward(request, response);
+    }
+
+    private String getCustomerId(HttpSession session) {
+        Object direct = session.getAttribute("customerId");
+        if (direct != null && !direct.toString().trim().isEmpty()) {
+            return direct.toString();
+        }
+
+        Object user = session.getAttribute("USER");
+        if (user == null) {
+            return null;
+        }
+
+        String[] methodNames = {"getAccountId", "getCustomerId", "getUserId", "getId"};
+        for (String methodName : methodNames) {
+            try {
+                Object value = user.getClass().getMethod(methodName).invoke(user);
+                if (value != null && !value.toString().trim().isEmpty()) {
+                    return value.toString();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return null;
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isEmpty(String value) {

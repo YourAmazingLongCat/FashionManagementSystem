@@ -14,6 +14,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "StaffOrderDetailServlet", urlPatterns = {"/staff/order-detail"})
 public class StaffOrderDetailServlet extends HttpServlet {
 
+    private static final String LAYOUT_PAGE = "/Pages/Guest/Home/Layout/Layout.jsp";
+    private static final String STAFF_ORDER_DETAIL_PAGE = "/Pages/Staff/orderDetail.jsp";
+
     private OrderService orderService;
 
     @Override
@@ -24,7 +27,7 @@ public class StaffOrderDetailServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String orderId = request.getParameter("orderId");
+        String orderId = trim(request.getParameter("orderId"));
 
         if (isEmpty(orderId)) {
             response.sendRedirect(request.getContextPath() + "/staff/orders");
@@ -32,18 +35,26 @@ public class StaffOrderDetailServlet extends HttpServlet {
         }
 
         Order order = orderService.viewOrderDetailForStaff(orderId);
-
         if (order == null) {
             request.setAttribute("errorMessage", "Order not found.");
-            request.getRequestDispatcher("/Pages/Staff/orderDetail.jsp").forward(request, response);
+            forwardLayout(request, response, STAFF_ORDER_DETAIL_PAGE);
             return;
         }
 
         List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId);
-
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        request.getRequestDispatcher("/Pages/Staff/orderDetail.jsp").forward(request, response);
+        forwardLayout(request, response, STAFF_ORDER_DETAIL_PAGE);
+    }
+
+    private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
+            throws ServletException, IOException {
+        request.setAttribute("contentPage", contentPage);
+        request.getRequestDispatcher(LAYOUT_PAGE).forward(request, response);
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isEmpty(String value) {

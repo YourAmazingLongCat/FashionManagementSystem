@@ -9,8 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-@WebServlet(name = "ConfirmOrderServlet", urlPatterns = {"/staff/confirm-order"})
-public class ConfirmOrderServlet extends HttpServlet {
+@WebServlet(name = "StaffCancelOrderServlet", urlPatterns = {"/staff/cancel-order"})
+public class StaffCancelOrderServlet extends HttpServlet {
 
     private OrderService orderService;
 
@@ -38,9 +38,9 @@ public class ConfirmOrderServlet extends HttpServlet {
             return;
         }
 
-        boolean confirmed = orderService.confirmOrder(orderId);
-        session.setAttribute(confirmed ? "successMessage" : "errorMessage",
-                confirmed ? "Order confirmed successfully." : "This order cannot be confirmed.");
+        boolean cancelled = orderService.cancelOrder(orderId);
+        session.setAttribute(cancelled ? "successMessage" : "errorMessage",
+                cancelled ? "Order cancelled successfully." : "This order cannot be cancelled now.");
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }
