@@ -348,7 +348,7 @@
                 const renumberVariantRows = () => {
                     Array.from(variantsList.children).forEach((row, index) => {
                         const title = row.querySelector('.variant-row-title');
-                        if (title) title.textContent = `Variant ${index + 1}`;
+                        if (title) title.textContent = 'Variant';
                     });
                 };
 
@@ -385,7 +385,7 @@
 
                     const title = document.createElement('div');
                     title.className = 'variant-row-title';
-                    title.textContent = `Variant ${variantsList.children.length + 1}`;
+                    title.textContent = 'Variant';
 
                     const removeBtn = document.createElement('button');
                     removeBtn.type = 'button';
@@ -418,6 +418,7 @@
 
                     variantsList.appendChild(row);
                     attachVariantRowEvents(row);
+                    renumberVariantRows();
                     updateEmptyState();
                 };
 

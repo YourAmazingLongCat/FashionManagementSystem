@@ -112,7 +112,7 @@
                                        value="${item.cartItemId}">
 
                                 <div class="img-box">
-                                    <img src="${item.imageUrl}">
+                                    <img src="${pageContext.request.contextPath}${item.imageUrl}">
                                 </div>
 
                                 <div style="flex:1">

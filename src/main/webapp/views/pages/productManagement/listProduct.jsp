@@ -219,7 +219,6 @@
                                                     </div>
                                                 </div>
                                                 <div class="product-side">
-                                                    <div class="info-card"><p class="info-copy">Options</p><strong>${product.variants.size()}</strong></div>
                                                     <div class="info-card"><p class="info-copy">Stock</p><strong>${product.totalStockQty}</strong></div>
                                                     <div class="info-card"><p class="info-copy">Price</p><strong><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> đ</strong></div>
                                                     <div class="info-card"><p class="info-copy">Catalog</p><strong>${product.categoryName}</strong></div>
