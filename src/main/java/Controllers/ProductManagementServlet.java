@@ -130,6 +130,17 @@ public class ProductManagementServlet extends HttpServlet {
         List<Color> allColors = colorDAO.getAllColors();
         List<Size> allSizes = sizeDAO.getAllSizes();
 
+        // Group sizes by category
+        Map<String, List<Size>> sizesByCategory = new LinkedHashMap<>();
+        for (Category cat : allCategories) {
+            sizesByCategory.put(cat.getCategoryId(), new ArrayList<>());
+        }
+        for (Size size : allSizes) {
+            if (size.getCategoryId() != null && sizesByCategory.containsKey(size.getCategoryId())) {
+                sizesByCategory.get(size.getCategoryId()).add(size);
+            }
+        }
+
         PageSlice<Category> categoryPage = paginate(allCategories, currentPage, DEFAULT_PAGE_SIZE);
         PageSlice<Color> colorPage = paginate(allColors, currentPage, DEFAULT_PAGE_SIZE);
         PageSlice<Size> sizePage = paginate(allSizes, currentPage, DEFAULT_PAGE_SIZE);
@@ -151,6 +162,7 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("totalColors", allColors.size());
         request.setAttribute("sizeItems", sizePage.items());
         request.setAttribute("totalSizes", allSizes.size());
+        request.setAttribute("sizesByCategory", sizesByCategory);
         request.setAttribute("currentPage", activePage.currentPage());
         request.setAttribute("totalPages", activePage.totalPages());
         request.setAttribute("productQuery", buildProductManagementQuery(request));
