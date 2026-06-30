@@ -60,6 +60,12 @@ public class ProductDAO extends DBContext {
 
     public ProductResult getProductsFiltered(String keyword, String status, String categoryId,
                                              int page, int pageSize) {
+        return getProductsFiltered(keyword, status, categoryId, null, null, null, page, pageSize);
+    }
+
+    public ProductResult getProductsFiltered(String keyword, String status, String categoryId,
+                                             String skuFilter, String sizeFilter, String colorFilter,
+                                             int page, int pageSize) {
         List<Product> products = new ArrayList<>();
         int totalCount = 0;
 
@@ -74,21 +80,21 @@ public class ProductDAO extends DBContext {
             return new ProductResult(products, 0);
         }
 
-        totalCount = countProducts(keyword, status, categoryId);
+        totalCount = countProducts(keyword, status, categoryId, skuFilter, sizeFilter, colorFilter);
         System.out.println("getProductsFiltered: totalCount = " + totalCount);
 
         if (totalCount == 0) {
             return new ProductResult(products, 0);
         }
 
-        String sql = buildPaginatedQuery(keyword, status, categoryId);
+        String sql = buildPaginatedQuery(keyword, status, categoryId, skuFilter, sizeFilter, colorFilter);
         int offset = (page - 1) * pageSize;
         int limit = pageSize;
 
         System.out.println("getProductsFiltered: executing query with limit=" + limit + ", offset=" + offset);
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            int paramIndex = setQueryParameters(ps, keyword, status, categoryId);
+            int paramIndex = setQueryParameters(ps, keyword, status, categoryId, skuFilter, sizeFilter, colorFilter);
             ps.setInt(paramIndex++, offset);
             ps.setInt(paramIndex++, limit);
 
@@ -108,10 +114,15 @@ public class ProductDAO extends DBContext {
     }
 
     private int countProducts(String keyword, String status, String categoryId) {
-        String sql = buildCountQuery(keyword, status, categoryId);
+        return countProducts(keyword, status, categoryId, null, null, null);
+    }
+
+    private int countProducts(String keyword, String status, String categoryId,
+                             String skuFilter, String sizeFilter, String colorFilter) {
+        String sql = buildCountQuery(keyword, status, categoryId, skuFilter, sizeFilter, colorFilter);
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            setQueryParameters(ps, keyword, status, categoryId);
+            setQueryParameters(ps, keyword, status, categoryId, skuFilter, sizeFilter, colorFilter);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("totalCount");
@@ -125,13 +136,34 @@ public class ProductDAO extends DBContext {
     }
 
     private String buildCountQuery(String keyword, String status, String categoryId) {
+        return buildCountQuery(keyword, status, categoryId, null, null, null);
+    }
+
+    private String buildCountQuery(String keyword, String status, String categoryId,
+                                   String skuFilter, String sizeFilter, String colorFilter) {
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT COUNT(*) AS totalCount FROM Products p ");
+        sql.append("SELECT COUNT(DISTINCT p.productId) AS totalCount FROM Products p ");
         sql.append("INNER JOIN Categories c ON p.categoryId = c.categoryId ");
+
+        boolean hasVariantFilter = (skuFilter != null && !skuFilter.isBlank())
+                                || (sizeFilter != null && !sizeFilter.isBlank())
+                                || (colorFilter != null && !colorFilter.isBlank());
+
+        if (hasVariantFilter) {
+            sql.append("INNER JOIN ProductVariants pv ON p.productId = pv.productId ");
+            if (sizeFilter != null && !sizeFilter.isBlank()) {
+                sql.append("INNER JOIN Sizes s ON pv.sizeId = s.sizeId ");
+            }
+            if (colorFilter != null && !colorFilter.isBlank()) {
+                sql.append("INNER JOIN Colors cl ON pv.colorId = cl.colorId ");
+            }
+        }
+
         sql.append("WHERE 1=1 ");
 
         if (keyword != null && !keyword.isBlank()) {
-            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ?) ");
+            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ? ");
+            sql.append("OR LOWER(pv.sku) LIKE ? OR LOWER(s.sizeName) LIKE ? OR LOWER(cl.colorName) LIKE ?) ");
         }
         if (status != null && !status.isBlank()) {
             sql.append("AND p.status = ? ");
@@ -139,11 +171,25 @@ public class ProductDAO extends DBContext {
         if (categoryId != null && !categoryId.isBlank()) {
             sql.append("AND p.categoryId = ? ");
         }
+        if (skuFilter != null && !skuFilter.isBlank()) {
+            sql.append("AND LOWER(pv.sku) LIKE ? ");
+        }
+        if (sizeFilter != null && !sizeFilter.isBlank()) {
+            sql.append("AND s.sizeId = ? ");
+        }
+        if (colorFilter != null && !colorFilter.isBlank()) {
+            sql.append("AND cl.colorId = ? ");
+        }
 
         return sql.toString();
     }
 
     private String buildPaginatedQuery(String keyword, String status, String categoryId) {
+        return buildPaginatedQuery(keyword, status, categoryId, null, null, null);
+    }
+
+    private String buildPaginatedQuery(String keyword, String status, String categoryId,
+                                       String skuFilter, String sizeFilter, String colorFilter) {
         StringBuilder sql = new StringBuilder();
         sql.append("""
             SELECT * FROM (
@@ -153,17 +199,42 @@ public class ProductDAO extends DBContext {
                        ROW_NUMBER() OVER (ORDER BY p.createdAt DESC) AS rowNum
                 FROM Products p
                 INNER JOIN Categories c ON p.categoryId = c.categoryId
-                WHERE 1=1
             """);
 
+        boolean hasVariantFilter = (skuFilter != null && !skuFilter.isBlank())
+                                || (sizeFilter != null && !sizeFilter.isBlank())
+                                || (colorFilter != null && !colorFilter.isBlank());
+
+        if (hasVariantFilter) {
+            sql.append("INNER JOIN ProductVariants pv ON p.productId = pv.productId ");
+            if (sizeFilter != null && !sizeFilter.isBlank()) {
+                sql.append("INNER JOIN Sizes s ON pv.sizeId = s.sizeId ");
+            }
+            if (colorFilter != null && !colorFilter.isBlank()) {
+                sql.append("INNER JOIN Colors cl ON pv.colorId = cl.colorId ");
+            }
+        }
+
+        sql.append("WHERE 1=1 ");
+
         if (keyword != null && !keyword.isBlank()) {
-            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ?) ");
+            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(p.description) LIKE ? OR LOWER(c.name) LIKE ? ");
+            sql.append("OR LOWER(pv.sku) LIKE ? OR LOWER(s.sizeName) LIKE ? OR LOWER(cl.colorName) LIKE ?) ");
         }
         if (status != null && !status.isBlank()) {
             sql.append("AND p.status = ? ");
         }
         if (categoryId != null && !categoryId.isBlank()) {
             sql.append("AND p.categoryId = ? ");
+        }
+        if (skuFilter != null && !skuFilter.isBlank()) {
+            sql.append("AND LOWER(pv.sku) LIKE ? ");
+        }
+        if (sizeFilter != null && !sizeFilter.isBlank()) {
+            sql.append("AND s.sizeId = ? ");
+        }
+        if (colorFilter != null && !colorFilter.isBlank()) {
+            sql.append("AND cl.colorId = ? ");
         }
 
         sql.append("""
@@ -175,10 +246,18 @@ public class ProductDAO extends DBContext {
     }
 
     private int setQueryParameters(PreparedStatement ps, String keyword, String status, String categoryId) throws SQLException {
+        return setQueryParameters(ps, keyword, status, categoryId, null, null, null);
+    }
+
+    private int setQueryParameters(PreparedStatement ps, String keyword, String status, String categoryId,
+                                   String skuFilter, String sizeFilter, String colorFilter) throws SQLException {
         int paramIndex = 1;
 
         if (keyword != null && !keyword.isBlank()) {
             String searchPattern = "%" + keyword.toLowerCase() + "%";
+            ps.setString(paramIndex++, searchPattern);
+            ps.setString(paramIndex++, searchPattern);
+            ps.setString(paramIndex++, searchPattern);
             ps.setString(paramIndex++, searchPattern);
             ps.setString(paramIndex++, searchPattern);
             ps.setString(paramIndex++, searchPattern);
@@ -190,6 +269,16 @@ public class ProductDAO extends DBContext {
 
         if (categoryId != null && !categoryId.isBlank()) {
             ps.setString(paramIndex++, categoryId);
+        }
+
+        if (skuFilter != null && !skuFilter.isBlank()) {
+            ps.setString(paramIndex++, "%" + skuFilter.toLowerCase() + "%");
+        }
+        if (sizeFilter != null && !sizeFilter.isBlank()) {
+            ps.setString(paramIndex++, sizeFilter);
+        }
+        if (colorFilter != null && !colorFilter.isBlank()) {
+            ps.setString(paramIndex++, colorFilter);
         }
 
         return paramIndex;

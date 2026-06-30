@@ -1,15 +1,13 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package Controllers;
 
 import Models.Order;
 import Models.OrderItem;
 import Models.Account;
 import DALs.OrderDAO;
+import DALs.OrderItemDAO;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 
 import jakarta.servlet.ServletException;
@@ -67,7 +65,7 @@ public class OrderReviewServlet extends HttpServlet {
         }
 
         OrderDAO orderDAO = new OrderDAO();
-        Order order = orderDAO.GetOrderById(orderId);
+        Order order = orderDAO.getOrderById(orderId);
 
         if (order == null) {
             request.setAttribute("error", "Order not found!");
@@ -75,18 +73,22 @@ public class OrderReviewServlet extends HttpServlet {
             return;
         }
 
-        if (!order.getCustomerId().equals(user.getUserId())) {
+        // Use accountId instead of userId
+        if (!order.getCustomerId().equals(user.getAccountId())) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied!");
             return;
         }
 
-        List<OrderItem> orderItems = orderDAO.GetOrderItems(orderId);
+        // Use OrderItemDAO instead of OrderDAO
+        OrderItemDAO orderItemDAO = new OrderItemDAO();
+        List<OrderItem> orderItems = orderItemDAO.getOrderItemsByOrderId(orderId);
 
-        double totalAmount = 0;
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
         if (orderItems != null) {
             for (OrderItem item : orderItems) {
-                totalAmount += item.getUnitPrice() * item.getQuantity();
+                // Use getSubTotal() which returns BigDecimal
+                totalAmount = totalAmount.add(item.getSubTotal());
             }
         }
 
@@ -95,21 +97,6 @@ public class OrderReviewServlet extends HttpServlet {
         request.setAttribute("totalAmount", totalAmount);
 
         request.getRequestDispatcher("/views/orderReview.jsp").forward(request, response);
-    }
-
-    private double calculateTotal(List<OrderItem> orderItems) {
-
-        double total = 0;
-
-        if (orderItems == null) {
-            return total;
-        }
-
-        for (OrderItem item : orderItems) {
-            total += item.getUnitPrice() * item.getQuantity();
-        }
-
-        return total;
     }
 
     @Override

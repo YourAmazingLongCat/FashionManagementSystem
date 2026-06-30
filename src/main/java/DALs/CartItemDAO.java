@@ -181,6 +181,22 @@ public class CartItemDAO extends DBContext {
     }
 
     // =========================
+    // CLEANUP INVALID ITEMS
+    // =========================
+    public int cleanupInvalidItems(String cartId) {
+        String sql = "DELETE FROM CartItems WHERE cartId=? AND variantId NOT IN (SELECT variantId FROM ProductVariants)";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, cartId);
+            return ps.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    // =========================
     // CART TOTAL
     // =========================
     public double getCartTotal(String cartId) {

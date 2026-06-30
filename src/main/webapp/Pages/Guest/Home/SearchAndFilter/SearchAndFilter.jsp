@@ -84,7 +84,7 @@
                                                 <img class="product-image" src="https://via.placeholder.com/600x800?text=No+Image" alt="${p.name}" />
                                             </c:when>
                                             <c:otherwise>
-                                                <img class="product-image" src="${p.primaryImageUrl}" alt="${p.name}" />
+                                                <img class="product-image" src="${pageContext.request.contextPath}${p.primaryImageUrl}" alt="${p.name}" />
                                             </c:otherwise>
                                         </c:choose>
                                         <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">

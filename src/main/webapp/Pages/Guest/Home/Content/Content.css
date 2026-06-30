@@ -207,23 +207,27 @@ a {
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    color: #000;
     transition: all 0.2s;
     z-index: 10;
 }
 
 .favorite-btn:hover {
     background-color: #000;
-    color: #fff;
 }
 
 .favorite-btn span {
     font-size: 18px;
+    color: #000;
 }
 
-.favorite-btn span.active {
-    color: #000;
-    font-variation-settings: 'FILL' 1; 
+.favorite-btn:hover span {
+    color: #fff;
+}
+
+.favorite-btn.active .material-symbols-outlined,
+.favorite-btn .material-symbols-outlined.active {
+    color: #ef4444;
+    font-variation-settings: 'FILL' 1;
 }
 
 /* ================= TYPOGRAPHY TRONG CARD ================= */
@@ -376,6 +380,25 @@ a {
     border: 1px solid #111827;
     font-weight: 700;
     font-size: 0.88rem;
+}
+
+.detail-chip-button {
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.detail-chip-button:hover {
+    background: #f3f4f6;
+    border-color: #7c3aed;
+}
+
+.detail-chip-button.active {
+    background: #7c3aed;
+    border-color: #7c3aed;
+    color: #ffffff;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 /* Selection Summary - Qty + Add to Cart */

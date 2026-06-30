@@ -13,7 +13,7 @@
             body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
             .product-shell { width: min(1440px, calc(100% - 40px)); margin: 28px auto; display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
             .sidebar-panel, .content-panel { background: #ffffff; border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 24px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1); contain: content; }
-            .sidebar-panel { padding: 28px; display: flex; flex-direction: column; gap: 24px; background: linear-gradient(180deg, #0f172a 0%, #312e81 100%); color: #ffffff; }
+            .sidebar-panel { padding: 28px; display: flex; flex-direction: column; gap: 24px; background: linear-gradient(180deg, #0f172a 0%, #312e81 100%); color: #ffffff; position: sticky; top: 32px; align-self: start; max-height: calc(100vh - 64px); overflow-y: auto; }
             .brand-label, .eyebrow, .sidebar-label, .meta-label { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.74rem; font-weight: 700; }
             .sidebar-panel h1, .hero-panel h2 { margin: 0; font-size: 2rem; line-height: 1.12; }
             .sidebar-text, .section-header p, .product-description, .info-copy, .meta-copy { margin: 12px 0 0; color: #64748b; line-height: 1.7; }
@@ -87,6 +87,30 @@
             .soft-badge { padding: 6px 12px; background: #f8fafc; color: #475569; font-size: 0.78rem; border: 1px solid #e2e8f0; }
             .color-preview { display: inline-flex; align-items: center; gap: 10px; }
             .color-dot { width: 22px; height: 22px; border-radius: 999px; border: 1px solid rgba(15,23,42,0.12); flex-shrink: 0; }
+
+            /* Table styles */
+            .data-table-wrapper { overflow-x: auto; }
+            .data-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+            .data-table th, .data-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            .data-table th { background: #f8fafc; font-weight: 700; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; color: #64748b; white-space: nowrap; }
+            .data-table tbody tr:hover { background: #f8fafc; }
+            .data-table .cell-id { font-family: monospace; color: #4338ca; font-weight: 600; font-size: 0.85rem; }
+            .data-table .cell-name { font-weight: 600; }
+            .data-table .cell-description { color: #64748b; max-width: 300px; }
+            .data-table .cell-actions { white-space: nowrap; }
+            .data-table .action-group { display: flex; gap: 8px; }
+            .data-table .table-btn { min-width: 70px; padding: 8px 12px; font-size: 0.8rem; }
+
+            /* Category group styles for Sizes table */
+            .size-group-list { display: flex; flex-direction: column; gap: 12px; }
+            .size-group { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+            .size-group-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; }
+            .size-group-header-left { display: flex; align-items: center; gap: 12px; }
+            .size-group-title { font-weight: 700; font-size: 0.95rem; }
+            .size-group-count { font-size: 0.8rem; opacity: 0.85; }
+            .add-size-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #ffffff; font-size: 0.75rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; }
+            .add-size-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
+            .size-group-body .data-table-wrapper { border-radius: 0; border: none; border-top: 1px solid #e2e8f0; }
             .empty-state { padding: 42px 16px; text-align: center; }
             .empty-state h4 { margin: 0 0 10px; font-size: 1.15rem; }
             .empty-state p { margin: 0; color: #64748b; }
@@ -116,14 +140,13 @@
                 <div class="sidebar-block">
                     <p class="sidebar-label">Management</p>
                     <div class="sidebar-tabs">
-                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=products"><span>Products</span><span class="tab-badge">${totalProducts}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=categories"><span>Categories</span><span class="tab-badge">${totalCategories}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=colors"><span>Colors</span><span class="tab-badge">${totalColors}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/products?tab=sizes"><span>Sizes</span><span class="tab-badge">${totalSizes}</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=products"><span>Products</span><span class="tab-badge">${totalProducts}</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span><span class="tab-badge">${totalCategories}</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span><span class="tab-badge">${totalColors}</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span><span class="tab-badge">${totalSizes}</span></a>
                         <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/inventory"><span>Warehouse</span><span class="tab-badge">&#128203;</span></a>
                     </div>
                 </div>
-                <a class="home-link" href="${pageContext.request.contextPath}/home">← Back to home</a>
             </aside>
 
             <main class="content-panel">
@@ -145,11 +168,11 @@
 
                 <section class="tab-panel ${activeTab eq 'products' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Products</h3><p>Review images, colors, sizes, stock levels, and prices in a clean layout.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/admin/products?action=create&tab=products">Add product</a></div>
+                        <div class="section-header"><div><h3>Products</h3><p>Review images, colors, sizes, stock levels, and prices in a clean layout.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=create&tab=products">Add product</a></div>
                         <div class="section-body">
-                            <form id="productFilterForm" method="get" action="${pageContext.request.contextPath}/admin/products" class="filter-toolbar">
+                            <form id="productFilterForm" method="get" action="${pageContext.request.contextPath}/staff/products" class="filter-toolbar">
                                 <input type="hidden" name="tab" value="products" />
-                                <input id="productKeywordInput" class="filter-input" type="text" name="keyword" value="${param.keyword}" placeholder="Search by product name, description, category..." autocomplete="off" />
+                                <input id="productKeywordInput" class="filter-input" type="text" name="keyword" value="${param.keyword}" placeholder="Search product name, SKU, size, color..." autocomplete="off" />
                                 <select class="filter-select" name="statusFilter" onchange="submitProductFilterForm()">
                                     <option value="">All status</option>
                                     <option value="Available" ${param.statusFilter eq 'Available' ? 'selected' : ''}>Available</option>
@@ -164,7 +187,7 @@
                                 </select>
                                 <div class="filter-actions">
                                     <button class="primary-btn" type="submit">Apply</button>
-                                    <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=products">Reset</a>
+                                    <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=products">Reset</a>
                                 </div>
                             </form>
                             <c:choose>
@@ -178,7 +201,7 @@
                                                 <div class="product-main">
                                                     <c:choose>
                                                         <c:when test="${not empty product.primaryImageUrl}">
-                                                            <img class="thumb" src="${product.primaryImageUrl}" alt="${product.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                                            <img class="thumb" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                                                             <div class="thumb-empty" style="display:none;">No image</div>
                                                         </c:when>
                                                         <c:otherwise>
@@ -220,7 +243,6 @@
                                                     </div>
                                                 </div>
                                                 <div class="product-side">
-                                                    <div class="info-card"><p class="info-copy">Options</p><strong>${product.variants.size()}</strong></div>
                                                     <div class="info-card"><p class="info-copy">Stock</p><strong>${product.totalStockQty}</strong></div>
                                                     <div class="info-card"><p class="info-copy">Price</p><strong><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> đ</strong></div>
                                                     <div class="info-card"><p class="info-copy">Catalog</p><strong>${product.categoryName}</strong></div>
@@ -228,8 +250,8 @@
                                                 <div class="product-actions">
                                                     <span class="status-badge status-${product.status}">${product.status}</span>
                                                     <div class="action-group">
-                                                        <a class="table-btn edit" href="${pageContext.request.contextPath}/admin/products?action=edit&id=${product.productId}&tab=products">Edit</a>
-                                                        <a class="table-btn delete" href="${pageContext.request.contextPath}/admin/products?action=delete&id=${product.productId}&tab=products">Delete</a>
+                                                        <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=edit&id=${product.productId}&tab=products">Edit</a>
+                                                        <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=delete&id=${product.productId}&tab=products">Delete</a>
                                                     </div>
                                                 </div>
                                             </article>
@@ -266,36 +288,46 @@
 
                 <section class="tab-panel ${activeTab eq 'categories' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Categories</h3><p>Manage category names and descriptions without crowded table rows.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/admin/products?action=createCategory&tab=categories">Add category</a></div>
+                        <div class="section-header"><div><h3>Categories</h3><p>Manage category names and descriptions in a structured table.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=createCategory&tab=categories">Add category</a></div>
                         <div class="section-body">
                             <c:choose>
                                 <c:when test="${empty categoryItems}">
                                     <div class="empty-state"><h4>No categories found</h4><p>Create categories to keep the catalog organized.</p></div>
                                 </c:when>
                                 <c:otherwise>
-                                    <div class="collection-grid">
-                                        <c:forEach var="category" items="${categoryItems}">
-                                            <article class="collection-card">
-                                                <div class="collection-card-header">
-                                                    <div>
-                                                        <span class="id-badge">${category.categoryId}</span>
-                                                        <h4>${category.name}</h4>
-                                                    </div>
-                                                </div>
-                                                <p class="collection-description">${empty category.description ? 'No description available' : category.description}</p>
-                                                <div class="action-group">
-                                                    <a class="table-btn edit" href="${pageContext.request.contextPath}/admin/products?action=editCategory&id=${category.categoryId}&tab=categories">Edit</a>
-                                                    <a class="table-btn delete" href="${pageContext.request.contextPath}/admin/products?action=deleteCategory&id=${category.categoryId}&tab=categories">Delete</a>
-                                                </div>
-                                            </article>
-                                        </c:forEach>
+                                    <div class="data-table-wrapper">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Name</th>
+                                                    <th>Description</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="category" items="${categoryItems}">
+                                                    <tr>
+                                                        <td class="cell-id">${category.categoryId}</td>
+                                                        <td class="cell-name">${category.name}</td>
+                                                        <td class="cell-description">${empty category.description ? '-' : category.description}</td>
+                                                        <td class="cell-actions">
+                                                            <div class="action-group">
+                                                                <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=editCategory&id=${category.categoryId}&tab=categories">Edit</a>
+                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=deleteCategory&id=${category.categoryId}&tab=categories">Delete</a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
                                     </div>
                                     <c:if test="${totalPages > 1}">
                                         <div class="pagination-bar">
                                             <span class="pagination-summary">Showing ${categoryItems.size()} of ${totalCategories} categories</span>
                                             <div class="pagination-controls">
                                                 <c:if test="${currentPage > 1}">
-                                                    <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">‹</a>
+                                                    <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">&#8249;</a>
                                                 </c:if>
                                                 <c:forEach var="i" begin="1" end="${totalPages}">
                                                     <c:choose>
@@ -308,7 +340,7 @@
                                                     </c:choose>
                                                 </c:forEach>
                                                 <c:if test="${currentPage < totalPages}">
-                                                    <a class="page-link" href="?${productQuery}&page=${currentPage + 1}">›</a>
+                                                    <a class="page-link" href="?${productQuery}&page=${currentPage + 1}">&#8250;</a>
                                                 </c:if>
                                             </div>
                                         </div>
@@ -321,39 +353,52 @@
 
                 <section class="tab-panel ${activeTab eq 'colors' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Colors</h3><p>Display color details in compact cards that are easy to scan.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/admin/products?action=createColor&tab=colors">Add color</a></div>
+                        <div class="section-header"><div><h3>Colors</h3><p>Display color details in a structured table format.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=createColor&tab=colors">Add color</a></div>
                         <div class="section-body">
                             <c:choose>
                                 <c:when test="${empty colorItems}">
                                     <div class="empty-state"><h4>No colors found</h4><p>Add color options for your catalog.</p></div>
                                 </c:when>
                                 <c:otherwise>
-                                    <div class="collection-grid">
-                                        <c:forEach var="color" items="${colorItems}">
-                                            <article class="collection-card">
-                                                <div class="collection-card-header">
-                                                    <div>
-                                                        <span class="id-badge">${color.colorId}</span>
-                                                        <h4>${color.colorName}</h4>
-                                                    </div>
-                                                    <span class="color-preview"><span class="color-dot" style="background:${empty color.hexCode ? '#000000' : color.hexCode}"></span></span>
-                                                </div>
-                                                <div class="collection-meta">
-                                                    <span class="soft-badge">${empty color.hexCode ? '#000000' : color.hexCode}</span>
-                                                </div>
-                                                <div class="action-group">
-                                                    <a class="table-btn edit" href="${pageContext.request.contextPath}/admin/products?action=editColor&id=${color.colorId}&tab=colors">Edit</a>
-                                                    <a class="table-btn delete" href="${pageContext.request.contextPath}/admin/products?action=deleteColor&id=${color.colorId}&tab=colors">Delete</a>
-                                                </div>
-                                            </article>
-                                        </c:forEach>
+                                    <div class="data-table-wrapper">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Color Name</th>
+                                                    <th>Hex Code</th>
+                                                    <th>Preview</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="color" items="${colorItems}">
+                                                    <tr>
+                                                        <td class="cell-id">${color.colorId}</td>
+                                                        <td class="cell-name">${color.colorName}</td>
+                                                        <td class="cell-id">${empty color.hexCode ? '-' : color.hexCode}</td>
+                                                        <td>
+                                                            <span class="color-preview" style="display: inline-flex; align-items: center; gap: 8px;">
+                                                                <span class="color-dot" style="background: ${empty color.hexCode ? '#000000' : color.hexCode};"></span>
+                                                            </span>
+                                                        </td>
+                                                        <td class="cell-actions">
+                                                            <div class="action-group">
+                                                                <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=editColor&id=${color.colorId}&tab=colors">Edit</a>
+                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=deleteColor&id=${color.colorId}&tab=colors">Delete</a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
                                     </div>
                                     <c:if test="${totalPages > 1}">
                                         <div class="pagination-bar">
                                             <span class="pagination-summary">Showing ${colorItems.size()} of ${totalColors} colors</span>
                                             <div class="pagination-controls">
                                                 <c:if test="${currentPage > 1}">
-                                                    <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">‹</a>
+                                                    <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">&#8249;</a>
                                                 </c:if>
                                                 <c:forEach var="i" begin="1" end="${totalPages}">
                                                     <c:choose>
@@ -366,7 +411,7 @@
                                                     </c:choose>
                                                 </c:forEach>
                                                 <c:if test="${currentPage < totalPages}">
-                                                    <a class="page-link" href="?${productQuery}&page=${currentPage + 1}">›</a>
+                                                    <a class="page-link" href="?${productQuery}&page=${currentPage + 1}">&#8250;</a>
                                                 </c:if>
                                             </div>
                                         </div>
@@ -379,55 +424,70 @@
 
                 <section class="tab-panel ${activeTab eq 'sizes' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Sizes</h3><p>Keep size data readable with clear cards and grouped metadata.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/admin/products?action=createSize&tab=sizes">Add size</a></div>
+                        <div class="section-header"><div><h3>Sizes</h3><p>Manage sizes grouped by category. Click on a category to expand and view its sizes.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=createSize&tab=sizes">Add size</a></div>
                         <div class="section-body">
                             <c:choose>
-                                <c:when test="${empty sizeItems}">
+                                <c:when test="${empty sizesByCategory}">
                                     <div class="empty-state"><h4>No sizes found</h4><p>Add sizes that fit each category.</p></div>
                                 </c:when>
                                 <c:otherwise>
-                                    <div class="collection-grid">
-                                        <c:forEach var="size" items="${sizeItems}">
-                                            <article class="collection-card">
-                                                <div class="collection-card-header">
-                                                    <div>
-                                                        <span class="id-badge">${size.sizeId}</span>
-                                                        <h4>${size.sizeName}</h4>
-                                                    </div>
-                                                </div>
-                                                <div class="collection-meta">
-                                                    <span class="soft-badge">Category: ${size.categoryName}</span>
-                                                </div>
-                                                <div class="action-group">
-                                                    <a class="table-btn edit" href="${pageContext.request.contextPath}/admin/products?action=editSize&id=${size.sizeId}&tab=sizes">Edit</a>
-                                                    <a class="table-btn delete" href="${pageContext.request.contextPath}/admin/products?action=deleteSize&id=${size.sizeId}&tab=sizes">Delete</a>
-                                                </div>
-                                            </article>
-                                        </c:forEach>
-                                    </div>
-                                    <c:if test="${totalPages > 1}">
-                                        <div class="pagination-bar">
-                                            <span class="pagination-summary">Showing ${sizeItems.size()} of ${totalSizes} sizes</span>
-                                            <div class="pagination-controls">
-                                                <c:if test="${currentPage > 1}">
-                                                    <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">‹</a>
+                                    <div class="size-group-list">
+                                        <c:forEach var="catEntry" items="${sizesByCategory}">
+                                            <c:set var="categoryId" value="${catEntry.key}" />
+                                            <c:forEach var="cat" items="${allCategoryItems}">
+                                                <c:if test="${cat.categoryId == categoryId}">
+                                                    <c:set var="currentCategory" value="${cat}" />
                                                 </c:if>
-                                                <c:forEach var="i" begin="1" end="${totalPages}">
+                                            </c:forEach>
+                                            <c:set var="sizesInCategory" value="${catEntry.value}" />
+
+                                            <div class="size-group">
+                                                <div class="size-group-header" data-group="${currentCategory.categoryId}">
+                                                    <div class="size-group-header-left">
+                                                        <span class="size-group-title">${currentCategory.name}</span>
+                                                        <span class="size-group-count">(${sizesInCategory.size()} sizes)</span>
+                                                    </div>
+                                                    <a class="add-size-btn" href="${pageContext.request.contextPath}/staff/products?action=createSize&categoryId=${currentCategory.categoryId}&tab=sizes" onclick="event.stopPropagation();">
+                                                        + Add Size
+                                                    </a>
+                                                </div>
+                                                <div class="size-group-body" data-group="${currentCategory.categoryId}">
                                                     <c:choose>
-                                                        <c:when test="${i == currentPage}">
-                                                            <a class="page-link active" href="?${productQuery}&page=${i}">${i}</a>
+                                                        <c:when test="${empty sizesInCategory}">
+                                                            <div style="padding: 20px; text-align: center; color: #94a3b8; font-style: italic;">No sizes in this category yet. Click "+ Add Size" to create one.</div>
                                                         </c:when>
                                                         <c:otherwise>
-                                                            <a class="page-link" href="?${productQuery}&page=${i}">${i}</a>
+                                                            <div class="data-table-wrapper">
+                                                                <table class="data-table">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>ID</th>
+                                                                            <th>Size Name</th>
+                                                                            <th>Actions</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <c:forEach var="size" items="${sizesInCategory}">
+                                                                            <tr>
+                                                                                <td class="cell-id">${size.sizeId}</td>
+                                                                                <td class="cell-name">${size.sizeName}</td>
+                                                                                <td class="cell-actions">
+                                                                                    <div class="action-group">
+                                                                                        <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=editSize&id=${size.sizeId}&tab=sizes">Edit</a>
+                                                                                        <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=deleteSize&id=${size.sizeId}&tab=sizes">Delete</a>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </c:forEach>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
                                                         </c:otherwise>
                                                     </c:choose>
-                                                </c:forEach>
-                                                <c:if test="${currentPage < totalPages}">
-                                                    <a class="page-link" href="?${productQuery}&page=${currentPage + 1}">›</a>
-                                                </c:if>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </c:if>
+                                        </c:forEach>
+                                    </div>
                                 </c:otherwise>
                             </c:choose>
                         </div>
@@ -454,5 +514,7 @@
                 }
             });
         }
+
+        // Placeholder for future enhancements
     </script>
 </html>

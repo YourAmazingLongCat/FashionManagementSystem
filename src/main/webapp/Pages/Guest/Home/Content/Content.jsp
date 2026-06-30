@@ -51,7 +51,7 @@
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
+                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : pageContext.request.contextPath.concat(p.primaryImageUrl)}" alt="${p.name}" />
                             <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
                                 <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
                                     favorite
