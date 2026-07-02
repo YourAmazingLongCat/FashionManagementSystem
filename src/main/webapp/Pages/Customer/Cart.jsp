@@ -81,16 +81,17 @@
 </head>
 
 <body>
+<div class="container mt-3"><a href="${pageContext.request.contextPath}/home" class="btn btn-outline-secondary">&larr; Back to Home</a></div>
 
 <div class="container cart-container py-4">
 
-    <h3 class="mb-4">🛒 Giỏ hàng</h3>
+    <h3 class="mb-4">Shopping Cart</h3>
 
     <c:choose>
 
         <c:when test="${empty cartItems}">
             <div class="alert alert-warning text-center">
-                Giỏ hàng trống
+                Your cart is empty
             </div>
         </c:when>
 
@@ -109,7 +110,7 @@
 
                                 <input type="checkbox"
                                        name="selectedItems"
-                                       value="${item.cartItemId}">
+                                       value="${item.cartItemId}" data-subtotal="${item.subtotal}" onchange="calculateTotal()">
 
                                 <div class="img-box">
                                     <img src="${pageContext.request.contextPath}${item.imageUrl}">
@@ -136,7 +137,7 @@
 
                                 <a class="btn btn-sm btn-outline-danger"
                                    href="${pageContext.request.contextPath}/cart/delete?id=${item.cartItemId}">
-                                    Xóa
+                                    Delete
                                 </a>
 
                             </div>
@@ -150,16 +151,16 @@
 
                         <div class="checkout-box">
 
-                            <h5>Tổng thanh toán</h5>
+                            <h5>Order Summary</h5>
 
                             <hr>
 
                             <h4 class="text-danger">
-                                ${total}₫
+                                <span id="totalPrice">0₫</span>
                             </h4>
 
                             <button type="submit" class="btn btn-shopee w-100 mt-3">
-                                Mua hàng
+                                Checkout
                             </button>
 
                         </div>
@@ -190,6 +191,7 @@ function updateQty(id, qty) {
     });
 
 }
+function calculateTotal(){let t=0;document.querySelectorAll('input[name="selectedItems"]:checked').forEach(cb=>t+=Number(cb.dataset.subtotal));document.getElementById("totalPrice").innerHTML=t.toLocaleString('vi-VN')+'₫';}
 </script>
 
 </body>
