@@ -1,10 +1,6 @@
 package DALs;
 
 import Utils.DBContext;
-import Controllers.ProductManagementServlet;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,56 +31,40 @@ public class ProductImageDAO extends DBContext {
         return null;
     }
 
-    public String getImageFileNameByUrl(String imageUrl) {
-        if (imageUrl == null || imageUrl.isBlank()) return null;
-        int lastSlash = imageUrl.lastIndexOf('/');
-        if (lastSlash >= 0 && lastSlash < imageUrl.length() - 1) {
-            return imageUrl.substring(lastSlash + 1);
-        }
-        return null;
-    }
-
     public boolean upsertPrimaryImage(String productId, String imageUrl) {
         if (connection == null || productId == null || productId.isBlank() || imageUrl == null || imageUrl.isBlank()) {
             return false;
         }
 
-        String getExistingSql = "SELECT imageId, imageUrl FROM ProductImages WHERE productId = ? AND isPrimary = 1";
-        String deleteSql = "DELETE FROM ProductImages WHERE productId = ?";
-        String insertSql = "INSERT INTO ProductImages (imageId, productId, imageUrl, isPrimary) VALUES (?, ?, ?, 1)";
+        String updatePrimaryOff = "UPDATE ProductImages SET isPrimary = 0 WHERE productId = ?";
+        String updateExisting = "UPDATE ProductImages SET imageUrl = ?, isPrimary = 1 WHERE productId = ? AND isPrimary = 1";
+        String insertNew = "INSERT INTO ProductImages (imageId, productId, imageUrl, isPrimary) VALUES (?, ?, ?, 1)";
 
         try {
             connection.setAutoCommit(false);
 
-            String oldImageUrl = null;
-            try (PreparedStatement psGet = connection.prepareStatement(getExistingSql)) {
-                psGet.setString(1, productId);
-                try (ResultSet rs = psGet.executeQuery()) {
-                    if (rs.next()) {
-                        oldImageUrl = rs.getString("imageUrl");
-                    }
+            try (PreparedStatement psOff = connection.prepareStatement(updatePrimaryOff)) {
+                psOff.setString(1, productId);
+                psOff.executeUpdate();
+            }
+
+            int updated;
+            try (PreparedStatement psUpdate = connection.prepareStatement(updateExisting)) {
+                psUpdate.setString(1, imageUrl);
+                psUpdate.setString(2, productId);
+                updated = psUpdate.executeUpdate();
+            }
+
+            if (updated == 0) {
+                try (PreparedStatement psInsert = connection.prepareStatement(insertNew)) {
+                    psInsert.setString(1, generateImageId());
+                    psInsert.setString(2, productId);
+                    psInsert.setString(3, imageUrl);
+                    psInsert.executeUpdate();
                 }
             }
 
-            // Xoa anh cu trong folder (neu co)
-            if (oldImageUrl != null && !oldImageUrl.equals(imageUrl)) {
-                deleteOldImageFile(oldImageUrl);
-            }
-
-            try (PreparedStatement psDelete = connection.prepareStatement(deleteSql)) {
-                psDelete.setString(1, productId);
-                psDelete.executeUpdate();
-            }
-
-            try (PreparedStatement psInsert = connection.prepareStatement(insertSql)) {
-                psInsert.setString(1, generateImageId());
-                psInsert.setString(2, productId);
-                psInsert.setString(3, imageUrl);
-                psInsert.executeUpdate();
-            }
-
             connection.commit();
-
             return true;
         } catch (SQLException e) {
             try {
@@ -99,41 +79,6 @@ public class ProductImageDAO extends DBContext {
             } catch (SQLException ignored) {
             }
         }
-    }
-
-    private void deleteOldImageFile(String imageUrl) {
-        try {
-            String fileName = getImageFileNameByUrl(imageUrl);
-            if (fileName == null) return;
-            // Duong dan Assets/Images/Product trong Tomcat webapps
-            Path uploadDir = Paths.get(System.getProperty("catalina.base"), "webapps", "FashionManagementSystem-1.0-SNAPSHOT", "Assets", "Images", "Product");
-            Path oldFilePath = uploadDir.resolve(fileName).normalize();
-            if (Files.exists(oldFilePath) && Files.isRegularFile(oldFilePath)) {
-                Files.delete(oldFilePath);
-                System.out.println("[ProductImageDAO] Deleted old image file: " + oldFilePath.toAbsolutePath());
-            }
-        } catch (Exception e) {
-            System.out.println("[ProductImageDAO] Failed to delete old image: " + e.getMessage());
-        }
-    }
-
-    public boolean deleteImagesByProductId(String productId) {
-        if (connection == null || productId == null || productId.isBlank()) {
-            return false;
-        }
-
-        String sql = "DELETE FROM ProductImages WHERE productId = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, productId);
-            return ps.executeUpdate() >= 0;
-        } catch (SQLException e) {
-            System.out.println("deleteImagesByProductId error: " + e.getMessage());
-            return false;
-        }
-    }
-
-    public String getPrimaryImageByProductId(String productId) {
-        return getPrimaryImageUrl(productId);
     }
 
     private String generateImageId() {

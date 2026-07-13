@@ -32,18 +32,18 @@ public class LoginControllers extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
+        
         // 1. Lấy dữ liệu từ form (khớp với thuộc tính name="email" và name="password" trong JSP)
         String email = request.getParameter("email");
         String password = request.getParameter("password");
-
+        
         // 2. Gọi DAO để kiểm tra DB
         AccountDAO dao = new AccountDAO();
         Account acc = dao.checkLogin(email, password);
-
+        
         // 3. Xử lý kết quả
         if (acc != null) {
-
+            
             // 👉 SỬA Ở ĐÂY: Kiểm tra status kiểu String
             // Nếu status khác null và KHÔNG bằng chữ "Active" (không phân biệt hoa thường)
             if (acc.getStatus() != null && !acc.getStatus().equalsIgnoreCase("Active")) {
@@ -51,19 +51,14 @@ public class LoginControllers extends HttpServlet {
                 request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
                 return;
             }
-
+            
             // Đăng nhập thành công: Lưu thông tin Account vào Session
             HttpSession session = request.getSession();
             session.setAttribute("USER", acc);
 
-            // Chuyển hướng Staff đến Product Management, Admin/Customer đến Home
-            String role = acc.getRole();
-            if (role != null && role.equalsIgnoreCase("Staff")) {
-                response.sendRedirect(request.getContextPath() + "/staff/products");
-            } else {
-                response.sendRedirect(request.getContextPath() + "/home");
-            }
-
+            // Chuyển hướng về trang chủ
+            response.sendRedirect(request.getContextPath() + "/home");
+            
         } else {
             // Đăng nhập thất bại: Gửi thông báo lỗi về lại trang Login
             request.setAttribute("errorMessage", "Email hoặc mật khẩu không chính xác!");

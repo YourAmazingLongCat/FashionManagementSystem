@@ -111,14 +111,8 @@ public class WarehouseServlet extends HttpServlet {
 
     private void showInventory(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String keyword = trim(request.getParameter("keyword"));
-        String sizeFilter = trim(request.getParameter("sizeFilter"));
-        String colorFilter = trim(request.getParameter("colorFilter"));
-
-        List<Object[]> inventory = warehouseDAO.getInventorySummary(keyword, sizeFilter, colorFilter);
+        List<Object[]> inventory = warehouseDAO.getInventorySummary();
         List<Object[]> lowStock = warehouseDAO.getLowStockItems(10);
-        List<Object[]> allSizes = warehouseDAO.getAllSizes();
-        List<Object[]> allColors = warehouseDAO.getAllColors();
 
         int totalItems = inventory.size();
         int totalStock = 0;
@@ -130,15 +124,10 @@ public class WarehouseServlet extends HttpServlet {
 
         request.setAttribute("inventory", inventory);
         request.setAttribute("lowStock", lowStock);
-        request.setAttribute("allSizes", allSizes);
-        request.setAttribute("allColors", allColors);
         request.setAttribute("totalItems", totalItems);
         request.setAttribute("totalStock", totalStock);
         request.setAttribute("lowStockCount", lowStockCount);
         request.setAttribute("activeTab", "inventory");
-        request.setAttribute("currentKeyword", keyword);
-        request.setAttribute("currentSizeFilter", sizeFilter);
-        request.setAttribute("currentColorFilter", colorFilter);
 
         if (request.getParameter("message") != null) {
             request.setAttribute("message", request.getParameter("message"));
@@ -152,13 +141,9 @@ public class WarehouseServlet extends HttpServlet {
             throws ServletException, IOException {
         List<Object[]> inventory = warehouseDAO.getInventorySummary();
         List<Product> products = productDAO.getAllProducts();
-        List<Object[]> allSizes = warehouseDAO.getAllSizes();
-        List<Object[]> allColors = warehouseDAO.getAllColors();
 
         request.setAttribute("inventory", inventory);
         request.setAttribute("products", products);
-        request.setAttribute("allSizes", allSizes);
-        request.setAttribute("allColors", allColors);
         request.setAttribute("activeTab", "import");
 
         if (request.getParameter("message") != null) {

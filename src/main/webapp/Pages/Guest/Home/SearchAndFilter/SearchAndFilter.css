@@ -315,26 +315,22 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
+    color: #000;
     transition: all 0.2s;
     z-index: 10;
 }
 
 .favorite-btn:hover {
     background-color: #000;
+    color: #fff;
 }
 
 .favorite-btn span {
     font-size: 16px;
+}
+
+.favorite-btn span.active {
     color: #000;
-}
-
-.favorite-btn:hover span {
-    color: #fff;
-}
-
-.favorite-btn.active .material-symbols-outlined,
-.favorite-btn .material-symbols-outlined.active {
-    color: #ef4444;
     font-variation-settings: 'FILL' 1;
 }
 

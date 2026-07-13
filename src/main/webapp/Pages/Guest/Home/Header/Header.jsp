@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <header class="header-guest-page">
-    
+
     <div class="logo-area">
         <a class="logo-link" href="${pageContext.request.contextPath}/home" style="text-decoration: none;">
             <div class="peak-logo">
@@ -15,8 +15,14 @@
 
     <nav class="quick-nav">
         <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
+        <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
+            <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
+        </c:if>
+        <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Staff'}">
+            <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/BillServlet?action=list">BILL MANAGEMENT</a>
+        </c:if>
     </nav>
-    
+
     <div class="categories-dropdown">
         <button class="categories-btn">
             <span class="material-symbols-outlined">menu</span>
@@ -30,16 +36,16 @@
                     <c:if test="${status.index % 5 == 0}">
                         <div>
                             <ul class="mega-list">
-                    </c:if>
-                                <li>
-                                    <a class="category-card" href="${pageContext.request.contextPath}/home/search?category=${c.categoryId}">
-                                        <div class="category-content">
-                                            <span class="material-symbols-outlined category-icon">local_mall</span>
-                                            <span class="category-name">${c.name}</span>
-                                        </div>
-                                    </a>
-                                </li>
-                    <c:if test="${status.index % 5 == 4 || status.last}">
+                            </c:if>
+                            <li>
+                                <a class="category-card" href="${pageContext.request.contextPath}/home/search?category=${c.categoryId}">
+                                    <div class="category-content">
+                                        <span class="material-symbols-outlined category-icon">local_mall</span>
+                                        <span class="category-name">${c.name}</span>
+                                    </div>
+                                </a>
+                            </li>
+                            <c:if test="${status.index % 5 == 4 || status.last}">
                             </ul>
                         </div>
                     </c:if>
@@ -56,7 +62,7 @@
             </button>
         </form>
     </div>
-    
+
     <div class="header-actions">
         <a href="${pageContext.request.contextPath}/cart" class="cart-icon-btn" title="View Cart">
             <span class="material-symbols-outlined">shopping_bag</span>

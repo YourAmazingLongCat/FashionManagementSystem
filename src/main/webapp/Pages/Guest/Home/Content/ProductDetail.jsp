@@ -8,7 +8,7 @@
             <div class="detail-image-wrap">
                 <c:choose>
                     <c:when test="${not empty product.primaryImageUrl}">
-                        <img class="detail-image" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" />
+                        <img class="detail-image" src="${product.primaryImageUrl}" alt="${product.name}" />
                     </c:when>
                     <c:otherwise>
                         <div class="detail-image detail-image-empty">No image</div>
@@ -20,14 +20,14 @@
         <div class="detail-content-card">
             <a class="detail-back-link" href="${pageContext.request.contextPath}/home">← Back to home</a>
             <p class="detail-category">${product.categoryName}</p>
-            <div class="detail-title-row">
-                <h1 class="detail-title">${product.name}</h1>
-                <button type="button" class="detail-wishlist-btn ${wishlistProductIds != null && wishlistProductIds.contains(product.productId) ? 'active' : ''}" onclick="toggleWishlistDetail('${product.productId}', this)">
-                    <span class="material-symbols-outlined">favorite</span>
-                </button>
-            </div>
+            <h1 class="detail-title">${product.name}</h1>
             <div class="detail-price" id="detailPrice"><fmt:formatNumber value="${displayPrice}" type="number" groupingUsed="true"/> đ</div>
             <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
+
+            <button type="button" class="detail-comment-btn" id="openCommentsBtn">
+                💬 View comments
+                <span class="comment-count-badge" id="commentCountBadge" style="display:none;">0</span>
+            </button>
 
             <c:if test="${not empty param.message}">
                 <div class="detail-flash-message ${param.message eq 'added-to-cart' ? 'success' : 'error'}">
@@ -111,7 +111,7 @@
                         <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                             <div class="product-card">
                                 <div class="product-image-container">
-                                    <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : pageContext.request.contextPath.concat(p.primaryImageUrl)}" alt="${p.name}" />
+                                    <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
                                 </div>
                                 <div class="product-info">
                                     <div class="product-name">${p.name}</div>
@@ -126,49 +126,9 @@
             </div>
         </section>
     </c:if>
-</div>
 
-<style>
-    .detail-title-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .detail-title-row .detail-title {
-        margin: 0;
-        flex: 1;
-    }
-    .detail-wishlist-btn {
-        background: none;
-        border: 2px solid #000;
-        cursor: pointer;
-        padding: 8px;
-        border-radius: 50%;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .detail-wishlist-btn:hover {
-        background-color: #000;
-    }
-    .detail-wishlist-btn .material-symbols-outlined {
-        font-size: 28px;
-        color: #000;
-        font-variation-settings: 'FILL' 0;
-    }
-    .detail-wishlist-btn:hover .material-symbols-outlined {
-        color: #fff;
-    }
-    .detail-wishlist-btn.active {
-        background-color: transparent;
-        border-color: #000;
-    }
-    .detail-wishlist-btn.active .material-symbols-outlined {
-        color: #ef4444;
-        font-variation-settings: 'FILL' 1;
-    }
-</style>
+    <jsp:include page="commentsModal.jsp" />
+</div>
 
 <script>
     (function () {
@@ -231,23 +191,5 @@
             setActiveButton(sizeButtons, selectedSize, 'sizeName');
             refreshVariantSelection();
         }));
-
-        window.toggleWishlistDetail = function(productId, button) {
-            fetch('${pageContext.request.contextPath}/home/customer/toggle-wishlist', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'productId=' + encodeURIComponent(productId)
-            }).then(response => response.json()).then(data => {
-                if (data && data.requiresLogin) {
-                    window.location.href = '${pageContext.request.contextPath}/auth/login';
-                    return;
-                }
-                if (data) {
-                    button.classList.toggle('active', data.inWishlist);
-                }
-            }).catch(error => {
-                console.error('Wishlist toggle error:', error);
-            });
-        };
     })();
 </script>

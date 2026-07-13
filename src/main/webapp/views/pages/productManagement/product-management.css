@@ -31,7 +31,6 @@ body {
     display: grid;
     grid-template-columns: 300px 1fr;
     gap: 24px;
-    align-items: start;
 }
 
 .sidebar-panel,
@@ -48,14 +47,10 @@ body {
     padding: 28px;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     gap: 24px;
     background: linear-gradient(180deg, #111827 0%, #1e1b4b 100%);
     color: #ffffff;
-    position: sticky;
-    top: 32px;
-    align-self: start;
-    max-height: calc(100vh - 64px);
-    overflow-y: auto;
 }
 
 .brand-label,

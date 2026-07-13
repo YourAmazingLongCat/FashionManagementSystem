@@ -81,17 +81,16 @@
 </head>
 
 <body>
-<div class="container mt-3"><a href="${pageContext.request.contextPath}/home" class="btn btn-outline-secondary">&larr; Back to Home</a></div>
 
 <div class="container cart-container py-4">
 
-    <h3 class="mb-4">Shopping Cart</h3>
+    <h3 class="mb-4">🛒 Giỏ hàng</h3>
 
     <c:choose>
 
         <c:when test="${empty cartItems}">
             <div class="alert alert-warning text-center">
-                Your cart is empty
+                Giỏ hàng trống
             </div>
         </c:when>
 
@@ -110,10 +109,10 @@
 
                                 <input type="checkbox"
                                        name="selectedItems"
-                                       value="${item.cartItemId}" data-subtotal="${item.subtotal}" onchange="calculateTotal()">
+                                       value="${item.cartItemId}">
 
                                 <div class="img-box">
-                                    <img src="${pageContext.request.contextPath}${item.imageUrl}">
+                                    <img src="${item.imageUrl}">
                                 </div>
 
                                 <div style="flex:1">
@@ -137,7 +136,7 @@
 
                                 <a class="btn btn-sm btn-outline-danger"
                                    href="${pageContext.request.contextPath}/cart/delete?id=${item.cartItemId}">
-                                    Delete
+                                    Xóa
                                 </a>
 
                             </div>
@@ -151,16 +150,16 @@
 
                         <div class="checkout-box">
 
-                            <h5>Order Summary</h5>
+                            <h5>Tổng thanh toán</h5>
 
                             <hr>
 
                             <h4 class="text-danger">
-                                <span id="totalPrice">0₫</span>
+                                ${total}₫
                             </h4>
 
                             <button type="submit" class="btn btn-shopee w-100 mt-3">
-                                Checkout
+                                Mua hàng
                             </button>
 
                         </div>
@@ -191,7 +190,6 @@ function updateQty(id, qty) {
     });
 
 }
-function calculateTotal(){let t=0;document.querySelectorAll('input[name="selectedItems"]:checked').forEach(cb=>t+=Number(cb.dataset.subtotal));document.getElementById("totalPrice").innerHTML=t.toLocaleString('vi-VN')+'₫';}
 </script>
 
 </body>

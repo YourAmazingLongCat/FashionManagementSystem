@@ -24,9 +24,9 @@
                         <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                             <div class="product-card">
                                 <div class="product-image-container">
-                                    <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : pageContext.request.contextPath.concat(p.primaryImageUrl)}" alt="${p.name}" />
+                                    <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
                                     <button type="button" class="favorite-btn active" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist('${p.productId}', this)">
-                                        <span class="material-symbols-outlined">favorite</span>
+                                        <span class="material-symbols-outlined active">favorite</span>
                                     </button>
                                 </div>
                                 <div class="product-info">
@@ -150,15 +150,6 @@
         margin-bottom: 40px;
     }
 
-    .product-card, .product-link {
-        transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
-    .product-card.removing, .product-link.removing {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-
     /* Pagination */
     .pagination {
         display: flex;
@@ -228,13 +219,20 @@
             if (data && data.inWishlist !== undefined && data.inWishlist === false) {
                 const card = button.closest('.product-card');
                 const link = button.closest('.product-link');
-                const toRemove = card || link;
-                if (toRemove) {
-                    toRemove.classList.add('removing');
+                if (card) {
+                    card.remove();
+                } else if (link) {
+                    link.remove();
                 }
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
+                const countEl = document.querySelector('.wishlist-count');
+                if (countEl) {
+                    const currentCount = parseInt(countEl.textContent) || 0;
+                    const newCount = currentCount - 1;
+                    countEl.textContent = newCount + ' products';
+                    if (newCount <= 0) {
+                        location.reload();
+                    }
+                }
             }
         }).catch(error => {
             console.error('Wishlist toggle error:', error);

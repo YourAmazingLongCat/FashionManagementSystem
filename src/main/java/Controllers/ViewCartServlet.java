@@ -46,8 +46,6 @@ public class ViewCartServlet extends HttpServlet {
         CartItemDAO itemDAO = new CartItemDAO();
 
         if (cart != null) {
-            // Clean up invalid cart items (variant deleted by staff)
-            itemDAO.cleanupInvalidItems(cart.getCartId());
 
             List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
             request.setAttribute("cartItems", items);

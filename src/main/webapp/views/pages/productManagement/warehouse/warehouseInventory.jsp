@@ -38,17 +38,8 @@
             .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
             .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
             .table-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; }
-            .table-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 16px; }
+            .table-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
             .table-header h3 { margin: 0; font-size: 1.1rem; }
-            .search-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-            .search-input { padding: 11px 15px; border-radius: 14px; border: 1px solid #dbe3f0; background: #fff; font-family: 'Inter', sans-serif; font-size: 0.9rem; min-width: 220px; outline: none; }
-            .search-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1); }
-            .filter-select { padding: 11px 32px 11px 14px; border-radius: 14px; border: 1px solid #dbe3f0; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 10px center; font-family: 'Inter', sans-serif; font-size: 0.9rem; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; -moz-appearance: none; }
-            .filter-select:focus { border-color: #7c3aed; }
-            .search-btn { padding: 11px 18px; border-radius: 14px; border: none; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #fff; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all 0.2s ease; }
-            .search-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(124, 58, 237, 0.25); }
-            .reset-btn { padding: 11px 18px; border-radius: 14px; border: 1px solid #dbe3f0; background: #fff; color: #334155; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.88rem; text-decoration: none; transition: all 0.2s ease; }
-            .reset-btn:hover { background: #f8fafc; }
             .table-wrapper { overflow-x: auto; }
             table { width: 100%; border-collapse: collapse; }
             th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid #f1f5f9; }
@@ -84,7 +75,7 @@
                         <span>Stock In</span>
                     </a>
                 </div>
-                <a class="back-link" href="${pageContext.request.contextPath}/staff/products">
+                <a class="back-link" href="${pageContext.request.contextPath}/admin/products">
                     &#8592; Back to Product Management
                 </a>
             </aside>
@@ -117,23 +108,6 @@
                 <div class="table-panel">
                     <div class="table-header">
                         <h3>Stock List</h3>
-                        <form class="search-toolbar" method="get" action="${pageContext.request.contextPath}/admin/warehouse/inventory">
-                            <input class="search-input" type="text" name="keyword" value="${currentKeyword}" placeholder="Search by product name or SKU..." />
-                            <select class="filter-select" name="sizeFilter">
-                                <option value="">All Sizes</option>
-                                <c:forEach var="size" items="${allSizes}">
-                                    <option value="${size[0]}" ${currentSizeFilter eq size[0] ? 'selected' : ''}>${size[1]}</option>
-                                </c:forEach>
-                            </select>
-                            <select class="filter-select" name="colorFilter">
-                                <option value="">All Colors</option>
-                                <c:forEach var="color" items="${allColors}">
-                                    <option value="${color[0]}" ${currentColorFilter eq color[0] ? 'selected' : ''}>${color[1]}</option>
-                                </c:forEach>
-                            </select>
-                            <button class="search-btn" type="submit">Search</button>
-                            <a class="reset-btn" href="${pageContext.request.contextPath}/admin/warehouse/inventory">Reset</a>
-                        </form>
                     </div>
                     <div class="table-wrapper">
                         <table>

@@ -49,7 +49,7 @@
                         <div class="alert">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="size-form">
+                    <form method="post" action="${pageContext.request.contextPath}/admin/products" class="size-form">
                         <input type="hidden" name="action" value="${formAction}">
                         <c:if test="${formAction eq 'editSize'}">
                             <input type="hidden" name="sizeId" value="${size.sizeId}">
@@ -86,7 +86,7 @@
                         </section>
 
                         <div class="form-actions">
-                            <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=sizes">Back</a>
+                            <a class="ghost-btn" href="${pageContext.request.contextPath}/admin/products?tab=sizes">Back</a>
                             <button type="submit" class="primary-btn">${formAction eq 'editSize' ? 'Save changes' : 'Add size'}</button>
                         </div>
                     </form>

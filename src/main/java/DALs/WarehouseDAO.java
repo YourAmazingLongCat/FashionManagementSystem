@@ -14,101 +14,36 @@ public class WarehouseDAO extends DBContext {
     }
 
     public List<Object[]> getInventorySummary() {
-        return getInventorySummary(null, null, null);
-    }
-
-    public List<Object[]> getInventorySummary(String keyword, String sizeFilter, String colorFilter) {
         List<Object[]> summary = new ArrayList<>();
         if (connection == null) return summary;
 
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT pv.variantId, pv.productId, p.name AS productName, "
+        String sql = "SELECT pv.variantId, pv.productId, p.name AS productName, "
                 + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, pv.stockQty "
                 + "FROM ProductVariants pv "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "WHERE 1=1 ");
+                + "ORDER BY p.name, s.sizeName, c.colorName";
 
-        List<Object> params = new ArrayList<>();
-        if (keyword != null && !keyword.isBlank()) {
-            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(pv.sku) LIKE ?) ");
-            params.add("%" + keyword.toLowerCase() + "%");
-            params.add("%" + keyword.toLowerCase() + "%");
-        }
-        if (sizeFilter != null && !sizeFilter.isBlank()) {
-            sql.append("AND s.sizeId = ? ");
-            params.add(sizeFilter);
-        }
-        if (colorFilter != null && !colorFilter.isBlank()) {
-            sql.append("AND c.colorId = ? ");
-            params.add(colorFilter);
-        }
-
-        sql.append("ORDER BY p.name, s.sizeName, c.colorName");
-
-        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
-            }
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Object[] row = new Object[9];
-                    row[0] = rs.getString("variantId");
-                    row[1] = rs.getString("productId");
-                    row[2] = rs.getString("productName");
-                    row[3] = rs.getString("sizeId");
-                    row[4] = rs.getString("sizeName");
-                    row[5] = rs.getString("colorId");
-                    row[6] = rs.getString("colorName");
-                    row[7] = rs.getString("sku");
-                    row[8] = rs.getInt("stockQty");
-                    summary.add(row);
-                }
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Object[] row = new Object[9];
+                row[0] = rs.getString("variantId");
+                row[1] = rs.getString("productId");
+                row[2] = rs.getString("productName");
+                row[3] = rs.getString("sizeId");
+                row[4] = rs.getString("sizeName");
+                row[5] = rs.getString("colorId");
+                row[6] = rs.getString("colorName");
+                row[7] = rs.getString("sku");
+                row[8] = rs.getInt("stockQty");
+                summary.add(row);
             }
         } catch (SQLException ex) {
             System.out.println("getInventorySummary error: " + ex.getMessage());
         }
         return summary;
-    }
-
-    public List<Object[]> getAllSizes() {
-        List<Object[]> sizes = new ArrayList<>();
-        if (connection == null) return sizes;
-
-        String sql = "SELECT sizeId, sizeName FROM Sizes ORDER BY sizeName";
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Object[] row = new Object[2];
-                row[0] = rs.getString("sizeId");
-                row[1] = rs.getString("sizeName");
-                sizes.add(row);
-            }
-        } catch (SQLException ex) {
-            System.out.println("getAllSizes error: " + ex.getMessage());
-        }
-        return sizes;
-    }
-
-    public List<Object[]> getAllColors() {
-        List<Object[]> colors = new ArrayList<>();
-        if (connection == null) return colors;
-
-        String sql = "SELECT colorId, colorName, hexCode FROM Colors ORDER BY colorName";
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Object[] row = new Object[3];
-                row[0] = rs.getString("colorId");
-                row[1] = rs.getString("colorName");
-                row[2] = rs.getString("hexCode");
-                colors.add(row);
-            }
-        } catch (SQLException ex) {
-            System.out.println("getAllColors error: " + ex.getMessage());
-        }
-        return colors;
     }
 
     public List<Object[]> getLowStockItems(int threshold) {
