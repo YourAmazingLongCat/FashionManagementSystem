@@ -59,7 +59,12 @@
 
                     <div class="form-group">
                         <label for="password">Mật khẩu<span class="required">*</span></label>
-                        <input type="password" id="password" name="password" required>
+                        <div class="password-wrapper">
+                            <input type="password" id="password" name="password" required>
+                            <span class="material-icons toggle-password" onclick="togglePasswordVisibility()">
+                                visibility_off
+                            </span>
+                        </div>
                     </div>
 
                     <div class="action-row">
@@ -91,6 +96,21 @@
         </div>
 
         <script>
+            function togglePasswordVisibility() {
+                const passwordInput = document.getElementById("password");
+                const toggleIcon = document.querySelector(".toggle-password");
+                
+                if (passwordInput.type === "password") {
+                    passwordInput.type = "text";
+                    toggleIcon.textContent = "visibility";
+                    toggleIcon.style.color = "#000";
+                } else {
+                    passwordInput.type = "password";
+                    toggleIcon.textContent = "visibility_off";
+                    toggleIcon.style.color = "#555";
+                }
+            }
+
             function closeToast() {
                 const toast = document.getElementById("toast");
                 if (toast) {
