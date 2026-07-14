@@ -2,15 +2,11 @@ package Controllers;
 
 import Models.CartItem;
 import Models.Order;
-<<<<<<< HEAD
 import Services.OrderService;
-=======
 import Models.OrderItem;
 import Models.Account;
 import DALs.OrderDAO;
 import DALs.OrderItemDAO;
-
->>>>>>> e3e54207b4a5ae9c33f0518079c2c8ea883ea308
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,10 +23,11 @@ public class OrderReviewServlet extends HttpServlet {
     private OrderService orderService;
 
     @Override
-<<<<<<< HEAD
     public void init() throws ServletException {
         orderService = new OrderService();
-=======
+    }
+
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -103,7 +100,6 @@ public class OrderReviewServlet extends HttpServlet {
         request.setAttribute("totalAmount", totalAmount);
 
         request.getRequestDispatcher("/views/orderReview.jsp").forward(request, response);
->>>>>>> e3e54207b4a5ae9c33f0518079c2c8ea883ea308
     }
 
     @Override
