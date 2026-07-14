@@ -1,6 +1,6 @@
 package Controllers;
 
-import DALs.AccountDAO;
+import DAOs.AccountDAO;
 import Models.Account;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -44,7 +44,7 @@ public class LoginControllers extends HttpServlet {
         // 3. Xử lý kết quả
         if (acc != null) {
 
-            // 👉 SỬA Ở ĐÂY: Kiểm tra status kiểu String
+            // Kiểm tra status kiểu String
             // Nếu status khác null và KHÔNG bằng chữ "Active" (không phân biệt hoa thường)
             if (acc.getStatus() != null && !acc.getStatus().equalsIgnoreCase("Active")) {
                 request.setAttribute("errorMessage", "Tài khoản của bạn đã bị khóa hoặc chưa kích hoạt!");
@@ -56,11 +56,19 @@ public class LoginControllers extends HttpServlet {
             HttpSession session = request.getSession();
             session.setAttribute("USER", acc);
 
-            // Chuyển hướng Staff đến Product Management, Admin/Customer đến Home
+            // 👉 ĐÃ SỬA Ở ĐÂY: Phân luồng chuyển hướng rõ ràng cho từng Role
             String role = acc.getRole();
-            if (role != null && role.equalsIgnoreCase("Staff")) {
+            if (role != null && role.equalsIgnoreCase("Admin")) {
+                // Nếu là Admin -> Vào trang Quản trị
+                // Lưu ý: Đảm bảo urlPatterns của trang Admin khớp với "/admin" nhé!
+                response.sendRedirect(request.getContextPath() + "/admin");
+                
+            } else if (role != null && role.equalsIgnoreCase("Staff")) {
+                // Nếu là Staff -> Vào trang Quản lý Sản phẩm
                 response.sendRedirect(request.getContextPath() + "/staff/products");
+                
             } else {
+                // Mặc định (Customer) -> Về trang chủ Home
                 response.sendRedirect(request.getContextPath() + "/home");
             }
 
