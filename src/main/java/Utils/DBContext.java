@@ -24,6 +24,7 @@ public class DBContext {
         }
     }    
 
+    // SỬA LẠI HÀM NÀY: Xóa bỏ chữ "static" và trả về biến connection ở trên
     public Connection getConnection() {
         return connection; 
     }

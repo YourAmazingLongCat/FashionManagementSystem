@@ -285,6 +285,9 @@ a {
     100% {
         transform: translateX(-50%);
     }
+
+
+
 }
 
 /* ================= CHỮ SIÊU TO CHẠY Ở TRÊN CỦA LOGIN ================= */
@@ -322,31 +325,4 @@ a {
     100% {
         transform: translateX(-50%);
     }
-}
-
-/* ================= CSS THÊM MỚI CHO CON MẮT ẨN HIỆN MẬT KHẨU ================= */
-.password-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.password-wrapper input {
-    width: 100%;
-    padding-right: 40px !important; /* Chừa chỗ cho con mắt để chữ không đè lên */
-}
-
-.toggle-password {
-    position: absolute;
-    right: 12px;
-    cursor: pointer;
-    color: #555;
-    user-select: none;
-    transition: color 0.3s;
-    font-size: 22px; /* Kích thước icon */
-}
-
-.toggle-password:hover {
-    color: #ff5a00; /* Hover đổi màu cam neon */
 }

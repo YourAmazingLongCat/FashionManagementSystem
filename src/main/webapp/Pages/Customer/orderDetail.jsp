@@ -1,171 +1,133 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.text.NumberFormat" %>
-<%@ page import="java.time.format.DateTimeFormatter" %>
-<%@ page import="java.util.Locale" %>
-<%@ page import="Models.Order" %>
-<%@ page import="Models.OrderItem" %>
-<%!
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-    private String badgeClass(String status) {
-        if (status == null) return "order-badge-pending";
-        return "order-badge-" + status.toLowerCase();
-    }
+<c:if test="${empty requestScope.contentPage}">
+    <c:redirect url="${pageContext.request.contextPath}/customer/order-history" />
+</c:if>
 
-    private int statusIndex(String status) {
-        if ("Pending".equals(status)) return 0;
-        if ("Confirmed".equals(status)) return 1;
-        if ("Processing".equals(status)) return 2;
-        if ("Shipping".equals(status)) return 3;
-        if ("Delivered".equals(status)) return 4;
-        if ("Cancelled".equals(status)) return -1;
-        return 0;
-    }
-%>
-<%
-    Order order = (Order) request.getAttribute("order");
-    List<OrderItem> orderItems = (List<OrderItem>) request.getAttribute("orderItems");
-    String errorMessage = (String) request.getAttribute("errorMessage");
-    String successMessage = (String) request.getAttribute("successMessage");
-    NumberFormat currency = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
-    DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    String[] steps = {"Pending", "Confirmed", "Processing", "Shipping", "Delivered"};
-    int currentStep = order == null ? 0 : statusIndex(order.getOrderStatus());
-%>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Detail</title>
-    <link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/order-ui.css">
-</head>
-<body class="order-page">
-<div class="order-shell">
-    <div class="order-topbar">
+<section class="wallet-page">
+    <div class="wallet-hero">
         <div>
-            <div class="order-breadcrumb">Customer / Order detail</div>
-            <h1 class="order-title">Order Detail</h1>
-            <p class="order-subtitle">Review your order information and shipping progress.</p>
+            <p class="wallet-breadcrumb">Customer / Order Detail</p>
+            <h1 class="wallet-title">Order Detail</h1>
+            <p class="wallet-subtitle">Review your order and pay with wallet balance.</p>
         </div>
-        <a class="order-btn order-btn-light" href="<%= request.getContextPath() %>/customer/order-history">Back to orders</a>
+        <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/customer/order-history">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Back to orders
+        </a>
     </div>
 
-    <% if (errorMessage != null) { %>
-        <div class="order-alert order-alert-error"><%= errorMessage %></div>
-    <% } %>
-    <% if (successMessage != null) { %>
-        <div class="order-alert order-alert-success"><%= successMessage %></div>
-    <% } %>
+    <c:if test="${not empty sessionScope.successMessage}">
+        <div class="wallet-alert wallet-alert-success">${sessionScope.successMessage}</div>
+        <c:remove var="successMessage" scope="session" />
+    </c:if>
 
-    <% if (order == null) { %>
-        <div class="order-card order-card-pad order-empty">
-            <h3>Order not found</h3>
-            <p>Please return to your order history and try again.</p>
-        </div>
-    <% } else { %>
-        <div class="order-grid order-grid-2">
-            <div class="order-card order-card-pad">
-                <div class="order-detail-header">
-                    <div>
-                        <div class="order-muted">Order ID</div>
-                        <h2 class="order-id"><%= order.getOrderId() %></h2>
-                    </div>
-                    <span class="order-badge <%= badgeClass(order.getOrderStatus()) %>"><%= order.getOrderStatus() %></span>
-                </div>
+    <c:if test="${not empty sessionScope.errorMessage}">
+        <div class="wallet-alert wallet-alert-error">${sessionScope.errorMessage}</div>
+        <c:remove var="errorMessage" scope="session" />
+    </c:if>
 
-                <div style="height: 22px"></div>
-
-                <div class="order-detail-meta">
-                    <div class="order-meta-box">
-                        <div class="order-meta-label">Placed at</div>
-                        <div class="order-meta-value"><%= order.getPlacedAt() == null ? "N/A" : order.getPlacedAt().format(dateFormat) %></div>
-                    </div>
-                    <div class="order-meta-box">
-                        <div class="order-meta-label">Phone</div>
-                        <div class="order-meta-value"><%= safe(order.getPhone()) %></div>
-                    </div>
-                    <div class="order-meta-box" style="grid-column: 1 / -1;">
-                        <div class="order-meta-label">Shipping address</div>
-                        <div class="order-meta-value"><%= safe(order.getShippingAddress()) %></div>
-                    </div>
-                </div>
-
-                <div style="height: 24px"></div>
-                <h3 class="order-section-title">Products</h3>
-                <div class="order-items">
-                    <% if (orderItems == null || orderItems.isEmpty()) { %>
-                        <div class="order-empty">No items found for this order.</div>
-                    <% } else { %>
-                        <% for (OrderItem item : orderItems) { %>
-                            <div class="order-item-card">
-                                <div class="order-item-thumb">PR</div>
-                                <div>
-                                    <div class="order-item-name">Variant <%= safe(item.getVariantId()) %></div>
-                                    <div class="order-muted">Quantity: <%= item.getQuantity() %> × <%= currency.format(item.getUnitPrice()) %></div>
-                                </div>
-                                <div class="order-price"><%= currency.format(item.getSubTotal()) %></div>
-                            </div>
-                        <% } %>
-                    <% } %>
-                </div>
+    <c:choose>
+        <c:when test="${empty order}">
+            <div class="wallet-empty">
+                <span class="material-symbols-outlined">error</span>
+                <h3>Order not found</h3>
+                <p>${errorMessage}</p>
             </div>
+        </c:when>
+        <c:otherwise>
+            <div class="wallet-order-grid">
+                <div class="wallet-history-card">
+                    <div class="wallet-section-head">
+                        <h2>${order.orderId}</h2>
+                        <span class="payment-status payment-status-${fn:toLowerCase(order.orderStatus)}">${order.orderStatus}</span>
+                    </div>
 
-            <div class="order-grid">
-                <div class="order-card order-card-pad">
-                    <h3 class="order-section-title">Shipping progress</h3>
-                    <div class="order-timeline">
-                        <% if ("Cancelled".equals(order.getOrderStatus())) { %>
-                            <div class="order-timeline-step is-cancelled">
-                                <div class="order-timeline-dot">!</div>
-                                <div>
-                                    <strong>Cancelled</strong>
-                                    <div class="order-muted">This order has been cancelled.</div>
-                                </div>
-                            </div>
-                        <% } else { %>
-                            <% for (int i = 0; i < steps.length; i++) { %>
-                                <div class="order-timeline-step <%= i < currentStep ? "is-done" : (i == currentStep ? "is-active" : "") %>">
-                                    <div class="order-timeline-dot"><%= i + 1 %></div>
-                                    <div>
-                                        <strong><%= steps[i] %></strong>
-                                        <div class="order-muted"><%= i <= currentStep ? "Completed or current step" : "Waiting" %></div>
-                                    </div>
-                                </div>
-                            <% } %>
-                        <% } %>
+                    <div class="wallet-info-list">
+                        <div><span>Shipping Address</span><strong>${order.shippingAddress}</strong></div>
+                        <div><span>Phone</span><strong>${order.phone}</strong></div>
+                        <div><span>Placed At</span><strong>${order.placedAt}</strong></div>
+                        <div>
+                            <span>Total Amount</span>
+                            <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                        </div>
+                    </div>
+
+                    <div class="wallet-table-wrap wallet-table-space">
+                        <table class="wallet-table">
+                            <thead>
+                                <tr>
+                                    <th>Variant</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Discount</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="item" items="${orderItems}">
+                                    <tr>
+                                        <td><strong>${item.variantId}</strong></td>
+                                        <td>${item.quantity}</td>
+                                        <td><fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND</td>
+                                        <td><fmt:formatNumber value="${item.discountAmount}" type="number" groupingUsed="true" /> VND</td>
+                                        <td class="wallet-money"><fmt:formatNumber value="${item.subTotal}" type="number" groupingUsed="true" /> VND</td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div class="order-card order-card-pad">
-                    <h3 class="order-section-title">Summary</h3>
-                    <div class="order-summary-row">
-                        <span>Subtotal</span>
-                        <strong><%= order.getTotalAmount() == null ? "0 ₫" : currency.format(order.getTotalAmount()) %></strong>
-                    </div>
-                    <div class="order-summary-row">
-                        <span>Shipping fee</span>
-                        <strong>0 ₫</strong>
-                    </div>
-                    <div class="order-summary-row">
-                        <span>Total</span>
-                        <span class="order-summary-total"><%= order.getTotalAmount() == null ? "0 ₫" : currency.format(order.getTotalAmount()) %></span>
+                <aside class="wallet-payment-panel">
+                    <div class="wallet-form-head">
+                        <span class="material-symbols-outlined">account_balance_wallet</span>
+                        <div>
+                            <h2>Wallet Payment</h2>
+                            <p>Use your wallet balance to pay this order.</p>
+                        </div>
                     </div>
 
-                    <% if (!("Shipping".equals(order.getOrderStatus()) || "Delivered".equals(order.getOrderStatus()) || "Cancelled".equals(order.getOrderStatus()))) { %>
-                        <div style="height: 16px"></div>
-                        <form action="<%= request.getContextPath() %>/customer/cancel-order" method="post" onsubmit="return confirm('Are you sure you want to cancel this order?');">
-                            <input type="hidden" name="orderId" value="<%= order.getOrderId() %>">
-                            <button class="order-btn order-btn-danger" type="submit" style="width: 100%;">Cancel order</button>
-                        </form>
-                    <% } %>
-                </div>
+                    <div class="wallet-payment-row">
+                        <span>Payment Status</span>
+                        <c:choose>
+                            <c:when test="${not empty payment}">
+                                <strong class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
+                            </c:when>
+                            <c:otherwise>
+                                <strong class="payment-status payment-status-pending">Unpaid</strong>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+
+                    <div class="wallet-payment-row">
+                        <span>Amount</span>
+                        <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                    </div>
+
+                    <c:choose>
+                        <c:when test="${not empty payment && payment.paymentStatus == 'Paid'}">
+                            <a class="wallet-outline-btn wallet-full-btn" href="${pageContext.request.contextPath}/customer/wallet">
+                                View Wallet History
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <form action="${pageContext.request.contextPath}/customer/pay-with-wallet" method="post">
+                                <input type="hidden" name="orderId" value="${order.orderId}" />
+                                <button class="wallet-primary-btn wallet-full-btn" type="submit">
+                                    <span class="material-symbols-outlined">wallet</span>
+                                    Pay With Wallet
+                                </button>
+                            </form>
+                            <a class="wallet-outline-btn wallet-full-btn" href="${pageContext.request.contextPath}/customer/wallet">
+                                Deposit More Money
+                            </a>
+                        </c:otherwise>
+                    </c:choose>
+                </aside>
             </div>
-        </div>
-    <% } %>
-</div>
-</body>
-</html>
+        </c:otherwise>
+    </c:choose>
+</section>

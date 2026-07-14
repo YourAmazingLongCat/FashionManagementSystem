@@ -1,15 +1,19 @@
 package Controllers;
 
+import Models.CartItem;
 import Models.Order;
+<<<<<<< HEAD
+import Services.OrderService;
+=======
 import Models.OrderItem;
 import Models.Account;
 import DALs.OrderDAO;
 import DALs.OrderItemDAO;
 
+>>>>>>> e3e54207b4a5ae9c33f0518079c2c8ea883ea308
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -17,14 +21,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-/**
- *
- * @author CE181629 - Ngo Manh Quan
- */
-@WebServlet(name = "OrderReviewServlet", urlPatterns = {"/OrderReviewServlet"})
+@WebServlet(name = "OrderReviewServlet", urlPatterns = {"/customer/order-review"})
 public class OrderReviewServlet extends HttpServlet {
 
+    private OrderService orderService;
+
     @Override
+<<<<<<< HEAD
+    public void init() throws ServletException {
+        orderService = new OrderService();
+=======
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -97,12 +103,61 @@ public class OrderReviewServlet extends HttpServlet {
         request.setAttribute("totalAmount", totalAmount);
 
         request.getRequestDispatcher("/views/orderReview.jsp").forward(request, response);
+>>>>>>> e3e54207b4a5ae9c33f0518079c2c8ea883ea308
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        doGet(request, response);
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+
+        HttpSession session = request.getSession();
+
+        String customerId = (String) session.getAttribute("customerId");
+
+        if (customerId == null) {
+            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            return;
+        }
+
+        List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
+
+        if (cart == null || cart.isEmpty()) {
+            request.setAttribute("errorMessage", "Your cart is empty.");
+            request.getRequestDispatcher("/Pages/Customer/Cart.jsp").forward(request, response);
+            return;
+        }
+
+        String shippingAddress = request.getParameter("shippingAddress");
+        String phone = request.getParameter("phone");
+
+        if (shippingAddress == null || shippingAddress.trim().isEmpty()
+                || phone == null || phone.trim().isEmpty()) {
+
+            request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
+            request.getRequestDispatcher("/Pages/Customer/checkout.jsp").forward(request, response);
+            return;
+        }
+
+        Order orderPreview = orderService.reviewOrder(
+                customerId,
+                shippingAddress.trim(),
+                phone.trim(),
+                cart
+        );
+
+        if (orderPreview == null) {
+            request.setAttribute("errorMessage", "Cannot review order. Please check your cart.");
+            request.getRequestDispatcher("/Pages/Customer/checkout.jsp").forward(request, response);
+            return;
+        }
+
+        request.setAttribute("orderPreview", orderPreview);
+        request.setAttribute("cart", cart);
+
+        request.getRequestDispatcher("/Pages/Customer/orderReview.jsp").forward(request, response);
     }
 }

@@ -7,6 +7,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "ConfirmOrderServlet", urlPatterns = {"/staff/confirm-order"})
 public class ConfirmOrderServlet extends HttpServlet {
@@ -28,21 +29,24 @@ public class ConfirmOrderServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
-
-        String orderId = request.getParameter("orderId");
+        HttpSession session = request.getSession();
+        String orderId = trim(request.getParameter("orderId"));
 
         if (isEmpty(orderId)) {
-            response.sendRedirect(request.getContextPath() + "/staff/orders?error=missingOrderId");
+            session.setAttribute("errorMessage", "Missing order ID.");
+            response.sendRedirect(request.getContextPath() + "/staff/orders");
             return;
         }
 
-        boolean result = orderService.confirmOrder(orderId);
-        String message = result ? "confirmSuccess" : "confirmFailed";
+        boolean confirmed = orderService.confirmOrder(orderId);
+        session.setAttribute(confirmed ? "successMessage" : "errorMessage",
+                confirmed ? "Order confirmed successfully." : "This order cannot be confirmed.");
 
-        response.sendRedirect(request.getContextPath()
-                + "/staff/order-detail?orderId=" + orderId.trim()
-                + "&message=" + message);
+        response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isEmpty(String value) {
