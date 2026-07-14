@@ -21,6 +21,27 @@
             <a class="detail-back-link" href="${pageContext.request.contextPath}/home">← Back to home</a>
             <p class="detail-category">${product.categoryName}</p>
             <h1 class="detail-title">${product.name}</h1>
+            <div class="detail-rating-row">
+                <c:choose>
+                    <c:when test="${not empty ratingSummary && ratingSummary[1] > 0}">
+                        <span class="detail-stars">
+                            <c:forEach begin="1" end="5" var="i">
+                                <c:choose>
+                                    <c:when test="${i <= ratingSummary[0] + 0.5}">★</c:when>
+                                    <c:otherwise>☆</c:otherwise>
+                                </c:choose>
+                            </c:forEach>
+                        </span>
+                        <span class="detail-rating-value"><fmt:formatNumber value="${ratingSummary[0]}" maxFractionDigits="1"/></span>
+                        <span class="detail-review-count">(${ratingSummary[1]} đánh giá)</span>
+                    </c:when>
+                    <c:otherwise>
+                        <span class="detail-no-rating">Chưa có đánh giá</span>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+
+            <div class="detail-price" id="detailPrice">...</div>
             <div class="detail-price" id="detailPrice"><fmt:formatNumber value="${displayPrice}" type="number" groupingUsed="true"/> đ</div>
             <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
 
@@ -118,6 +139,26 @@
                                     <div class="product-price-row">
                                         <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                                     </div>
+                                    <div class="product-info">
+                                        <div class="product-name">${p.name}</div>
+                                        <div class="product-price-row">
+                                            <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
+                                        </div>
+                                        <c:set var="rs" value="${ratingMap[p.productId]}" />
+                                        <div class="product-rating-row">
+                                            <c:choose>
+                                                <c:when test="${not empty rs && rs[1] > 0}">
+                                                    <span class="product-stars">
+                                                        <c:forEach begin="1" end="5" var="i">${i <= rs[0] + 0.5 ? '★' : '☆'}</c:forEach>
+                                                        </span>
+                                                        <span class="product-review-count">(${rs[1]})</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="product-no-rating">Chưa có đánh giá</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </a>
@@ -181,15 +222,15 @@
         };
 
         colorButtons.forEach(button => button.addEventListener('click', () => {
-            selectedColor = button.dataset.colorName;
-            setActiveButton(colorButtons, selectedColor, 'colorName');
-            refreshVariantSelection();
-        }));
+                selectedColor = button.dataset.colorName;
+                setActiveButton(colorButtons, selectedColor, 'colorName');
+                refreshVariantSelection();
+            }));
 
         sizeButtons.forEach(button => button.addEventListener('click', () => {
-            selectedSize = button.dataset.sizeName;
-            setActiveButton(sizeButtons, selectedSize, 'sizeName');
-            refreshVariantSelection();
-        }));
+                selectedSize = button.dataset.sizeName;
+                setActiveButton(sizeButtons, selectedSize, 'sizeName');
+                refreshVariantSelection();
+            }));
     })();
 </script>

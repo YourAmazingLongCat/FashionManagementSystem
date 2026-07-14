@@ -838,3 +838,50 @@ a {
         max-height: 92vh;
     }
 }
+/* Rating trên product card (trang chủ + related products) */
+.product-rating-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.85rem;
+}
+.product-stars {
+    color: #f59e0b;
+    letter-spacing: 1px;
+    font-size: 0.95rem;
+}
+.product-review-count {
+    color: var(--gray-dark);
+}
+.product-no-rating {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.8rem;
+}
+
+/* Rating trên trang chi tiết sản phẩm */
+.detail-rating-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+}
+.detail-stars {
+    color: #f59e0b;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+.detail-rating-value {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+.detail-review-count {
+    color: #6b7280;
+    font-size: 0.88rem;
+}
+.detail-no-rating {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.88rem;
+}

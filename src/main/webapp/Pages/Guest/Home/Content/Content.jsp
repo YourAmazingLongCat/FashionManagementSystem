@@ -63,6 +63,20 @@
                             <div class="product-price-row">
                                 <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                             </div>
+                            <c:set var="rs" value="${ratingMap[p.productId]}" />
+                            <div class="product-rating-row">
+                                <c:choose>
+                                    <c:when test="${not empty rs && rs[1] > 0}">
+                                        <span class="product-stars">
+                                            <c:forEach begin="1" end="5" var="i">${i <= rs[0] + 0.5 ? '★' : '☆'}</c:forEach>
+                                        </span>
+                                        <span class="product-review-count">(${rs[1]})</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="product-no-rating">Chưa có đánh giá</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
                         </div>
                     </div>
                 </a>

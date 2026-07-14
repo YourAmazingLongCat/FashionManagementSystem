@@ -32,7 +32,7 @@
             <h5 class="mb-0">Biểu đồ tăng trưởng doanh thu</h5>
             <div class="d-flex gap-2 align-items-center">
                 <select id="periodType" class="form-select form-select-sm" style="width:130px;">
-                    <option value="day">Theo ngày</option>
+<!--                    <option value="day">Theo ngày</option>-->
                     <option value="week">Theo tuần</option>
                     <option value="month">Theo tháng</option>
                     <option value="year">Theo năm</option>
