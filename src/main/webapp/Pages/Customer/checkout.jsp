@@ -27,7 +27,7 @@
                     <span class="order-muted">Required</span>
                 </div>
 
-                <form method="post" action="${pageContext.request.contextPath}/customer/checkout">
+                <form action="<%= request.getContextPath() %>/customer/order-review" method="post">
                     <div class="order-form-group">
                         <label class="order-label" for="shippingAddress">Shipping address</label>
                         <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required>${param.shippingAddress}</textarea>

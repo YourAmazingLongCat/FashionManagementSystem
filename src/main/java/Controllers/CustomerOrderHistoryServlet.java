@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.lang.reflect.InvocationTargetException;
 
 @WebServlet(name = "CustomerOrderHistoryServlet", urlPatterns = {"/customer/order-history"})
 public class CustomerOrderHistoryServlet extends HttpServlet {
@@ -69,7 +70,7 @@ public class CustomerOrderHistoryServlet extends HttpServlet {
                 if (value != null && !value.toString().trim().isEmpty()) {
                     return value.toString();
                 }
-            } catch (Exception ignored) {
+            } catch (IllegalAccessException | IllegalArgumentException | NoSuchMethodException | SecurityException | InvocationTargetException ignored) {
             }
         }
 

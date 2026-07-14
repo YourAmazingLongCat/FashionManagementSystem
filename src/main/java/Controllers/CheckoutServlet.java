@@ -30,10 +30,10 @@ public class CheckoutServlet extends HttpServlet {
         HttpSession session = request.getSession();
         String customerId = getCustomerId(session);
 
-        if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/auth/login");
-            return;
-        }
+//        if (customerId == null) {
+//            response.sendRedirect(request.getContextPath() + "/auth/login");
+//            return;
+//        }
 
         forwardLayout(request, response, CHECKOUT_PAGE);
     }
@@ -48,10 +48,10 @@ public class CheckoutServlet extends HttpServlet {
         HttpSession session = request.getSession();
         String customerId = getCustomerId(session);
 
-        if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/auth/login");
-            return;
-        }
+//        if (customerId == null) {
+//            response.sendRedirect(request.getContextPath() + "/auth/login");
+//            return;
+//        }
 
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) {

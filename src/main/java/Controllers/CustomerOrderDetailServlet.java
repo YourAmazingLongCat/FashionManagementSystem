@@ -2,7 +2,9 @@ package Controllers;
 
 import Models.Order;
 import Models.OrderItem;
+import Models.Payment;
 import Services.OrderService;
+import Services.PaymentService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -15,83 +17,49 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "CustomerOrderDetailServlet", urlPatterns = {"/customer/order-detail"})
 public class CustomerOrderDetailServlet extends HttpServlet {
 
-    private static final String LAYOUT_PAGE = "/Pages/Guest/Home/Layout/Layout.jsp";
-    private static final String ORDER_DETAIL_PAGE = "/Pages/Customer/orderDetail.jsp";
-
     private OrderService orderService;
+    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
-        String customerId = getCustomerId(session);
+        String customerId = (String) session.getAttribute("customerId");
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/auth/login");
+            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
             return;
         }
 
-        String orderId = trim(request.getParameter("orderId"));
-        if (isEmpty(orderId)) {
-            session.setAttribute("errorMessage", "Missing order ID.");
+        String orderId = request.getParameter("orderId");
+
+        if (orderId == null || orderId.trim().isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
-        Order order = orderService.viewOrderDetailForCustomer(customerId, orderId);
+        Order order = orderService.viewOrderDetailForCustomer(customerId, orderId.trim());
+
         if (order == null) {
             request.setAttribute("errorMessage", "Order not found.");
-            forwardLayout(request, response, ORDER_DETAIL_PAGE);
+            request.setAttribute("contentPage", "/Pages/Customer/orderDetail.jsp");
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
             return;
         }
 
-        List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId);
+        List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId.trim());
+        Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
+
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        forwardLayout(request, response, ORDER_DETAIL_PAGE);
-    }
-
-    private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
-            throws ServletException, IOException {
-        request.setAttribute("contentPage", contentPage);
-        request.getRequestDispatcher(LAYOUT_PAGE).forward(request, response);
-    }
-
-    private String getCustomerId(HttpSession session) {
-        Object direct = session.getAttribute("customerId");
-        if (direct != null && !direct.toString().trim().isEmpty()) {
-            return direct.toString();
-        }
-
-        Object user = session.getAttribute("USER");
-        if (user == null) {
-            return null;
-        }
-
-        String[] methodNames = {"getAccountId", "getCustomerId", "getUserId", "getId"};
-        for (String methodName : methodNames) {
-            try {
-                Object value = user.getClass().getMethod(methodName).invoke(user);
-                if (value != null && !value.toString().trim().isEmpty()) {
-                    return value.toString();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        return null;
-    }
-
-    private String trim(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    private boolean isEmpty(String value) {
-        return value == null || value.trim().isEmpty();
+        request.setAttribute("payment", payment);
+        request.setAttribute("contentPage", "/Pages/Customer/orderDetail.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 }
