@@ -13,6 +13,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "StaffSearchOrderServlet", urlPatterns = {"/staff/search-orders"})
 public class StaffSearchOrderServlet extends HttpServlet {
 
+    private static final String LAYOUT_PAGE = "/Pages/Guest/Home/Layout/Layout.jsp";
+    private static final String STAFF_ORDERS_PAGE = "/Pages/Staff/orders.jsp";
+
     private OrderService orderService;
 
     @Override
@@ -23,14 +26,27 @@ public class StaffSearchOrderServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
-
-        String keyword = request.getParameter("keyword");
-        List<Order> listOrders = orderService.searchOrdersForStaff(keyword);
+        String keyword = trim(request.getParameter("keyword"));
+        List<Order> listOrders = isEmpty(keyword)
+                ? orderService.viewOrdersForStaff()
+                : orderService.searchOrdersForStaff(keyword);
 
         request.setAttribute("listOrders", listOrders);
-        request.setAttribute("keyword", keyword == null ? "" : keyword.trim());
-        request.getRequestDispatcher("/Pages/Staff/orders.jsp").forward(request, response);
+        request.setAttribute("keyword", keyword);
+        forwardLayout(request, response, STAFF_ORDERS_PAGE);
+    }
+
+    private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
+            throws ServletException, IOException {
+        request.setAttribute("contentPage", contentPage);
+        request.getRequestDispatcher(LAYOUT_PAGE).forward(request, response);
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

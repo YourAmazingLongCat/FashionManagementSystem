@@ -1,8 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
-<link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Header/Header.css">
-
 <header class="header-guest-page">
     
     <div class="logo-area">
@@ -17,6 +15,18 @@
 
     <nav class="quick-nav">
         <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
+<<<<<<< HEAD
+        <c:if test="${not empty sessionScope.USER}">
+            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
+        </c:if>
+        <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
+            <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
+        </c:if>
+        <c:if test="${not empty sessionScope.USER and (sessionScope.USER.role eq 'Staff' or sessionScope.USER.role eq 'Admin')}">
+            <a class="quick-nav-link quick-nav-link--accent order-nav-accent" href="${pageContext.request.contextPath}/staff/orders">ORDER MANAGEMENT</a>
+        </c:if>
+=======
+>>>>>>> e3e54207b4a5ae9c33f0518079c2c8ea883ea308
     </nav>
     
     <div class="categories-dropdown">
@@ -69,28 +79,15 @@
                 <span class="material-symbols-outlined">favorite</span>
             </a>
         </c:if>
-        
         <c:choose>
             <c:when test="${not empty sessionScope.USER}">
-                <div class="account-dropdown">
-                    <c:choose>
-                        <c:when test="${not empty sessionScope.USER.avatar}">
-                            <img src="${pageContext.request.contextPath}/${sessionScope.USER.avatar}" 
-                                 class="account-avatar" alt="Avatar"
-                                 onerror="this.outerHTML='<span class=\'material-symbols-outlined account-avatar-default\'>account_circle</span>'">
-                        </c:when>
-                        <c:otherwise>
-                            <span class="material-symbols-outlined account-avatar-default">account_circle</span>
-                        </c:otherwise>
-                    </c:choose>
-                    
-                    <div class="dropdown-content">
-                        <div class="user-greeting">HI, <b>${sessionScope.USER.fullName}</b></div>
-                        <hr>
-                        <a href="${pageContext.request.contextPath}/profile">My Profile</a>
-                        <a href="${pageContext.request.contextPath}/change-password">Change Password</a>
-                        <a href="${pageContext.request.contextPath}/auth/logout" class="text-danger">Logout</a>
-                    </div>
+                <div class="user-logged-info" style="display: flex; align-items: center; gap: 15px;">
+                    <span class="user-name-display" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; color: #ffffff; letter-spacing: 0.5px;">
+                        HI, ${sessionScope.USER.fullName}
+                    </span>
+                    <a class="login-btn" href="${pageContext.request.contextPath}/auth/logout" style="background-color: #ff3333; color: #ffffff; border-color: #000000;">
+                        LOGOUT
+                    </a>
                 </div>
             </c:when>
             <c:otherwise>

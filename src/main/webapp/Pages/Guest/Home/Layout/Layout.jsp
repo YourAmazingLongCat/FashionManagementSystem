@@ -19,28 +19,34 @@
             <%@ include file="/Pages/Guest/Home/Header/Header.css" %>
             <%@ include file="/Pages/Guest/Home/Content/Content.css" %>
             <%@ include file="/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css" %>
+            <%@ include file="/Pages/Guest/Home/Order/Order.css" %>
         </style>
     </head>
     <body>
-        <c:if test="${not empty successMessage or not empty errorMessage}">
-            <div id="toast" class="toast-notification ${not empty successMessage ? 'toast-success' : 'toast-error'}">
+        <c:set var="displaySuccessMessage" value="${not empty successMessage ? successMessage : sessionScope.successMessage}" />
+        <c:set var="displayErrorMessage" value="${not empty errorMessage ? errorMessage : sessionScope.errorMessage}" />
+
+        <c:if test="${not empty displaySuccessMessage or not empty displayErrorMessage}">
+            <div id="toast" class="toast-notification ${not empty displaySuccessMessage ? 'toast-success' : 'toast-error'}">
                 <div class="toast-icon">
                     <span class="material-symbols-outlined">
-                        ${not empty successMessage ? 'check_circle' : 'error'}
+                        ${not empty displaySuccessMessage ? 'check_circle' : 'error'}
                     </span>
                 </div>
                 <div class="toast-content">
                     <h4 class="toast-title">
-                        ${not empty successMessage ? 'SUCCESS' : 'ERROR'}
+                        ${not empty displaySuccessMessage ? 'SUCCESS' : 'ERROR'}
                     </h4>
                     <p class="toast-message">
-                        ${not empty successMessage ? successMessage : errorMessage}
+                        ${not empty displaySuccessMessage ? displaySuccessMessage : displayErrorMessage}
                     </p>
                 </div>
                 <button class="toast-close" onclick="closeToast()">
                     <span class="material-symbols-outlined" style="font-size:20px;">close</span>
                 </button>
             </div>
+            <c:remove var="successMessage" scope="session" />
+            <c:remove var="errorMessage" scope="session" />
         </c:if>
 
         <header>

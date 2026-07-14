@@ -2,7 +2,9 @@ package Controllers;
 
 import Models.Order;
 import Models.OrderItem;
+import Models.Payment;
 import Services.OrderService;
+import Services.PaymentService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -15,10 +17,12 @@ import jakarta.servlet.http.HttpServletResponse;
 public class StaffOrderDetailServlet extends HttpServlet {
 
     private OrderService orderService;
+    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
     }
 
     @Override
@@ -26,27 +30,27 @@ public class StaffOrderDetailServlet extends HttpServlet {
             throws ServletException, IOException {
         String orderId = request.getParameter("orderId");
 
-        if (isEmpty(orderId)) {
+        if (orderId == null || orderId.trim().isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/staff/orders");
             return;
         }
 
-        Order order = orderService.viewOrderDetailForStaff(orderId);
+        Order order = orderService.viewOrderDetailForStaff(orderId.trim());
 
         if (order == null) {
             request.setAttribute("errorMessage", "Order not found.");
-            request.getRequestDispatcher("/Pages/Staff/orderDetail.jsp").forward(request, response);
+            request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
             return;
         }
 
-        List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId);
+        List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId.trim());
+        Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        request.getRequestDispatcher("/Pages/Staff/orderDetail.jsp").forward(request, response);
-    }
-
-    private boolean isEmpty(String value) {
-        return value == null || value.trim().isEmpty();
+        request.setAttribute("payment", payment);
+        request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 }

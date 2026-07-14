@@ -2,7 +2,9 @@ package Controllers;
 
 import Models.Order;
 import Models.OrderItem;
+import Models.Payment;
 import Services.OrderService;
+import Services.PaymentService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -16,10 +18,12 @@ import jakarta.servlet.http.HttpSession;
 public class CustomerOrderDetailServlet extends HttpServlet {
 
     private OrderService orderService;
+    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
     }
 
     @Override
@@ -35,27 +39,27 @@ public class CustomerOrderDetailServlet extends HttpServlet {
 
         String orderId = request.getParameter("orderId");
 
-        if (isEmpty(orderId)) {
+        if (orderId == null || orderId.trim().isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
-        Order order = orderService.viewOrderDetailForCustomer(customerId, orderId);
+        Order order = orderService.viewOrderDetailForCustomer(customerId, orderId.trim());
 
         if (order == null) {
-            request.setAttribute("errorMessage", "Order not found or you do not have permission to view this order.");
-            request.getRequestDispatcher("/Pages/Customer/orderDetail.jsp").forward(request, response);
+            request.setAttribute("errorMessage", "Order not found.");
+            request.setAttribute("contentPage", "/Pages/Customer/orderDetail.jsp");
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
             return;
         }
 
-        List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId);
+        List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId.trim());
+        Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        request.getRequestDispatcher("/Pages/Customer/orderDetail.jsp").forward(request, response);
-    }
-
-    private boolean isEmpty(String value) {
-        return value == null || value.trim().isEmpty();
+        request.setAttribute("payment", payment);
+        request.setAttribute("contentPage", "/Pages/Customer/orderDetail.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 }

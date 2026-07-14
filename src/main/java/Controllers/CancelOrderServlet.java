@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Order;
 import Services.OrderService;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -29,29 +30,62 @@ public class CancelOrderServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
-
         HttpSession session = request.getSession();
-        String customerId = (String) session.getAttribute("customerId");
+        String customerId = getCustomerId(session);
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
-        String orderId = request.getParameter("orderId");
-
+        String orderId = trim(request.getParameter("orderId"));
         if (isEmpty(orderId)) {
-            response.sendRedirect(request.getContextPath() + "/customer/order-history?error=missingOrderId");
+            session.setAttribute("errorMessage", "Missing order ID.");
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
-        boolean result = orderService.cancelOrder(orderId, customerId);
-        String message = result ? "cancelSuccess" : "cancelFailed";
+        Order order = orderService.viewOrderDetailForCustomer(customerId, orderId);
+        if (order == null) {
+            session.setAttribute("errorMessage", "You cannot cancel this order.");
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
+            return;
+        }
 
-        response.sendRedirect(request.getContextPath()
-                + "/customer/order-detail?orderId=" + orderId.trim()
-                + "&message=" + message);
+        boolean cancelled = orderService.cancelOrder(orderId);
+        session.setAttribute(cancelled ? "successMessage" : "errorMessage",
+                cancelled ? "Order cancelled successfully." : "This order cannot be cancelled now.");
+
+        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
+    }
+
+    private String getCustomerId(HttpSession session) {
+        Object direct = session.getAttribute("customerId");
+        if (direct != null && !direct.toString().trim().isEmpty()) {
+            return direct.toString();
+        }
+
+        Object user = session.getAttribute("USER");
+        if (user == null) {
+            return null;
+        }
+
+        String[] methodNames = {"getAccountId", "getCustomerId", "getUserId", "getId"};
+        for (String methodName : methodNames) {
+            try {
+                Object value = user.getClass().getMethod(methodName).invoke(user);
+                if (value != null && !value.toString().trim().isEmpty()) {
+                    return value.toString();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return null;
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isEmpty(String value) {
