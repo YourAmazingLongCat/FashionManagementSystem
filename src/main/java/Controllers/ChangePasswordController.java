@@ -1,6 +1,10 @@
-import DAOs.AccountDAO;
-import Models.Account;
 import java.io.IOException;
+
+import org.mindrot.jbcrypt.BCrypt;
+
+import DALs.AccountDAO;
+import Models.Account;
+import Utils.passwordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -57,14 +61,15 @@ public class ChangePasswordController extends HttpServlet {
             Account accountInDb = accountDAO.getAccountById(currentUser.getAccountId());
             
             // 5. ĐÃ SỬA LẠI THÀNH getPassword() ĐỂ KHÔNG BỊ LỖI
-            if (accountInDb == null || !accountInDb.getPassword().equals(oldPassword)) {
+            if (accountInDb == null || accountInDb.getPassword() == null
+                    || !BCrypt.checkpw(oldPassword, accountInDb.getPassword())) {
                 request.setAttribute("error", "Mật khẩu hiện tại không đúng!");
                 request.getRequestDispatcher("/Pages/Customer/ChangePassword.jsp").forward(request, response);
                 return;
             }
 
             // 6. Thực hiện update mật khẩu mới vào cơ sở dữ liệu
-            boolean isUpdated = accountDAO.updatePassword(currentUser.getAccountId(), newPassword);
+            boolean isUpdated = accountDAO.updatePassword(currentUser.getAccountId(), passwordUtil.hashPassword(newPassword));
             
             if (isUpdated) {
                 // Đổi mật khẩu thành công

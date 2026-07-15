@@ -5,20 +5,19 @@ package Models;
  * @author ADMIN
  */
 public class Account {
-    
-    // 1. Khai báo các thuộc tính (Trường dữ liệu)
-    private String accountId; // ĐÃ ĐỔI THÀNH STRING để nhận ID dạng "ACC..."
+
+    private String accountId;
     private String email;
     private String password;
     private String fullName;
-    private String role; // Ví dụ: "Admin", "Customer", "Staff"
-    private String status; // ĐÃ ĐỔI THÀNH STRING để nhận chữ "Active"
+    private String role;
+    private String status;
+    private String phone;
+    private String avatar;
 
-    // 2. Hàm khởi tạo rỗng (Bắt buộc phải có trong Java Bean)
     public Account() {
     }
 
-    // 3. Hàm khởi tạo đầy đủ tham số
     public Account(String accountId, String email, String password, String fullName, String role, String status) {
         this.accountId = accountId;
         this.email = email;
@@ -28,7 +27,6 @@ public class Account {
         this.status = status;
     }
 
-    // 4. Các hàm Getter và Setter
     public String getAccountId() {
         return accountId;
     }
@@ -69,7 +67,6 @@ public class Account {
         this.role = role;
     }
 
-    // Đã đổi tên hàm từ isStatus() thành getStatus() cho phù hợp với kiểu String
     public String getStatus() {
         return status;
     }
@@ -78,7 +75,22 @@ public class Account {
         this.status = status;
     }
 
-    // 5. Hàm toString (Hỗ trợ in ra console để debug lỗi)
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
     @Override
     public String toString() {
         return "Account{" + "accountId=" + accountId + ", email=" + email + ", fullName=" + fullName + ", role=" + role + ", status=" + status + '}';

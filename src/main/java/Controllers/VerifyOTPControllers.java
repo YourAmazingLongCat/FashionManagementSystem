@@ -4,10 +4,12 @@
  */
 package Controllers;
 
-import Utils.DBContext;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+
+import Utils.DBContext;
+import Utils.passwordUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -72,7 +74,7 @@ public class VerifyOTPControllers extends HttpServlet {
                 psInsert.setString(3, fullName);
                 psInsert.setString(4, email);
                 psInsert.setString(5, phone);
-                psInsert.setString(6, password);
+                psInsert.setString(6, passwordUtil.hashPassword(password));
 
                 int row = psInsert.executeUpdate();
                 
