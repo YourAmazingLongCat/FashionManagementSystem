@@ -4,10 +4,11 @@
  */
 package Controllers;
 
-import DAOs.AccountDAO;
-import Models.Account;
 import java.io.IOException;
 import java.util.List;
+
+import DALs.AccountDAO;
+import Models.Account;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;

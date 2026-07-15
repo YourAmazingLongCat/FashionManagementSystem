@@ -1,75 +1,161 @@
 package DALs;
 
-import Models.Account;
-import Utils.DBContext;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.mindrot.jbcrypt.BCrypt;
+
+import Models.Account;
+import Utils.DBContext;
 
 /**
  * Data Access Object cho Account
  * @author ADMIN
  */
 public class AccountDAO {
-    
-    /**
-     * Kiểm tra thông tin đăng nhập của người dùng
-     * @param email Email do người dùng nhập
-     * @param password Mật khẩu do người dùng nhập (đã mã hóa hoặc chưa)
-     * @return Đối tượng Account nếu thành công, null nếu thất bại
-     */
+
+    private Account mapAccount(ResultSet rs) throws SQLException {
+        Account acc = new Account();
+        acc.setAccountId(rs.getString("accountId"));
+        acc.setEmail(rs.getString("email"));
+        acc.setPassword(rs.getString("passwordHash"));
+        acc.setFullName(rs.getString("fullName"));
+        acc.setRole(rs.getString("role"));
+        acc.setStatus(rs.getString("status"));
+        acc.setPhone(rs.getString("phone"));
+        return acc;
+    }
+
     public Account checkLogin(String email, String password) {
-        
-        // 1. Sửa tên bảng thành Accounts và cột mật khẩu thành passwordHash
-        String query = "SELECT * FROM Accounts WHERE email = ? AND passwordHash = ?";
-        
-        try (Connection conn = new DBContext().getConnection(); 
+        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts WHERE email = ?";
+
+        try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
-            
+
             ps.setString(1, email);
-            ps.setString(2, password);
-            
+
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    Account acc = new Account();
-                    
-                    // 2. Map ĐÚNG tên cột trong SQL Server vào Object
-                    
-                    /* LƯU Ý QUAN TRỌNG: 
-                       Vì accountId lúc nãy đăng ký chúng ta đang để dạng chữ ("ACC" + số), 
-                       nên chỗ này phải dùng rs.getString("accountId"). 
-                       Nếu class Account (Models) của bạn biến accountId đang là kiểu 'int', 
-                       hãy vào đó đổi lại thành kiểu 'String' nhé! 
-                    */
-                    acc.setAccountId(rs.getString("accountId")); // Thay vì rs.getInt("id")
-                    
-                    acc.setEmail(rs.getString("email"));
-                    
-                    // Cột mật khẩu trong DB tên là passwordHash
-                    acc.setPassword(rs.getString("passwordHash"));
-                    
-                    // Cột tên trong DB là fullName (không có dấu gạch dưới)
-                    acc.setFullName(rs.getString("fullName"));
-                    
-                    acc.setRole(rs.getString("role"));
-                    
-                    /* Tạm thời mình đóng dòng status lại. 
-                       Vì trong DB status đang lưu chữ 'Active', 
-                       nếu class Account của bạn dùng kiểu boolean sẽ bị lỗi.
-                       Bạn có thể mở ra và chỉnh lại sau nếu cần. */
-                    // acc.setStatus(rs.getBoolean("status")); 
-                    
-                    return acc; // Đăng nhập thành công, trả về acc
+                    String storedHash = rs.getString("passwordHash");
+                    if (storedHash != null && BCrypt.checkpw(password, storedHash)) {
+                        return mapAccount(rs);
+                    }
                 }
             }
-        } catch (SQLException e) { 
+        } catch (SQLException e) {
             System.out.println("Lỗi SQL tại AccountDAO.checkLogin: " + e.getMessage());
             e.printStackTrace();
-        } catch (Exception e) { 
+        } catch (Exception e) {
             System.out.println("Lỗi tại AccountDAO.checkLogin: " + e.getMessage());
             e.printStackTrace();
         }
         return null;
+    }
+
+    public Account getAccountById(String accountId) {
+        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts WHERE accountId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, accountId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapAccount(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.getAccountById: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean updateProfile(Account account) {
+        String query = "UPDATE Accounts SET fullName = ?, phone = ? WHERE accountId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, account.getFullName());
+            ps.setString(2, account.getPhone());
+            ps.setString(3, account.getAccountId());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.updateProfile: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updatePassword(String accountId, String newPassword) {
+        String query = "UPDATE Accounts SET passwordHash = ? WHERE accountId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, newPassword);
+            ps.setString(2, accountId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.updatePassword: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<Account> getAllAccounts() {
+        List<Account> list = new ArrayList<>();
+        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts ORDER BY accountId";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(mapAccount(rs));
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.getAllAccounts: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public boolean updateRole(String accountId, String role) {
+        String query = "UPDATE Accounts SET role = ? WHERE accountId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, role);
+            ps.setString(2, accountId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.updateRole: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateStatus(String accountId, String status) {
+        String query = "UPDATE Accounts SET status = ? WHERE accountId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, status);
+            ps.setString(2, accountId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.updateStatus: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 }
