@@ -224,4 +224,104 @@ public class CartItemDAO extends DBContext {
 
         return 0;
     }
+
+    public List<CartItemView> getCartItemsByIds(String cartId, String[] cartItemIds) {
+        List<CartItemView> list = new ArrayList<>();
+
+        if (cartId == null || cartId.trim().isEmpty()
+                || cartItemIds == null || cartItemIds.length == 0) {
+            return list;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < cartItemIds.length; i++) {
+            if (i > 0) {
+                placeholders.append(",");
+            }
+            placeholders.append("?");
+        }
+
+        String sql = "SELECT "
+                + "ci.cartItemId, "
+                + "ci.variantId, "
+                + "ci.quantity, "
+                + "p.name AS productName, "
+                + "s.sizeName, "
+                + "c.colorName, "
+                + "ISNULL(pv.priceOverride, p.basePrice) AS price, "
+                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS imageUrl "
+                + "FROM CartItems ci "
+                + "JOIN ProductVariants pv ON ci.variantId = pv.variantId "
+                + "JOIN Products p ON pv.productId = p.productId "
+                + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                + "JOIN Colors c ON pv.colorId = c.colorId "
+                + "WHERE ci.cartId = ? AND ci.cartItemId IN (" + placeholders + ")";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, cartId);
+
+            int paramIndex = 2;
+            for (String cartItemId : cartItemIds) {
+                ps.setString(paramIndex++, cartItemId);
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                CartItemView item = new CartItemView();
+                item.setCartItemId(rs.getString("cartItemId"));
+                item.setVariantId(rs.getString("variantId"));
+                item.setProductName(rs.getString("productName"));
+                item.setSizeName(rs.getString("sizeName"));
+                item.setColorName(rs.getString("colorName"));
+                item.setImageUrl(rs.getString("imageUrl"));
+
+                double price = rs.getDouble("price");
+                int quantity = rs.getInt("quantity");
+                item.setPrice(price);
+                item.setQuantity(quantity);
+                item.setSubtotal(price * quantity);
+
+                list.add(item);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    public boolean deleteItemsByIds(String cartId, String[] cartItemIds) {
+        if (cartId == null || cartId.trim().isEmpty()
+                || cartItemIds == null || cartItemIds.length == 0) {
+            return false;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < cartItemIds.length; i++) {
+            if (i > 0) {
+                placeholders.append(",");
+            }
+            placeholders.append("?");
+        }
+
+        String sql = "DELETE FROM CartItems WHERE cartId = ? AND cartItemId IN (" + placeholders + ")";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, cartId);
+
+            int paramIndex = 2;
+            for (String cartItemId : cartItemIds) {
+                ps.setString(paramIndex++, cartItemId);
+            }
+
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
 }

@@ -33,8 +33,8 @@ public class AccountDAO {
     public Account checkLogin(String email, String password) {
         String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts WHERE email = ?";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, email);
 
@@ -59,8 +59,8 @@ public class AccountDAO {
     public Account getAccountById(String accountId) {
         String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts WHERE accountId = ?";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, accountId);
 
@@ -79,8 +79,8 @@ public class AccountDAO {
     public boolean updateProfile(Account account) {
         String query = "UPDATE Accounts SET fullName = ?, phone = ? WHERE accountId = ?";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, account.getFullName());
             ps.setString(2, account.getPhone());
@@ -96,8 +96,8 @@ public class AccountDAO {
     public boolean updatePassword(String accountId, String newPassword) {
         String query = "UPDATE Accounts SET passwordHash = ? WHERE accountId = ?";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, newPassword);
             ps.setString(2, accountId);
@@ -113,8 +113,8 @@ public class AccountDAO {
         List<Account> list = new ArrayList<>();
         String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts ORDER BY accountId";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query);
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
@@ -130,8 +130,8 @@ public class AccountDAO {
     public boolean updateRole(String accountId, String role) {
         String query = "UPDATE Accounts SET role = ? WHERE accountId = ?";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, role);
             ps.setString(2, accountId);
@@ -146,8 +146,8 @@ public class AccountDAO {
     public boolean updateStatus(String accountId, String status) {
         String query = "UPDATE Accounts SET status = ? WHERE accountId = ?";
 
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, status);
             ps.setString(2, accountId);

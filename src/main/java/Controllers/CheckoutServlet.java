@@ -1,5 +1,8 @@
 package Controllers;
 
+import DALs.CartDAO;
+import DALs.CartItemDAO;
+import Models.Cart;
 import Models.CartItem;
 import Services.OrderService;
 import java.io.IOException;
@@ -30,10 +33,10 @@ public class CheckoutServlet extends HttpServlet {
         HttpSession session = request.getSession();
         String customerId = getCustomerId(session);
 
-//        if (customerId == null) {
-//            response.sendRedirect(request.getContextPath() + "/auth/login");
-//            return;
-//        }
+        if (customerId == null) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return;
+        }
 
         forwardLayout(request, response, CHECKOUT_PAGE);
     }
@@ -48,10 +51,10 @@ public class CheckoutServlet extends HttpServlet {
         HttpSession session = request.getSession();
         String customerId = getCustomerId(session);
 
-//        if (customerId == null) {
-//            response.sendRedirect(request.getContextPath() + "/auth/login");
-//            return;
-//        }
+        if (customerId == null) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return;
+        }
 
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) {
@@ -72,7 +75,10 @@ public class CheckoutServlet extends HttpServlet {
         String orderId = orderService.checkout(customerId, shippingAddress, phone, cart);
 
         if (orderId != null) {
+            removeCheckedOutItemsFromDatabaseCart(session, customerId);
+
             session.removeAttribute("cart");
+            session.removeAttribute("checkoutCartItemIds");
             session.setAttribute("cartCount", 0);
             session.setAttribute("successMessage", "Checkout successfully. Your order has been created.");
             response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
@@ -81,6 +87,21 @@ public class CheckoutServlet extends HttpServlet {
 
         request.setAttribute("errorMessage", "Checkout failed. Please check your information.");
         forwardLayout(request, response, CHECKOUT_PAGE);
+    }
+
+    private void removeCheckedOutItemsFromDatabaseCart(HttpSession session, String customerId) {
+        Object selectedIdsObject = session.getAttribute("checkoutCartItemIds");
+        if (!(selectedIdsObject instanceof String[])) {
+            return;
+        }
+
+        String[] selectedIds = (String[]) selectedIdsObject;
+        Cart cart = new CartDAO().getActiveCart(customerId);
+        if (cart == null) {
+            return;
+        }
+
+        new CartItemDAO().deleteItemsByIds(cart.getCartId(), selectedIds);
     }
 
     private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
