@@ -41,7 +41,7 @@ public class ChangeShipStatusServlet extends HttpServlet {
 
         boolean updated = orderService.changeShipStatus(orderId, newStatus);
         session.setAttribute(updated ? "successMessage" : "errorMessage",
-                updated ? "Shipping status updated successfully." : "Invalid shipping status transition.");
+                updated ? "Shipping status updated successfully." : "Invalid transition or payment has not been completed.");
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }

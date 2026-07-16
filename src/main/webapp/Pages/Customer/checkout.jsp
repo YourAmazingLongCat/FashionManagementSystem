@@ -2,6 +2,10 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 
+<c:if test="${empty requestScope.contentPage}">
+    <c:redirect url="${pageContext.request.contextPath}/customer/checkout" />
+</c:if>
+
 <div class="content-page order-page">
     <div class="order-container">
         <section class="order-hero">
@@ -9,7 +13,7 @@
                 <p class="order-eyebrow">Customer / Checkout</p>
                 <h1 class="order-title">Complete Order</h1>
                 <p class="order-subtitle">
-                    Confirm your shipping information and review your cart before placing the order.
+                    Confirm your shipping information, choose a payment method, and review your cart before placing the order.
                 </p>
             </div>
             <div class="order-actions-row">
@@ -20,14 +24,20 @@
             </div>
         </section>
 
+        <c:set var="checkoutTotal" value="${0}" />
+        <c:forEach var="item" items="${sessionScope.cart}">
+            <c:set var="lineTotal" value="${item.unitPrice * item.quantity}" />
+            <c:set var="checkoutTotal" value="${checkoutTotal + lineTotal}" />
+        </c:forEach>
+
         <div class="order-grid order-grid-2">
             <section class="order-panel order-panel-padding">
                 <div class="order-panel-header">
-                    <h2 class="order-section-title">Shipping Information</h2>
+                    <h2 class="order-section-title">Checkout Information</h2>
                     <span class="order-muted">Required</span>
                 </div>
 
-                <form action="<%= request.getContextPath() %>/customer/order-review" method="post">
+                <form action="${pageContext.request.contextPath}/customer/checkout" method="post">
                     <div class="order-form-group">
                         <label class="order-label" for="shippingAddress">Shipping address</label>
                         <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required>${param.shippingAddress}</textarea>
@@ -38,7 +48,41 @@
                         <input id="phone" name="phone" class="order-input" type="tel" value="${param.phone}" placeholder="Example: 0912345678" required />
                     </div>
 
-                    <button class="order-btn order-btn-primary" type="submit" style="width: 100%;">
+                    <div class="wallet-deposit-card wallet-checkout-payment-box" style="box-shadow: none; margin: 18px 0;">
+                        <div class="wallet-form-head">
+                            <span class="material-symbols-outlined">payments</span>
+                            <div>
+                                <h2>Payment Method</h2>
+                                <p>Choose Wallet for instant payment or Cash on Delivery.</p>
+                            </div>
+                        </div>
+
+                        <label class="wallet-label" for="paymentMethod">Payment Method</label>
+                        <select class="wallet-input" id="paymentMethod" name="paymentMethod">
+                            <option value="Wallet">Wallet Balance</option>
+                            <option value="Cash" selected>Cash On Delivery</option>
+                        </select>
+
+                        <div class="wallet-info-list">
+                            <div>
+                                <span>Wallet Balance</span>
+                                <strong>
+                                    <c:choose>
+                                        <c:when test="${not empty wallet}">
+                                            <fmt:formatNumber value="${wallet.balance}" type="number" groupingUsed="true" /> VND
+                                        </c:when>
+                                        <c:otherwise>0 VND</c:otherwise>
+                                    </c:choose>
+                                </strong>
+                            </div>
+                            <div>
+                                <span>Order Total</span>
+                                <strong><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> VND</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="order-btn order-btn-primary" type="submit" style="width: 100%;" <c:if test="${empty sessionScope.cart}">disabled</c:if>>
                         <span class="material-symbols-outlined">lock</span>
                         Place order
                     </button>
@@ -51,7 +95,6 @@
                     <span class="order-muted">${empty sessionScope.cart ? 0 : sessionScope.cart.size()} items</span>
                 </div>
 
-                <c:set var="checkoutTotal" value="${0}" />
                 <c:choose>
                     <c:when test="${empty sessionScope.cart}">
                         <div class="order-empty" style="padding: 40px 10px;">
@@ -65,15 +108,29 @@
                         <div class="order-summary-list">
                             <c:forEach var="item" items="${sessionScope.cart}">
                                 <c:set var="lineTotal" value="${item.unitPrice * item.quantity}" />
-                                <c:set var="checkoutTotal" value="${checkoutTotal + lineTotal}" />
 
                                 <div class="order-summary-item">
-                                    <div class="order-thumb">PR</div>
-                                    <div>
-                                        <div class="order-item-name">Variant ${item.variantId}</div>
-                                        <div class="order-muted">Qty ${item.quantity} × <fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> đ</div>
+                                    <div class="order-thumb">
+                                        <c:choose>
+                                            <c:when test="${not empty item.productImageUrl}">
+                                                <img src="${pageContext.request.contextPath}${item.productImageUrl}" alt="${item.productName}" />
+                                            </c:when>
+                                            <c:otherwise>PR</c:otherwise>
+                                        </c:choose>
                                     </div>
-                                    <div class="order-price"><fmt:formatNumber value="${lineTotal}" type="number" groupingUsed="true" /> đ</div>
+                                    <div>
+                                        <div class="order-item-name">
+                                            <c:choose>
+                                                <c:when test="${not empty item.productName}">${item.productName}</c:when>
+                                                <c:otherwise>Variant ${item.variantId}</c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                        <div class="order-muted">
+                                            ${item.sizeName}<c:if test="${not empty item.colorName}"> / ${item.colorName}</c:if>
+                                            · Qty ${item.quantity} × <fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND
+                                        </div>
+                                    </div>
+                                    <div class="order-price"><fmt:formatNumber value="${lineTotal}" type="number" groupingUsed="true" /> VND</div>
                                 </div>
                             </c:forEach>
                         </div>
@@ -81,7 +138,7 @@
                         <div class="order-total-box">
                             <div class="order-total-row">
                                 <span>Subtotal</span>
-                                <strong><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> đ</strong>
+                                <strong><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> VND</strong>
                             </div>
                             <div class="order-total-row">
                                 <span>Shipping</span>
@@ -89,7 +146,7 @@
                             </div>
                             <div class="order-total-row final">
                                 <span>Total</span>
-                                <span><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> đ</span>
+                                <span><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> VND</span>
                             </div>
                         </div>
                     </c:otherwise>

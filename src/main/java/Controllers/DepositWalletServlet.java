@@ -1,6 +1,8 @@
 package Controllers;
 
+import Models.Account;
 import Services.PaymentService;
+import Utils.PaymentMethod;
 import java.io.IOException;
 import java.math.BigDecimal;
 import jakarta.servlet.ServletException;
@@ -26,15 +28,15 @@ public class DepositWalletServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
 
         HttpSession session = request.getSession();
-        String customerId = (String) session.getAttribute("customerId");
+        String customerId = getCustomerId(session);
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
         BigDecimal amount = parseAmount(request.getParameter("amount"));
-        String paymentMethod = request.getParameter("paymentMethod");
+        String paymentMethod = normalizeDepositMethod(request.getParameter("paymentMethod"));
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             session.setAttribute("errorMessage", "Deposit amount is invalid.");
@@ -42,15 +44,37 @@ public class DepositWalletServlet extends HttpServlet {
             return;
         }
 
-        String paymentId = paymentService.depositToWallet(customerId, amount, paymentMethod);
+        String paymentId = paymentService.createDepositPayment(customerId, amount, paymentMethod);
 
         if (paymentId != null) {
-            session.setAttribute("successMessage", "Deposit completed successfully. Payment ID: " + paymentId);
+            session.setAttribute("successMessage",
+                    "Deposit request created. Please wait for staff confirmation. Payment ID: " + paymentId);
         } else {
-            session.setAttribute("errorMessage", "Deposit failed. Please try again.");
+            session.setAttribute("errorMessage", "Deposit request failed. Please try again.");
         }
 
         response.sendRedirect(request.getContextPath() + "/customer/wallet");
+    }
+
+    private String getCustomerId(HttpSession session) {
+        Object direct = session.getAttribute("customerId");
+        if (direct != null && !direct.toString().trim().isEmpty()) {
+            return direct.toString();
+        }
+
+        Object user = session.getAttribute("USER");
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
+        }
+
+        return null;
+    }
+
+    private String normalizeDepositMethod(String method) {
+        if (PaymentMethod.VNPAY.equals(method)) {
+            return PaymentMethod.VNPAY;
+        }
+        return PaymentMethod.BANK_TRANSFER;
     }
 
     private BigDecimal parseAmount(String value) {

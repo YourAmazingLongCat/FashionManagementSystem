@@ -20,6 +20,7 @@
             <%@ include file="/Pages/Guest/Home/Content/Content.css" %>
             <%@ include file="/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css" %>
             <%@ include file="/Pages/Guest/Home/Order/Order.css" %>
+            <%@ include file="/Pages/Guest/Home/Payment/WalletPayment.css" %>
         </style>
     </head>
     <body>

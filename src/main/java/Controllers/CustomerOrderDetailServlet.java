@@ -1,8 +1,10 @@
 package Controllers;
 
+import Models.Account;
 import Models.Order;
 import Models.OrderItem;
 import Models.Payment;
+import Models.Wallet;
 import Services.OrderService;
 import Services.PaymentService;
 import java.io.IOException;
@@ -30,10 +32,10 @@ public class CustomerOrderDetailServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
-        String customerId = (String) session.getAttribute("customerId");
+        String customerId = getCustomerId(session);
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
@@ -55,11 +57,27 @@ public class CustomerOrderDetailServlet extends HttpServlet {
 
         List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId.trim());
         Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
+        Wallet wallet = paymentService.getOrCreateWallet(customerId);
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
         request.setAttribute("payment", payment);
+        request.setAttribute("wallet", wallet);
         request.setAttribute("contentPage", "/Pages/Customer/orderDetail.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+    }
+
+    private String getCustomerId(HttpSession session) {
+        Object direct = session.getAttribute("customerId");
+        if (direct != null && !direct.toString().trim().isEmpty()) {
+            return direct.toString();
+        }
+
+        Object user = session.getAttribute("USER");
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
+        }
+
+        return null;
     }
 }

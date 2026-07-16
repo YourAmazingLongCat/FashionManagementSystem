@@ -10,7 +10,7 @@
                 <p class="order-eyebrow">Staff / Order Detail</p>
                 <h1 class="order-title">Manage Order</h1>
                 <p class="order-subtitle">
-                    Confirm the order, update the shipping status, or cancel eligible orders.
+                    Confirm the order, check payment, update shipping status, or cancel eligible orders.
                 </p>
             </div>
             <div class="order-actions-row">
@@ -55,7 +55,7 @@
                             </div>
                             <div class="order-meta-card">
                                 <span class="order-meta-label">Total</span>
-                                <div class="order-meta-value"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> đ</div>
+                                <div class="order-meta-value"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</div>
                             </div>
                             <div class="order-meta-card" style="grid-column: 1 / -1;">
                                 <span class="order-meta-label">Shipping address</span>
@@ -80,9 +80,9 @@
                                             <div class="order-thumb">PR</div>
                                             <div>
                                                 <div class="order-item-name">Variant ${item.variantId}</div>
-                                                <div class="order-muted">Qty ${item.quantity} × <fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> đ</div>
+                                                <div class="order-muted">Qty ${item.quantity} × <fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND</div>
                                             </div>
-                                            <div class="order-price"><fmt:formatNumber value="${item.subTotal}" type="number" groupingUsed="true" /> đ</div>
+                                            <div class="order-price"><fmt:formatNumber value="${item.subTotal}" type="number" groupingUsed="true" /> VND</div>
                                         </div>
                                     </c:forEach>
                                 </div>
@@ -91,6 +91,53 @@
                     </section>
 
                     <aside class="order-grid">
+                        <div class="wallet-payment-panel" style="position: static;">
+                            <div class="wallet-form-head">
+                                <span class="material-symbols-outlined">payments</span>
+                                <div>
+                                    <h2>Payment Information</h2>
+                                    <p>Staff should verify Cash/Wallet payment status before shipping.</p>
+                                </div>
+                            </div>
+
+                            <c:choose>
+                                <c:when test="${not empty payment}">
+                                    <div class="wallet-payment-row">
+                                        <span>Payment ID</span>
+                                        <strong>${payment.paymentId}</strong>
+                                    </div>
+                                    <div class="wallet-payment-row">
+                                        <span>Method</span>
+                                        <strong>${payment.paymentMethod}</strong>
+                                    </div>
+                                    <div class="wallet-payment-row">
+                                        <span>Status</span>
+                                        <strong class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
+                                    </div>
+                                    <div class="wallet-payment-row">
+                                        <span>Amount</span>
+                                        <strong><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</strong>
+                                    </div>
+                                    <div class="wallet-payment-row">
+                                        <span>Paid At</span>
+                                        <strong><c:choose><c:when test="${empty payment.paidAt}">-</c:when><c:otherwise>${payment.paidAt}</c:otherwise></c:choose></strong>
+                                    </div>
+                                    <c:if test="${payment.paymentMethod eq 'Cash' and payment.paymentStatus eq 'Pending'}">
+                                        <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
+                                            COD order: payment will be marked Paid automatically when status becomes Delivered.
+                                        </div>
+                                    </c:if>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="wallet-empty wallet-empty-small">
+                                        <span class="material-symbols-outlined">money_off</span>
+                                        <h3>No payment found</h3>
+                                        <p>Ask customer to pay by wallet or recreate the payment record.</p>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+
                         <div class="order-panel order-panel-padding">
                             <div class="order-panel-header">
                                 <h3 class="order-section-title">Staff Actions</h3>
@@ -127,10 +174,13 @@
                                             Update shipping
                                         </button>
                                     </form>
+                                    <div class="order-warning-box">
+                                        Wallet/VNPay orders must be Paid before shipping. Cash orders can move forward and will be marked Paid when Delivered.
+                                    </div>
                                 </c:if>
 
                                 <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">
-                                    <form class="order-inline-form" method="post" action="${pageContext.request.contextPath}/staff/cancel-order" onsubmit="return confirm('Cancel this order?');">
+                                    <form class="order-inline-form" method="post" action="${pageContext.request.contextPath}/staff/cancel-order" onsubmit="return confirm('Cancel this order? Wallet payments will be refunded automatically if applicable.');">
                                         <input type="hidden" name="orderId" value="${order.orderId}" />
                                         <button class="order-btn order-btn-danger" type="submit">
                                             <span class="material-symbols-outlined">cancel</span>

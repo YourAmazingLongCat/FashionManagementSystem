@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,10 +58,13 @@ public class PaymentDAO extends DBContext {
     }
 
     public Payment getLatestPaymentByOrderId(String orderId) {
-        String query = "SELECT TOP 1 * FROM Payments WHERE orderId = ? ORDER BY createdAt DESC";
+        String query = "SELECT TOP 1 * FROM Payments "
+                + "WHERE orderId = ? AND paymentType <> ? "
+                + "ORDER BY createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
+            ps.setString(2, PaymentType.REFUND);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -110,6 +114,44 @@ public class PaymentDAO extends DBContext {
             }
         } catch (SQLException e) {
             System.out.println("getPaymentsByAccountId error: " + e);
+        }
+
+        return payments;
+    }
+
+    public List<Payment> getAllPayments() {
+        List<Payment> payments = new ArrayList<>();
+        String query = "SELECT * FROM Payments ORDER BY createdAt DESC";
+
+        try (PreparedStatement ps = connection.prepareStatement(query);
+                ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                payments.add(getPaymentFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            System.out.println("getAllPayments error: " + e);
+        }
+
+        return payments;
+    }
+
+    public List<Payment> getPendingDeposits() {
+        List<Payment> payments = new ArrayList<>();
+        String query = "SELECT * FROM Payments "
+                + "WHERE paymentType = ? AND paymentStatus = ? "
+                + "ORDER BY createdAt DESC";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentType.DEPOSIT);
+            ps.setString(2, PaymentStatus.PENDING);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    payments.add(getPaymentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getPendingDeposits error: " + e);
         }
 
         return payments;
@@ -170,18 +212,9 @@ public class PaymentDAO extends DBContext {
             connection.commit();
             return true;
         } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.out.println("completeDeposit rollback error: " + ex);
-            }
-            System.out.println("completeDeposit error: " + e);
+            rollback("completeDeposit", e);
         } finally {
-            try {
-                connection.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.out.println("completeDeposit setAutoCommit error: " + e);
-            }
+            restoreAutoCommit("completeDeposit");
         }
 
         return false;
@@ -208,14 +241,7 @@ public class PaymentDAO extends DBContext {
 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        wallet = new Wallet(
-                                rs.getString("walletId"),
-                                rs.getString("accountId"),
-                                rs.getBigDecimal("balance"),
-                                rs.getString("walletStatus"),
-                                toLocalDateTime(rs.getTimestamp("createdAt")),
-                                toLocalDateTime(rs.getTimestamp("updatedAt"))
-                        );
+                        wallet = getWalletFromResultSet(rs);
                     }
                 }
             }
@@ -258,18 +284,109 @@ public class PaymentDAO extends DBContext {
             connection.commit();
             return true;
         } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.out.println("payOrderWithWallet rollback error: " + ex);
-            }
-            System.out.println("payOrderWithWallet error: " + e);
+            rollback("payOrderWithWallet", e);
         } finally {
-            try {
-                connection.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.out.println("payOrderWithWallet setAutoCommit error: " + e);
+            restoreAutoCommit("payOrderWithWallet");
+        }
+
+        return false;
+    }
+
+    public boolean completeCashPayment(String orderId) {
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ?, paidAt = GETDATE() "
+                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.PAID);
+            ps.setString(2, orderId);
+            ps.setString(3, PaymentType.PURCHASE);
+            ps.setString(4, PaymentMethod.CASH);
+            ps.setString(5, PaymentStatus.PENDING);
+
+            return ps.executeUpdate() >= 0;
+        } catch (SQLException e) {
+            System.out.println("completeCashPayment error: " + e);
+        }
+
+        return false;
+    }
+
+    public boolean refundWalletPaymentIfNeeded(String orderId, String refundPaymentId) {
+        String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
+                + "ORDER BY createdAt DESC";
+        String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
+        String updateWalletQuery = "UPDATE Wallets SET balance = balance + ?, updatedAt = GETDATE() WHERE walletId = ?";
+        String insertRefundQuery = "INSERT INTO Payments "
+                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
+                + "amount, description, createdAt, paidAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+
+        try {
+            connection.setAutoCommit(false);
+
+            Payment paidWalletPayment = null;
+            try (PreparedStatement ps = connection.prepareStatement(selectQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentMethod.WALLET);
+                ps.setString(4, PaymentStatus.PAID);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        paidWalletPayment = getPaymentFromResultSet(rs);
+                    }
+                }
             }
+
+            if (paidWalletPayment == null) {
+                connection.rollback();
+                return true;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(updateWalletQuery)) {
+                ps.setBigDecimal(1, paidWalletPayment.getAmount());
+                ps.setString(2, paidWalletPayment.getWalletId());
+
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {
+                ps.setString(1, PaymentStatus.REFUNDED);
+                ps.setString(2, paidWalletPayment.getPaymentId());
+
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(insertRefundQuery)) {
+                ps.setString(1, refundPaymentId);
+                ps.setString(2, paidWalletPayment.getWalletId());
+                ps.setString(3, orderId);
+                ps.setString(4, PaymentType.REFUND);
+                ps.setString(5, PaymentMethod.WALLET);
+                ps.setString(6, PaymentStatus.PAID);
+                ps.setBigDecimal(7, paidWalletPayment.getAmount());
+                ps.setString(8, "Refund wallet payment for cancelled order " + orderId);
+
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback("refundWalletPaymentIfNeeded", e);
+        } finally {
+            restoreAutoCommit("refundWalletPaymentIfNeeded");
         }
 
         return false;
@@ -287,7 +404,7 @@ public class PaymentDAO extends DBContext {
         ps.setTimestamp(9, Timestamp.valueOf(payment.getCreatedAt()));
 
         if (payment.getPaidAt() == null) {
-            ps.setTimestamp(10, null);
+            ps.setNull(10, Types.TIMESTAMP);
         } else {
             ps.setTimestamp(10, Timestamp.valueOf(payment.getPaidAt()));
         }
@@ -308,10 +425,38 @@ public class PaymentDAO extends DBContext {
         );
     }
 
+    private Wallet getWalletFromResultSet(ResultSet rs) throws SQLException {
+        return new Wallet(
+                rs.getString("walletId"),
+                rs.getString("accountId"),
+                rs.getBigDecimal("balance"),
+                rs.getString("walletStatus"),
+                toLocalDateTime(rs.getTimestamp("createdAt")),
+                toLocalDateTime(rs.getTimestamp("updatedAt"))
+        );
+    }
+
     private LocalDateTime toLocalDateTime(Timestamp timestamp) {
         if (timestamp == null) {
             return null;
         }
         return timestamp.toLocalDateTime();
+    }
+
+    private void rollback(String action, SQLException original) {
+        try {
+            connection.rollback();
+        } catch (SQLException ex) {
+            System.out.println(action + " rollback error: " + ex);
+        }
+        System.out.println(action + " error: " + original);
+    }
+
+    private void restoreAutoCommit(String action) {
+        try {
+            connection.setAutoCommit(true);
+        } catch (SQLException e) {
+            System.out.println(action + " setAutoCommit error: " + e);
+        }
     }
 }

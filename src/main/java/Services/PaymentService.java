@@ -34,7 +34,7 @@ public class PaymentService {
             return null;
         }
 
-        Wallet wallet = walletDAO.getWalletByAccountId(accountId);
+        Wallet wallet = walletDAO.getWalletByAccountId(accountId.trim());
         if (wallet != null) {
             return wallet;
         }
@@ -42,7 +42,7 @@ public class PaymentService {
         LocalDateTime now = LocalDateTime.now();
         Wallet newWallet = new Wallet(
                 generateWalletId(),
-                accountId,
+                accountId.trim(),
                 BigDecimal.ZERO,
                 WalletStatus.ACTIVE,
                 now,
@@ -51,7 +51,7 @@ public class PaymentService {
 
         boolean created = walletDAO.createWallet(newWallet);
         if (!created) {
-            return walletDAO.getWalletByAccountId(accountId);
+            return walletDAO.getWalletByAccountId(accountId.trim());
         }
 
         return newWallet;
@@ -62,7 +62,7 @@ public class PaymentService {
             return null;
         }
 
-        return walletDAO.getWalletByAccountId(accountId);
+        return walletDAO.getWalletByAccountId(accountId.trim());
     }
 
     public List<Payment> getPaymentHistory(String accountId) {
@@ -70,7 +70,15 @@ public class PaymentService {
             return new ArrayList<>();
         }
 
-        return paymentDAO.getPaymentsByAccountId(accountId);
+        return paymentDAO.getPaymentsByAccountId(accountId.trim());
+    }
+
+    public List<Payment> getAllPayments() {
+        return paymentDAO.getAllPayments();
+    }
+
+    public List<Payment> getPendingDeposits() {
+        return paymentDAO.getPendingDeposits();
     }
 
     public Payment getPaymentByOrderId(String orderId) {
@@ -78,7 +86,7 @@ public class PaymentService {
             return null;
         }
 
-        return paymentDAO.getLatestPaymentByOrderId(orderId);
+        return paymentDAO.getLatestPaymentByOrderId(orderId.trim());
     }
 
     public String createDepositPayment(String accountId, BigDecimal amount, String paymentMethod) {
@@ -86,11 +94,9 @@ public class PaymentService {
             return null;
         }
 
-        if (!isDepositMethod(paymentMethod)) {
-            paymentMethod = PaymentMethod.BANK_TRANSFER;
-        }
+        String normalizedMethod = normalizeDepositMethod(paymentMethod);
 
-        Wallet wallet = getOrCreateWallet(accountId);
+        Wallet wallet = getOrCreateWallet(accountId.trim());
         if (wallet == null || !WalletStatus.ACTIVE.equals(wallet.getWalletStatus())) {
             return null;
         }
@@ -101,35 +107,25 @@ public class PaymentService {
                 wallet.getWalletId(),
                 null,
                 PaymentType.DEPOSIT,
-                paymentMethod,
+                normalizedMethod,
                 PaymentStatus.PENDING,
                 amount,
-                "Deposit money to wallet",
+                "Deposit request to wallet. Awaiting staff confirmation.",
                 now,
                 null
         );
 
         boolean created = paymentDAO.createPayment(payment);
-        if (!created) {
-            return null;
-        }
-
-        return payment.getPaymentId();
+        return created ? payment.getPaymentId() : null;
     }
 
+    /*
+     * Kept for backward compatibility.
+     * New business rule: deposit does NOT add balance immediately.
+     * Staff/Admin must approve it through /staff/payments.
+     */
     public String depositToWallet(String accountId, BigDecimal amount, String paymentMethod) {
-        String paymentId = createDepositPayment(accountId, amount, paymentMethod);
-
-        if (paymentId == null) {
-            return null;
-        }
-
-        boolean completed = paymentDAO.completeDeposit(paymentId);
-        if (!completed) {
-            return null;
-        }
-
-        return paymentId;
+        return createDepositPayment(accountId, amount, paymentMethod);
     }
 
     public boolean completeDeposit(String paymentId) {
@@ -137,7 +133,77 @@ public class PaymentService {
             return false;
         }
 
-        return paymentDAO.completeDeposit(paymentId);
+        return paymentDAO.completeDeposit(paymentId.trim());
+    }
+
+    public boolean createCashPaymentForOrder(String accountId, String orderId) {
+        if (isEmpty(accountId) || isEmpty(orderId)) {
+            return false;
+        }
+
+        Order order = orderDAO.getOrderByIdAndCustomerId(orderId.trim(), accountId.trim());
+        if (order == null || order.getTotalAmount() == null) {
+            return false;
+        }
+
+        Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (existingPayment != null) {
+            return true;
+        }
+
+        Wallet wallet = getOrCreateWallet(accountId.trim());
+        if (wallet == null) {
+            return false;
+        }
+
+        Payment payment = new Payment(
+                generatePaymentId(),
+                wallet.getWalletId(),
+                orderId.trim(),
+                PaymentType.PURCHASE,
+                PaymentMethod.CASH,
+                PaymentStatus.PENDING,
+                order.getTotalAmount(),
+                "Cash on delivery for order " + orderId.trim(),
+                LocalDateTime.now(),
+                null
+        );
+
+        return paymentDAO.createPayment(payment);
+    }
+
+    public boolean canPayOrderByWallet(String accountId, String orderId) {
+        if (isEmpty(accountId) || isEmpty(orderId)) {
+            return false;
+        }
+
+        Order order = orderDAO.getOrderByIdAndCustomerId(orderId.trim(), accountId.trim());
+        if (order == null || order.getTotalAmount() == null) {
+            return false;
+        }
+
+        Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (existingPayment != null && PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+            return true;
+        }
+
+        Wallet wallet = getOrCreateWallet(accountId.trim());
+        return wallet != null
+                && WalletStatus.ACTIVE.equals(wallet.getWalletStatus())
+                && wallet.getBalance() != null
+                && wallet.getBalance().compareTo(order.getTotalAmount()) >= 0;
+    }
+
+    public boolean canPayAmountByWallet(String accountId, BigDecimal amount) {
+        if (isEmpty(accountId) || !isValidAmount(amount)) {
+            return false;
+        }
+
+        Wallet wallet = getOrCreateWallet(accountId.trim());
+        return wallet != null
+                && WalletStatus.ACTIVE.equals(wallet.getWalletStatus())
+                && wallet.getBalance() != null
+                && wallet.getBalance().compareTo(amount) >= 0;
     }
 
     public boolean payOrderByWallet(String accountId, String orderId) {
@@ -145,7 +211,7 @@ public class PaymentService {
             return false;
         }
 
-        Order order = orderDAO.getOrderByIdAndCustomerId(orderId, accountId);
+        Order order = orderDAO.getOrderByIdAndCustomerId(orderId.trim(), accountId.trim());
         if (order == null || order.getTotalAmount() == null) {
             return false;
         }
@@ -155,23 +221,62 @@ public class PaymentService {
             return false;
         }
 
-        Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId);
+        Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
         if (existingPayment != null && PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
             return true;
         }
 
-        Wallet wallet = getOrCreateWallet(accountId);
-        if (wallet == null) {
+        return paymentDAO.payOrderWithWallet(
+                generatePaymentId(),
+                accountId.trim(),
+                orderId.trim(),
+                order.getTotalAmount(),
+                "Pay order " + orderId.trim() + " by wallet"
+        );
+    }
+
+    public boolean canMoveToShippingStatus(String orderId, String newStatus) {
+        if (isEmpty(orderId) || isEmpty(newStatus)) {
             return false;
         }
 
-        return paymentDAO.payOrderWithWallet(
-                generatePaymentId(),
-                accountId,
-                orderId,
-                order.getTotalAmount(),
-                "Pay order " + orderId + " by wallet"
-        );
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+
+        if (payment == null) {
+            return false;
+        }
+
+        if (PaymentMethod.CASH.equals(payment.getPaymentMethod())) {
+            return PaymentStatus.PENDING.equals(payment.getPaymentStatus())
+                    || PaymentStatus.PAID.equals(payment.getPaymentStatus());
+        }
+
+        return PaymentStatus.PAID.equals(payment.getPaymentStatus());
+    }
+
+    public boolean completeCashPaymentForDeliveredOrder(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (payment == null || !PaymentMethod.CASH.equals(payment.getPaymentMethod())) {
+            return true;
+        }
+
+        if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            return true;
+        }
+
+        return paymentDAO.completeCashPayment(orderId.trim());
+    }
+
+    public boolean refundWalletPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        return paymentDAO.refundWalletPaymentIfNeeded(orderId.trim(), generatePaymentId());
     }
 
     public boolean lockWallet(String accountId) {
@@ -192,10 +297,12 @@ public class PaymentService {
         return walletDAO.updateWalletStatus(wallet.getWalletId(), WalletStatus.ACTIVE);
     }
 
-    private boolean isDepositMethod(String paymentMethod) {
-        return PaymentMethod.BANK_TRANSFER.equals(paymentMethod)
-                || PaymentMethod.MOMO.equals(paymentMethod)
-                || PaymentMethod.VNPAY.equals(paymentMethod);
+    private String normalizeDepositMethod(String paymentMethod) {
+        if (PaymentMethod.VNPAY.equals(paymentMethod)) {
+            return PaymentMethod.VNPAY;
+        }
+
+        return PaymentMethod.BANK_TRANSFER;
     }
 
     private boolean isValidAmount(BigDecimal amount) {

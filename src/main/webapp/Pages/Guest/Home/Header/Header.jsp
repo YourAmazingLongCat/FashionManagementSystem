@@ -17,12 +17,14 @@
         <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
         <c:if test="${not empty sessionScope.USER}">
             <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
+            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/wallet">WALLET</a>
         </c:if>
         <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
             <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
         </c:if>
         <c:if test="${not empty sessionScope.USER and (sessionScope.USER.role eq 'Staff' or sessionScope.USER.role eq 'Admin')}">
             <a class="quick-nav-link quick-nav-link--accent order-nav-accent" href="${pageContext.request.contextPath}/staff/orders">ORDER MANAGEMENT</a>
+            <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/staff/payments">PAYMENT MANAGEMENT</a>
         </c:if>
     </nav>
     

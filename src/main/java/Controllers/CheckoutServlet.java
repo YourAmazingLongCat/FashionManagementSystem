@@ -2,9 +2,14 @@ package Controllers;
 
 import DALs.CartDAO;
 import DALs.CartItemDAO;
+import Models.Account;
 import Models.Cart;
 import Models.CartItem;
+import Models.Order;
+import Models.Wallet;
 import Services.OrderService;
+import Services.PaymentService;
+import Utils.PaymentMethod;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -21,13 +26,16 @@ public class CheckoutServlet extends HttpServlet {
     private static final String CHECKOUT_PAGE = "/Pages/Customer/checkout.jsp";
 
     private OrderService orderService;
+    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
@@ -36,6 +44,17 @@ public class CheckoutServlet extends HttpServlet {
         if (customerId == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
+        }
+
+        Wallet wallet = paymentService.getOrCreateWallet(customerId);
+        request.setAttribute("wallet", wallet);
+
+        List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
+        if (cart != null && !cart.isEmpty()) {
+            Order preview = orderService.reviewOrder(customerId, "Preview", "Preview", cart);
+            if (preview != null) {
+                request.setAttribute("checkoutTotal", preview.getTotalAmount());
+            }
         }
 
         forwardLayout(request, response, CHECKOUT_PAGE);
@@ -65,28 +84,63 @@ public class CheckoutServlet extends HttpServlet {
 
         String shippingAddress = trim(request.getParameter("shippingAddress"));
         String phone = trim(request.getParameter("phone"));
+        String paymentMethod = normalizePaymentMethod(request.getParameter("paymentMethod"));
 
         if (isEmpty(shippingAddress) || isEmpty(phone)) {
             request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
+            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
+            forwardLayout(request, response, CHECKOUT_PAGE);
+            return;
+        }
+
+        Order preview = orderService.reviewOrder(customerId, shippingAddress, phone, cart);
+        if (preview == null) {
+            request.setAttribute("errorMessage", "Cannot create order. Please check your cart again.");
+            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
+            forwardLayout(request, response, CHECKOUT_PAGE);
+            return;
+        }
+
+        if (PaymentMethod.WALLET.equals(paymentMethod)
+                && !paymentService.canPayAmountByWallet(customerId, preview.getTotalAmount())) {
+            request.setAttribute("errorMessage", "Your wallet balance is not enough. Please deposit more money or choose Cash on Delivery.");
+            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
+            request.setAttribute("checkoutTotal", preview.getTotalAmount());
             forwardLayout(request, response, CHECKOUT_PAGE);
             return;
         }
 
         String orderId = orderService.checkout(customerId, shippingAddress, phone, cart);
 
-        if (orderId != null) {
-            removeCheckedOutItemsFromDatabaseCart(session, customerId);
-
-            session.removeAttribute("cart");
-            session.removeAttribute("checkoutCartItemIds");
-            session.setAttribute("cartCount", 0);
-            session.setAttribute("successMessage", "Checkout successfully. Your order has been created.");
-            response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
+        if (orderId == null) {
+            request.setAttribute("errorMessage", "Checkout failed. Please check your information.");
+            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
+            request.setAttribute("checkoutTotal", preview.getTotalAmount());
+            forwardLayout(request, response, CHECKOUT_PAGE);
             return;
         }
 
-        request.setAttribute("errorMessage", "Checkout failed. Please check your information.");
-        forwardLayout(request, response, CHECKOUT_PAGE);
+        boolean paymentHandled;
+        if (PaymentMethod.WALLET.equals(paymentMethod)) {
+            paymentHandled = paymentService.payOrderByWallet(customerId, orderId);
+            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
+                    paymentHandled
+                            ? "Order created and paid successfully by wallet."
+                            : "Order was created, but wallet payment failed. Please pay again from order detail.");
+        } else {
+            paymentHandled = paymentService.createCashPaymentForOrder(customerId, orderId);
+            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
+                    paymentHandled
+                            ? "Order created. Please pay cash when the order is delivered."
+                            : "Order created, but payment record could not be created.");
+        }
+
+        removeCheckedOutItemsFromDatabaseCart(session, customerId);
+        session.removeAttribute("cart");
+        session.removeAttribute("checkoutCartItemIds");
+        session.setAttribute("cartCount", 0);
+
+        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
     }
 
     private void removeCheckedOutItemsFromDatabaseCart(HttpSession session, String customerId) {
@@ -117,22 +171,18 @@ public class CheckoutServlet extends HttpServlet {
         }
 
         Object user = session.getAttribute("USER");
-        if (user == null) {
-            return null;
-        }
-
-        String[] methodNames = {"getAccountId", "getCustomerId", "getUserId", "getId"};
-        for (String methodName : methodNames) {
-            try {
-                Object value = user.getClass().getMethod(methodName).invoke(user);
-                if (value != null && !value.toString().trim().isEmpty()) {
-                    return value.toString();
-                }
-            } catch (Exception ignored) {
-            }
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
         }
 
         return null;
+    }
+
+    private String normalizePaymentMethod(String value) {
+        if (PaymentMethod.WALLET.equals(value)) {
+            return PaymentMethod.WALLET;
+        }
+        return PaymentMethod.CASH;
     }
 
     private String trim(String value) {
