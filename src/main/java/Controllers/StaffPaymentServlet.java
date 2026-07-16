@@ -1,8 +1,10 @@
 package Controllers;
 
 import Models.Account;
+import Models.Payment;
 import Services.PaymentService;
 import java.io.IOException;
+import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -10,8 +12,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-@WebServlet(name = "CompleteDepositServlet", urlPatterns = {"/staff/complete-deposit"})
-public class CompleteDepositServlet extends HttpServlet {
+@WebServlet(name = "StaffPaymentServlet", urlPatterns = {"/staff/payments"})
+public class StaffPaymentServlet extends HttpServlet {
 
     private PaymentService paymentService;
 
@@ -21,10 +23,8 @@ public class CompleteDepositServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-
         HttpSession session = request.getSession();
         Account user = (Account) session.getAttribute("USER");
 
@@ -33,17 +33,13 @@ public class CompleteDepositServlet extends HttpServlet {
             return;
         }
 
-        String paymentId = request.getParameter("paymentId");
+        List<Payment> payments = paymentService.getAllPayments();
+        List<Payment> pendingDeposits = paymentService.getPendingDeposits();
 
-        if (paymentId == null || paymentId.trim().isEmpty()) {
-            session.setAttribute("errorMessage", "Payment ID is missing.");
-        } else if (paymentService.completeDeposit(paymentId.trim())) {
-            session.setAttribute("successMessage", "Deposit payment has been completed.");
-        } else {
-            session.setAttribute("errorMessage", "Cannot complete this deposit payment.");
-        }
-
-        response.sendRedirect(request.getContextPath() + "/staff/payments");
+        request.setAttribute("payments", payments);
+        request.setAttribute("pendingDeposits", pendingDeposits);
+        request.setAttribute("contentPage", "/Pages/Staff/payments.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 
     private boolean isStaffOrAdmin(Account user) {

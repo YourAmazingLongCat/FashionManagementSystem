@@ -115,7 +115,7 @@ public class OrderReviewServlet extends HttpServlet {
         String customerId = (String) session.getAttribute("customerId");
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 

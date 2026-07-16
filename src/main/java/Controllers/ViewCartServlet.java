@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package Controllers;
 
 import DALs.CartDAO;
@@ -18,10 +14,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- * @author Admin
- */
 @WebServlet("/cart")
 public class ViewCartServlet extends HttpServlet {
 
@@ -30,13 +22,10 @@ public class ViewCartServlet extends HttpServlet {
             HttpServletResponse response)
             throws ServletException, IOException {
 
-        Account acc = (Account) request.getSession()
-                .getAttribute("USER");
+        Account acc = (Account) request.getSession().getAttribute("USER");
 
         if (acc == null) {
-            response.sendRedirect(
-                    request.getContextPath()
-                    + "/auth/login");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
@@ -46,14 +35,12 @@ public class ViewCartServlet extends HttpServlet {
         CartItemDAO itemDAO = new CartItemDAO();
 
         if (cart != null) {
-            // Clean up invalid cart items (variant deleted by staff)
             itemDAO.cleanupInvalidItems(cart.getCartId());
 
             List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
             request.setAttribute("cartItems", items);
             request.setAttribute("total", itemDAO.getCartTotal(cart.getCartId()));
 
-            // Update cart count in session for header display
             int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
             request.getSession().setAttribute("cartCount", cartCount);
 
@@ -63,8 +50,7 @@ public class ViewCartServlet extends HttpServlet {
             request.getSession().setAttribute("cartCount", 0);
         }
 
-        request.getRequestDispatcher(
-                "/Pages/Customer/Cart.jsp")
-                .forward(request, response);
+        request.setAttribute("contentPage", "/Pages/Customer/Cart.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 }

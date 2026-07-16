@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Models.Order;
 import Models.OrderItem;
 import Models.Payment;
@@ -12,6 +13,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "StaffOrderDetailServlet", urlPatterns = {"/staff/order-detail"})
 public class StaffOrderDetailServlet extends HttpServlet {
@@ -28,6 +30,14 @@ public class StaffOrderDetailServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account user = (Account) session.getAttribute("USER");
+
+        if (user == null || !isStaffOrAdmin(user)) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return;
+        }
+
         String orderId = request.getParameter("orderId");
 
         if (orderId == null || orderId.trim().isEmpty()) {
@@ -52,5 +62,9 @@ public class StaffOrderDetailServlet extends HttpServlet {
         request.setAttribute("payment", payment);
         request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+    }
+
+    private boolean isStaffOrAdmin(Account user) {
+        return "Staff".equalsIgnoreCase(user.getRole()) || "Admin".equalsIgnoreCase(user.getRole());
     }
 }

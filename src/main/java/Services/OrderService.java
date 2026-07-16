@@ -16,10 +16,12 @@ public class OrderService {
 
     private final OrderDAO orderDAO;
     private final OrderItemDAO orderItemDAO;
+    private final PaymentService paymentService;
 
     public OrderService() {
         orderDAO = new OrderDAO();
         orderItemDAO = new OrderItemDAO();
+        paymentService = new PaymentService();
     }
 
     public Order reviewOrder(String customerId, String shippingAddress, String phone, List<CartItem> cart) {
@@ -101,7 +103,11 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        boolean cancelled = orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        if (cancelled) {
+            paymentService.refundWalletPaymentIfNeeded(orderId.trim());
+        }
+        return cancelled;
     }
 
     public boolean cancelOrder(String orderId, String customerId) {
@@ -115,7 +121,11 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        boolean cancelled = orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        if (cancelled) {
+            paymentService.refundWalletPaymentIfNeeded(orderId.trim());
+        }
+        return cancelled;
     }
 
     public boolean changeShipStatus(String orderId, String newStatus) {
@@ -158,7 +168,17 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.updateOrderStatus(orderId.trim(), normalizedStatus);
+        if (!paymentService.canMoveToShippingStatus(orderId.trim(), normalizedStatus)) {
+            return false;
+        }
+
+        boolean updated = orderDAO.updateOrderStatus(orderId.trim(), normalizedStatus);
+
+        if (updated && OrderStatus.DELIVERED.equals(normalizedStatus)) {
+            paymentService.completeCashPaymentForDeliveredOrder(orderId.trim());
+        }
+
+        return updated;
     }
 
     public boolean changePaymentStatus(String orderId, String paymentStatus) {

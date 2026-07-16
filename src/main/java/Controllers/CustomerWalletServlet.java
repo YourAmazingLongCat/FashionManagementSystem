@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Models.Payment;
 import Models.Wallet;
 import Services.PaymentService;
@@ -26,10 +27,10 @@ public class CustomerWalletServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
-        String customerId = (String) session.getAttribute("customerId");
+        String customerId = getCustomerId(session);
 
         if (customerId == null) {
-            response.sendRedirect(request.getContextPath() + "/Pages/Authentication/login.jsp");
+            response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
@@ -40,5 +41,19 @@ public class CustomerWalletServlet extends HttpServlet {
         request.setAttribute("paymentHistory", paymentHistory);
         request.setAttribute("contentPage", "/Pages/Customer/wallet.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+    }
+
+    private String getCustomerId(HttpSession session) {
+        Object direct = session.getAttribute("customerId");
+        if (direct != null && !direct.toString().trim().isEmpty()) {
+            return direct.toString();
+        }
+
+        Object user = session.getAttribute("USER");
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
+        }
+
+        return null;
     }
 }

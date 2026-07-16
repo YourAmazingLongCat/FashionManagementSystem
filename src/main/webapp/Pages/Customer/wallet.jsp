@@ -11,23 +11,15 @@
         <div>
             <p class="wallet-breadcrumb">Customer / Wallet</p>
             <h1 class="wallet-title">My Wallet</h1>
-            <p class="wallet-subtitle">Deposit money into your web wallet and use the balance to pay orders.</p>
+            <p class="wallet-subtitle">
+                Deposit money into your web wallet and use the balance to pay orders.
+            </p>
         </div>
         <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/customer/order-history">
             <span class="material-symbols-outlined">receipt_long</span>
             My Orders
         </a>
     </div>
-
-    <c:if test="${not empty sessionScope.successMessage}">
-        <div class="wallet-alert wallet-alert-success">${sessionScope.successMessage}</div>
-        <c:remove var="successMessage" scope="session" />
-    </c:if>
-
-    <c:if test="${not empty sessionScope.errorMessage}">
-        <div class="wallet-alert wallet-alert-error">${sessionScope.errorMessage}</div>
-        <c:remove var="errorMessage" scope="session" />
-    </c:if>
 
     <div class="wallet-grid">
         <div class="wallet-balance-card">
@@ -46,7 +38,7 @@
                 <span class="material-symbols-outlined">account_balance_wallet</span>
                 <div>
                     <h2>Deposit Money</h2>
-                    <p>Demo mode: deposit will be completed immediately.</p>
+                    <p>Deposit requests are now pending until Staff/Admin confirms the received payment.</p>
                 </div>
             </div>
 
@@ -56,13 +48,12 @@
             <label class="wallet-label" for="paymentMethod">Payment Method</label>
             <select class="wallet-input" id="paymentMethod" name="paymentMethod">
                 <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Momo">Momo</option>
                 <option value="VNPay">VNPay</option>
             </select>
 
             <button class="wallet-primary-btn" type="submit">
                 <span class="material-symbols-outlined">add_card</span>
-                Deposit Now
+                Create Deposit Request
             </button>
         </form>
     </div>
@@ -78,7 +69,7 @@
                 <div class="wallet-empty">
                     <span class="material-symbols-outlined">payments</span>
                     <h3>No payment yet</h3>
-                    <p>Your deposits and wallet purchases will appear here.</p>
+                    <p>Your deposits, wallet purchases, COD records and refunds will appear here.</p>
                 </div>
             </c:when>
             <c:otherwise>
