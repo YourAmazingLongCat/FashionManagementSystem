@@ -56,16 +56,17 @@ public class RegisterControllers extends HttpServlet {
         }
         // =========================================================================
 
-        Connection conn = null; 
+        Connection connection = null; 
         PreparedStatement psCheck = null;
         ResultSet rs = null;
 
         try {
-            conn = new DBContext().getConnection(); 
+            connection = new DBContext().getConnection(); 
+            System.out.println("Connection = " + connection);
             
             // 3. Kiểm tra trùng lặp (Email hoặc Phone)
             String checkSQL = "SELECT email FROM Accounts WHERE email = ? OR phone = ?";
-            psCheck = conn.prepareStatement(checkSQL);
+            psCheck = connection.prepareStatement(checkSQL);
             psCheck.setString(1, email);
             psCheck.setString(2, phone);
             rs = psCheck.executeQuery();
@@ -107,7 +108,7 @@ public class RegisterControllers extends HttpServlet {
             try {
                 if (rs != null) rs.close();
                 if (psCheck != null) psCheck.close();
-                if (conn != null) conn.close();
+                if (connection != null) connection.close();
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
