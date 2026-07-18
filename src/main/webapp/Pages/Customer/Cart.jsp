@@ -5,7 +5,7 @@
 --%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
-
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -122,7 +122,7 @@
                                 </div>
 
                                 <div class="price">
-                                    ${item.price}₫
+                                    <fmt:formatNumber value="${item.price}" pattern="#,##0"/> VND
                                 </div>
 
                                 <input type="number"
@@ -132,7 +132,7 @@
                                        onchange="updateQty('${item.cartItemId}', this.value)">
 
                                 <div class="price">
-                                    ${item.subtotal}₫
+                                    <fmt:formatNumber value="${item.subtotal}" pattern="#,##0"/> VND
                                 </div>
 
                                 <a class="btn btn-sm btn-outline-danger"
@@ -156,7 +156,7 @@
                             <hr>
 
                             <h4 class="text-danger">
-                                <span id="totalPrice">0₫</span>
+                                <span id="totalPrice">0 VND</span>
                             </h4>
 
                             <button type="submit" class="btn btn-shopee w-100 mt-3">
@@ -178,7 +178,17 @@
 </div>
 
 <script>
+function saveCheckedItems() {
+    let checked = [];
+
+    document.querySelectorAll("input[name='selectedItems']:checked")
+        .forEach(cb => checked.push(cb.value));
+
+    localStorage.setItem("checkedItems", JSON.stringify(checked));
+}
 function updateQty(id, qty) {
+
+    saveCheckedItems();
 
     fetch('${pageContext.request.contextPath}/cart/update', {
         method: 'POST',
@@ -191,7 +201,32 @@ function updateQty(id, qty) {
     });
 
 }
-function calculateTotal(){let t=0;document.querySelectorAll('input[name="selectedItems"]:checked').forEach(cb=>t+=Number(cb.dataset.subtotal));document.getElementById("totalPrice").innerHTML=t.toLocaleString('vi-VN')+'₫';}
+window.onload = function () {
+
+    let checked = JSON.parse(localStorage.getItem("checkedItems") || "[]");
+
+    document.querySelectorAll("input[name='selectedItems']").forEach(cb => {
+
+        if (checked.includes(cb.value)) {
+            cb.checked = true;
+        }
+
+    });
+
+    calculateTotal();
+
+};
+function calculateTotal() {
+    let total = 0;
+
+    document.querySelectorAll('input[name="selectedItems"]:checked')
+        .forEach(cb => {
+            total += Number(cb.dataset.subtotal);
+        });
+
+    document.getElementById("totalPrice").innerHTML =
+        total.toLocaleString('vi-VN') + " VND";
+}
 </script>
 
 </body>

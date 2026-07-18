@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,11 +27,6 @@
             background: #34495e; color: #fff; border-left-color: #1abc9c;
         }
         .sidebar .nav-link i { width: 24px; margin-right: 10px; }
-        .sidebar .nav-link.back-home {
-            margin-top: 30px; border-top: 1px solid #34495e; padding-top: 20px;
-            color: #f1c40f;
-        }
-        .sidebar .nav-link.back-home:hover { background: #2c3e50; color: #f39c12; }
         .main-content { padding: 20px 30px; }
         .stat-card {
             background: #fff; border-radius: 12px; padding: 20px;
@@ -47,10 +43,40 @@
         .hidden-section { display: none; }
         .search-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .search-form .form-control { width: auto; min-width: 180px; }
+        .time-filter-bar {
+            background: #fff; border-radius: 12px; padding: 15px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 15px 20px;
+        }
+        .time-filter-bar .label { font-weight: 600; color: #2c3e50; }
+        .time-filter-bar .form-control { border-radius: 8px; width: auto; min-width: 150px; }
+        .time-filter-bar .btn-filter {
+            background: #1abc9c; border: none; border-radius: 8px;
+            padding: 6px 20px; color: #fff; font-weight: 600;
+        }
+        .time-filter-bar .btn-filter:hover { background: #16a085; }
+        .rank-badge {
+            display: inline-block; width: 28px; height: 28px; line-height: 28px;
+            text-align: center; border-radius: 50%; font-weight: 700; font-size: 0.8rem;
+            background: #e9ecef; color: #2c3e50;
+        }
+        .rank-badge.gold { background: #f1c40f; color: #fff; }
+        .rank-badge.silver { background: #bdc3c7; color: #fff; }
+        .rank-badge.bronze { background: #e67e22; color: #fff; }
+        .profit-formula {
+            background: #f8fafc; padding: 15px; border-radius: 8px;
+            border-left: 4px solid #27ae60; margin-top: 10px;
+        }
+        .profit-formula .formula {
+            font-family: 'Courier New', monospace; font-size: 1.1rem;
+            font-weight: 600; color: #1a2634;
+        }
         @media (max-width: 768px) {
             .sidebar { min-height: auto; height: auto; }
             .main-content { padding: 15px; }
             .stat-card .stat-number { font-size: 1.5rem; }
+            .time-filter-bar { flex-direction: column; align-items: stretch; }
+            .time-filter-bar .form-control { width: 100% !important; min-width: unset; }
         }
     </style>
 </head>
@@ -62,32 +88,33 @@
             <div class="brand"><i class="fas fa-chart-pie"></i> Admin</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link ${param.section == null || param.section == 'customerStats' ? 'active' : ''}" 
-                       href="?section=customerStats">
-                        <i class="fas fa-users"></i> Customer Statistics
+                    <a class="nav-link ${param.section == null || param.section == 'overview' ? 'active' : ''}" 
+                       href="?section=overview">
+                        <i class="fas fa-th-large"></i> Overview
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link ${param.section == 'revenueStats' ? 'active' : ''}" 
-                       href="?section=revenueStats">
-                        <i class="fas fa-dollar-sign"></i> Revenue Statistics
+                    <a class="nav-link ${param.section == 'customers' ? 'active' : ''}" 
+                       href="?section=customers">
+                        <i class="fas fa-users"></i> Customers
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link ${param.section == 'profitStats' ? 'active' : ''}" 
-                       href="?section=profitStats">
-                        <i class="fas fa-chart-line"></i> Profit Statistics
+                    <a class="nav-link ${param.section == 'products' ? 'active' : ''}" 
+                       href="?section=products">
+                        <i class="fas fa-boxes"></i> Products
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link ${param.section == 'orderStats' ? 'active' : ''}" 
-                       href="?section=orderStats">
-                        <i class="fas fa-shopping-cart"></i> Order Statistics
+                    <a class="nav-link ${param.section == 'orders' ? 'active' : ''}" 
+                       href="?section=orders">
+                        <i class="fas fa-shopping-cart"></i> Orders
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link back-home" href="${pageContext.request.contextPath}/home">
-                        <i class="fas fa-home"></i> Back to Home
+                    <a class="nav-link ${param.section == 'profit' ? 'active' : ''}" 
+                       href="?section=profit">
+                        <i class="fas fa-chart-line"></i> Profit
                     </a>
                 </li>
             </ul>
@@ -95,30 +122,57 @@
 
         <!-- Main Content -->
         <div class="col-md-9 col-lg-10 main-content">
+
+            <!-- Time Filter Bar -->
+            <div class="time-filter-bar">
+                <span class="label"><i class="far fa-calendar-alt me-2"></i>Time period:</span>
+                <form action="${pageContext.request.contextPath}/Admin" method="get" class="d-flex flex-wrap align-items-center gap-2">
+                    <input type="date" name="fromDate" class="form-control" value="${param.fromDate}" placeholder="From">
+                    <span class="text-muted">→</span>
+                    <input type="date" name="toDate" class="form-control" value="${param.toDate}" placeholder="To">
+                    <input type="hidden" name="section" value="${param.section != null ? param.section : 'overview'}">
+                    <button type="submit" class="btn btn-filter"><i class="fas fa-filter me-1"></i> Filter</button>
+                </form>
+                <c:if test="${not empty param.fromDate or not empty param.toDate}">
+                    <span class="badge bg-info text-dark">
+                        <i class="far fa-clock me-1"></i>
+                        <c:choose>
+                            <c:when test="${not empty param.fromDate and not empty param.toDate}">${param.fromDate} → ${param.toDate}</c:when>
+                            <c:when test="${not empty param.fromDate}">From ${param.fromDate}</c:when>
+                            <c:when test="${not empty param.toDate}">Until ${param.toDate}</c:when>
+                        </c:choose>
+                    </span>
+                </c:if>
+            </div>
+
             <!-- Top summary cards -->
             <div class="row mb-4">
                 <div class="col-md-3 col-6">
                     <div class="stat-card">
                         <div class="stat-label"><i class="fas fa-user"></i> Total Customers</div>
-                        <div class="stat-number">${totalCustomers}</div>
+                        <div class="stat-number">${empty totalCustomers ? 0 : totalCustomers}</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="stat-card" style="border-left-color: #3498db;">
                         <div class="stat-label"><i class="fas fa-receipt"></i> Total Orders</div>
-                        <div class="stat-number">${totalOrders}</div>
+                        <div class="stat-number">${empty totalOrders ? 0 : totalOrders}</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="stat-card" style="border-left-color: #e67e22;">
                         <div class="stat-label"><i class="fas fa-money-bill-wave"></i> Revenue</div>
-                        <div class="stat-number">$${revenue}</div>
+                        <div class="stat-number">
+                            <fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="stat-card" style="border-left-color: #27ae60;">
                         <div class="stat-label"><i class="fas fa-coins"></i> Profit</div>
-                        <div class="stat-number">$${profit}</div>
+                        <div class="stat-number">
+                            <fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫
+                        </div>
                     </div>
                 </div>
             </div>
@@ -126,104 +180,337 @@
             <!-- Determine current section -->
             <c:set var="currentSection" value="${param.section}" />
             <c:if test="${empty currentSection}">
-                <c:set var="currentSection" value="customerStats" />
+                <c:set var="currentSection" value="overview" />
             </c:if>
 
-            <!-- Customer Statistics -->
-            <div id="customerStats" class="section-card ${currentSection != 'customerStats' ? 'hidden-section' : ''}">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-users me-2"></i> Customer Statistics</span>
-                        <form action="${pageContext.request.contextPath}/Admin" method="post" class="search-form">
-                            <label for="quantity" class="form-label mb-0">Min orders:</label>
-                            <input type="number" name="quantity" id="quantity" class="form-control form-control-sm" value="5" min="1">
-                            <input type="hidden" name="section" value="customerStats">
-                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Search</button>
-                        </form>
+            <!-- ==================== OVERVIEW ==================== -->
+            <div id="overview" class="section-card ${currentSection != 'overview' ? 'hidden-section' : ''}">
+                <div class="row">
+                    <!-- Top Products -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header"><i class="fas fa-fire me-2"></i> Top Selling Products</div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead>
+                                            <tr><th>#</th><th>Product</th><th class="text-end">Qty Sold</th><th class="text-end">Revenue</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:choose>
+                                                <c:when test="${not empty topProducts}">
+                                                    <c:forEach var="p" items="${topProducts}" varStatus="loop" begin="0" end="4">
+                                                        <tr>
+                                                            <td>${loop.index + 1}</td>
+                                                            <td>${p.productName}</td>
+                                                            <td class="text-end fw-bold">${p.quantitySold}</td>
+                                                            <td class="text-end"><fmt:formatNumber value="${p.revenue}" pattern="#,##0" /> ₫</td>
+                                                        </tr>
+                                                    </c:forEach>
+                                                </c:when>
+                                                <c:otherwise><tr><td colspan="4" class="text-center text-muted">No product data</td></tr></c:otherwise>
+                                            </c:choose>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                    <!-- Top Spending Customers -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header"><i class="fas fa-trophy me-2"></i> Top Spending Customers</div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead>
+                                            <tr><th>#</th><th>Customer</th><th class="text-end">Orders</th><th class="text-end">Total Spent</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <c:choose>
+                                                <c:when test="${not empty topSpenders}">
+                                                    <c:forEach var="c" items="${topSpenders}" varStatus="loop" begin="0" end="4">
+                                                        <tr>
+                                                            <td>
+                                                                <span class="rank-badge ${loop.index == 0 ? 'gold' : loop.index == 1 ? 'silver' : loop.index == 2 ? 'bronze' : ''}">${loop.index + 1}</span>
+                                                            </td>
+                                                            <td>${c.fullName}</td>
+                                                            <td class="text-end">${c.totalOrders}</td>
+                                                            <td class="text-end"><fmt:formatNumber value="${c.totalSpent}" pattern="#,##0" /> ₫</td>
+                                                        </tr>
+                                                    </c:forEach>
+                                                </c:when>
+                                                <c:otherwise><tr><td colspan="4" class="text-center text-muted">No customer data</td></tr></c:otherwise>
+                                            </c:choose>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Profit Formula -->
+                <div class="card mt-3">
+                    <div class="card-header"><i class="fas fa-calculator me-2"></i> Profit Calculation (based on cost price)</div>
+                    <div class="card-body">
+                        <div class="profit-formula">
+                            <div class="formula">
+                                Profit = Revenue − Cost of Goods Sold
+                            </div>
+                            <div class="mt-2">
+                                <strong>Revenue:</strong> <fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫ &nbsp;|&nbsp;
+                                <strong>Cost of Goods Sold:</strong> <fmt:formatNumber value="${empty costOfGoodsSold ? 0 : costOfGoodsSold}" pattern="#,##0" /> ₫ &nbsp;|&nbsp;
+                                <strong>Net Profit:</strong> <span class="text-success"><fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== CUSTOMERS ==================== -->
+            <div id="customers" class="section-card ${currentSection != 'customers' ? 'hidden-section' : ''}">
+                <ul class="nav nav-tabs mb-3" id="customerTabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#byOrdersTab">By Orders</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#bySpendingTab">By Spending</button></li>
+                </ul>
+                <div class="tab-content">
+                    <!-- By Orders -->
+                    <div class="tab-pane fade show active" id="byOrdersTab">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                                <span><i class="fas fa-users me-2"></i> Customers by Order Count</span>
+                                <form action="${pageContext.request.contextPath}/Admin" method="post" class="search-form">
+                                    <label for="minOrders" class="form-label mb-0">Min orders:</label>
+                                    <input type="number" name="quantity" id="minOrders" class="form-control form-control-sm" value="${param.quantity != null ? param.quantity : 5}" min="1">
+                                    <input type="hidden" name="section" value="customers">
+                                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
+                                </form>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead><tr><th>#</th><th>Full Name</th><th class="text-end">Total Orders</th></tr></thead>
+                                        <tbody>
+                                            <c:choose>
+                                                <c:when test="${not empty customerStatistics}">
+                                                    <c:forEach var="c" items="${customerStatistics}" varStatus="loop">
+                                                        <tr>
+                                                            <td>${loop.index + 1}</td>
+                                                            <td>${c.fullName}</td>
+                                                            <td class="text-end fw-bold">${c.totalOrders}</td>
+                                                        </tr>
+                                                    </c:forEach>
+                                                </c:when>
+                                                <c:otherwise><tr><td colspan="3" class="text-center text-muted">No customers found</td></tr></c:otherwise>
+                                            </c:choose>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- By Spending -->
+                    <div class="tab-pane fade" id="bySpendingTab">
+                        <div class="card">
+                            <div class="card-header"><i class="fas fa-money-bill-alt me-2"></i> Customers by Total Spending</div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead><tr><th>#</th><th>Full Name</th><th class="text-end">Total Orders</th><th class="text-end">Total Spent</th></tr></thead>
+                                        <tbody>
+                                            <c:choose>
+                                                <c:when test="${not empty topSpenders}">
+                                                    <c:forEach var="c" items="${topSpenders}" varStatus="loop">
+                                                        <tr>
+                                                            <td>${loop.index + 1}</td>
+                                                            <td>${c.fullName}</td>
+                                                            <td class="text-end">${c.totalOrders}</td>
+                                                            <td class="text-end"><fmt:formatNumber value="${c.totalSpent}" pattern="#,##0" /> ₫</td>
+                                                        </tr>
+                                                    </c:forEach>
+                                                </c:when>
+                                                <c:otherwise><tr><td colspan="4" class="text-center text-muted">No spending data</td></tr></c:otherwise>
+                                            </c:choose>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== PRODUCTS ==================== -->
+            <div id="products" class="section-card ${currentSection != 'products' ? 'hidden-section' : ''}">
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-boxes me-2"></i> Product Sales – Quantity Sold</div>
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-hover table-striped">
                                 <thead>
-                                    <tr><th>#</th><th>Full Name</th><th>Total Orders</th></tr>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Product Code</th>
+                                        <th>Product Name</th>
+                                        <th class="text-end">Unit Cost</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Qty Sold</th>
+                                        <th class="text-end">Revenue</th>
+                                        <th class="text-end">Profit</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     <c:choose>
-                                        <c:when test="${not empty customerStatistics}">
-                                            <c:forEach var="c" items="${customerStatistics}" varStatus="loop">
+                                        <c:when test="${not empty productSales}">
+                                            <c:forEach var="p" items="${productSales}" varStatus="loop">
                                                 <tr>
                                                     <td>${loop.index + 1}</td>
-                                                    <td>${c.fullName}</td>
-                                                    <td>${c.totalOrders}</td>
+                                                    <td><code>${p.productCode}</code></td>
+                                                    <td>${p.productName}</td>
+                                                    <td class="text-end"><fmt:formatNumber value="${p.unitCost}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end"><fmt:formatNumber value="${p.unitPrice}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end fw-bold">${p.quantitySold}</td>
+                                                    <td class="text-end"><fmt:formatNumber value="${p.revenue}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end text-success"><fmt:formatNumber value="${p.profit}" pattern="#,##0" /> ₫</td>
                                                 </tr>
                                             </c:forEach>
                                         </c:when>
-                                        <c:otherwise>
-                                            <tr><td colspan="3" class="text-center text-muted">No customers found</td></tr>
-                                        </c:otherwise>
+                                        <c:otherwise><tr><td colspan="8" class="text-center text-muted">No product data</td></tr></c:otherwise>
                                     </c:choose>
                                 </tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr>
+                                        <td colspan="5" class="text-end">TOTAL</td>
+                                        <td class="text-end">${empty totalProductSold ? 0 : totalProductSold}</td>
+                                        <td class="text-end"><fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫</td>
+                                        <td class="text-end text-success"><fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫</td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Revenue Statistics -->
-            <div id="revenueStats" class="section-card ${currentSection != 'revenueStats' ? 'hidden-section' : ''}">
-                <div class="card">
-                    <div class="card-header"><i class="fas fa-dollar-sign me-2"></i> Revenue Statistics</div>
-                    <div class="card-body">
-                        <h5 class="mb-3">Total Revenue: <span class="text-success">$${revenue}</span></h5>
-                        <p class="text-muted">Total income from all paid orders.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Profit Statistics -->
-            <div id="profitStats" class="section-card ${currentSection != 'profitStats' ? 'hidden-section' : ''}">
-                <div class="card">
-                    <div class="card-header"><i class="fas fa-chart-line me-2"></i> Profit Statistics</div>
-                    <div class="card-body">
-                        <h5 class="mb-3">Total Profit: <span class="text-success">$${profit}</span></h5>
-                        <p class="text-muted">Estimated profit (30% of revenue).</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order Statistics -->
-            <div id="orderStats" class="section-card ${currentSection != 'orderStats' ? 'hidden-section' : ''}">
+            <!-- ==================== ORDERS ==================== -->
+            <div id="orders" class="section-card ${currentSection != 'orders' ? 'hidden-section' : ''}">
                 <div class="card">
                     <div class="card-header"><i class="fas fa-shopping-cart me-2"></i> Order Statistics</div>
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-hover table-striped">
-                                <thead>
-                                    <tr><th>Status</th><th>Quantity</th></tr>
-                                </thead>
+                                <thead><tr><th>Status</th><th class="text-end">Quantity</th></tr></thead>
                                 <tbody>
                                     <c:choose>
                                         <c:when test="${not empty orderStatistics}">
                                             <c:forEach var="o" items="${orderStatistics}">
                                                 <tr>
                                                     <td><span class="badge bg-${o.status == 'Completed' ? 'success' : o.status == 'Pending' ? 'warning' : 'danger'}">${o.status}</span></td>
-                                                    <td>${o.quantity}</td>
+                                                    <td class="text-end fw-bold">${o.quantity}</td>
                                                 </tr>
                                             </c:forEach>
                                         </c:when>
-                                        <c:otherwise>
-                                            <tr><td colspan="2" class="text-center text-muted">No orders found</td></tr>
-                                        </c:otherwise>
+                                        <c:otherwise><tr><td colspan="2" class="text-center text-muted">No orders found</td></tr></c:otherwise>
                                     </c:choose>
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Progress bars for visual -->
+                        <div class="mt-3">
+                            <c:forEach var="o" items="${orderStatistics}">
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between small">
+                                        <span>${o.status}</span>
+                                        <span>${o.quantity} orders</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-${o.status == 'Completed' ? 'success' : o.status == 'Pending' ? 'warning' : 'danger'}"
+                                             role="progressbar" style="width: ${o.quantity / totalOrders * 100}%;"></div>
+                                    </div>
+                                </div>
+                            </c:forEach>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
+
+            <!-- ==================== PROFIT ==================== -->
+            <div id="profit" class="section-card ${currentSection != 'profit' ? 'hidden-section' : ''}">
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-chart-line me-2"></i> Profit Details</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-3">
+                                <div class="p-3 bg-light rounded-3">
+                                    <h6 class="text-muted">Revenue</h6>
+                                    <div class="h3"><fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center mb-3">
+                                <div class="p-3 bg-light rounded-3">
+                                    <h6 class="text-muted">Cost of Goods Sold</h6>
+                                    <div class="h3"><fmt:formatNumber value="${empty costOfGoodsSold ? 0 : costOfGoodsSold}" pattern="#,##0" /> ₫</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center mb-3">
+                                <div class="p-3 bg-success bg-opacity-10 rounded-3 border border-success">
+                                    <h6 class="text-success">Net Profit</h6>
+                                    <div class="h1 text-success"><fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="profit-formula">
+                            <div class="formula text-center">
+                                Profit = Revenue − Cost of Goods Sold
+                                &nbsp;&nbsp;→&nbsp;&nbsp;
+                                <fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫
+                                &nbsp;=&nbsp;
+                                <fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫
+                                &nbsp;−&nbsp;
+                                <fmt:formatNumber value="${empty costOfGoodsSold ? 0 : costOfGoodsSold}" pattern="#,##0" /> ₫
+                            </div>
+                        </div>
+                        <!-- Profit by product -->
+                        <div class="mt-4">
+                            <h6 class="fw-bold"><i class="fas fa-list-ul me-2"></i>Profit Contribution by Product</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped table-sm">
+                                    <thead>
+                                        <tr><th>Product</th><th class="text-end">Qty Sold</th><th class="text-end">Unit Cost</th><th class="text-end">Unit Price</th><th class="text-end">Profit / Unit</th><th class="text-end">Total Profit</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:choose>
+                                            <c:when test="${not empty productSales}">
+                                                <c:forEach var="p" items="${productSales}">
+                                                    <tr>
+                                                        <td>${p.productName}</td>
+                                                        <td class="text-end">${p.quantitySold}</td>
+                                                        <td class="text-end"><fmt:formatNumber value="${p.unitCost}" pattern="#,##0" /> ₫</td>
+                                                        <td class="text-end"><fmt:formatNumber value="${p.unitPrice}" pattern="#,##0" /> ₫</td>
+                                                        <td class="text-end text-success"><fmt:formatNumber value="${p.unitPrice - p.unitCost}" pattern="#,##0" /> ₫</td>
+                                                        <td class="text-end fw-bold text-success"><fmt:formatNumber value="${(p.unitPrice - p.unitCost) * p.quantitySold}" pattern="#,##0" /> ₫</td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </c:when>
+                                            <c:otherwise><tr><td colspan="6" class="text-center text-muted">No product data</td></tr></c:otherwise>
+                                        </c:choose>
+                                    </tbody>
+                                    <tfoot class="table-light fw-bold">
+                                        <tr><td colspan="5" class="text-end">TOTAL PROFIT</td>
+                                            <td class="text-end text-success"><fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end main-content -->
+    </div><!-- end row -->
+</div><!-- end container-fluid -->
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
