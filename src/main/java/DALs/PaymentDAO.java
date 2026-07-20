@@ -24,6 +24,16 @@ public class PaymentDAO extends DBContext {
     }
 
     public boolean createPayment(Payment payment) {
+        if (connection == null) {
+            System.out.println("createPayment error: database connection is null");
+            return false;
+        }
+
+        if (payment == null || payment.getPaymentId() == null || payment.getPaymentId().trim().isEmpty()) {
+            System.out.println("createPayment error: invalid payment object");
+            return false;
+        }
+
         String query = "INSERT INTO Payments "
                 + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
                 + "amount, description, createdAt, paidAt) "
@@ -33,7 +43,11 @@ public class PaymentDAO extends DBContext {
             setPaymentParameters(ps, payment);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.out.println("createPayment error: " + e);
+            System.out.println("createPayment error for orderId="
+                    + payment.getOrderId()
+                    + ", method=" + payment.getPaymentMethod()
+                    + ", status=" + payment.getPaymentStatus()
+                    + ": " + e.getMessage());
         }
 
         return false;
@@ -295,14 +309,19 @@ public class PaymentDAO extends DBContext {
     public boolean completeCashPayment(String orderId) {
         String query = "UPDATE Payments "
                 + "SET paymentStatus = ?, paidAt = GETDATE() "
-                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ?";
+                + "WHERE orderId = ? "
+                + "AND paymentType = ? "
+                + "AND paymentStatus = ? "
+                + "AND (paymentMethod = ? OR paymentMethod = ? OR paymentMethod = ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, PaymentStatus.PAID);
             ps.setString(2, orderId);
             ps.setString(3, PaymentType.PURCHASE);
-            ps.setString(4, PaymentMethod.CASH);
-            ps.setString(5, PaymentStatus.PENDING);
+            ps.setString(4, PaymentStatus.PENDING);
+            ps.setString(5, PaymentMethod.CASH);
+            ps.setString(6, PaymentMethod.COD);
+            ps.setString(7, PaymentMethod.CASH_ON_DELIVERY);
 
             return ps.executeUpdate() >= 0;
         } catch (SQLException e) {
@@ -394,14 +413,30 @@ public class PaymentDAO extends DBContext {
 
     private void setPaymentParameters(PreparedStatement ps, Payment payment) throws SQLException {
         ps.setString(1, payment.getPaymentId());
-        ps.setString(2, payment.getWalletId());
-        ps.setString(3, payment.getOrderId());
+
+        if (payment.getWalletId() == null || payment.getWalletId().trim().isEmpty()) {
+            ps.setNull(2, Types.VARCHAR);
+        } else {
+            ps.setString(2, payment.getWalletId());
+        }
+
+        if (payment.getOrderId() == null || payment.getOrderId().trim().isEmpty()) {
+            ps.setNull(3, Types.VARCHAR);
+        } else {
+            ps.setString(3, payment.getOrderId());
+        }
+
         ps.setString(4, payment.getPaymentType());
         ps.setString(5, payment.getPaymentMethod());
         ps.setString(6, payment.getPaymentStatus());
         ps.setBigDecimal(7, payment.getAmount());
         ps.setString(8, payment.getDescription());
-        ps.setTimestamp(9, Timestamp.valueOf(payment.getCreatedAt()));
+
+        if (payment.getCreatedAt() == null) {
+            ps.setTimestamp(9, Timestamp.valueOf(LocalDateTime.now()));
+        } else {
+            ps.setTimestamp(9, Timestamp.valueOf(payment.getCreatedAt()));
+        }
 
         if (payment.getPaidAt() == null) {
             ps.setNull(10, Types.TIMESTAMP);

@@ -135,7 +135,7 @@ public class OrderService {
 
         String normalizedStatus = normalizeOrderStatus(newStatus);
 
-        if (!isShippingStatus(normalizedStatus)) {
+        if (!isOrderProgressStatus(normalizedStatus)) {
             return false;
         }
 
@@ -145,30 +145,36 @@ public class OrderService {
             return false;
         }
 
-        String currentStatus = order.getOrderStatus();
+        String currentStatus = normalizeOrderStatus(order.getOrderStatus());
 
-        if (OrderStatus.CANCELLED.equals(currentStatus)
-                || OrderStatus.DELIVERED.equals(currentStatus)
-                || OrderStatus.PENDING.equals(currentStatus)) {
+        int currentIndex = getOrderStatusIndex(currentStatus);
+        int newIndex = getOrderStatusIndex(normalizedStatus);
+
+        if (currentIndex < 0 || newIndex < 0 || currentIndex == newIndex) {
             return false;
         }
 
-        if (OrderStatus.PROCESSING.equals(normalizedStatus)
-                && !OrderStatus.CONFIRMED.equals(currentStatus)) {
-            return false;
+        boolean isForward = newIndex > currentIndex;
+        boolean isBackward = newIndex < currentIndex;
+
+        /*
+         * Business rule:
+         * - Forward: only one status level each time.
+         * - Backward: only one status level each time.
+         * - Payment check only applies to Wallet and VNPay when moving forward.
+         * - COD/Cash is not blocked by payment status and becomes Paid automatically when Delivered.
+         */
+        if (isForward) {
+            if (newIndex - currentIndex != 1) {
+                return false;
+            }
+
+            if (!paymentService.canForwardOrderStatusByPayment(orderId.trim())) {
+                return false;
+            }
         }
 
-        if (OrderStatus.SHIPPING.equals(normalizedStatus)
-                && !OrderStatus.PROCESSING.equals(currentStatus)) {
-            return false;
-        }
-
-        if (OrderStatus.DELIVERED.equals(normalizedStatus)
-                && !OrderStatus.SHIPPING.equals(currentStatus)) {
-            return false;
-        }
-
-        if (!paymentService.canMoveToShippingStatus(orderId.trim(), normalizedStatus)) {
+        if (isBackward && currentIndex - newIndex != 1) {
             return false;
         }
 
@@ -328,10 +334,32 @@ public class OrderService {
         return true;
     }
 
-    private boolean isShippingStatus(String status) {
-        return OrderStatus.PROCESSING.equals(status)
+    private boolean isOrderProgressStatus(String status) {
+        return OrderStatus.PENDING.equals(status)
+                || OrderStatus.CONFIRMED.equals(status)
+                || OrderStatus.PROCESSING.equals(status)
                 || OrderStatus.SHIPPING.equals(status)
                 || OrderStatus.DELIVERED.equals(status);
+    }
+
+    private int getOrderStatusIndex(String status) {
+        if (OrderStatus.PENDING.equals(status)) {
+            return 0;
+        }
+        if (OrderStatus.CONFIRMED.equals(status)) {
+            return 1;
+        }
+        if (OrderStatus.PROCESSING.equals(status)) {
+            return 2;
+        }
+        if (OrderStatus.SHIPPING.equals(status)) {
+            return 3;
+        }
+        if (OrderStatus.DELIVERED.equals(status)) {
+            return 4;
+        }
+
+        return -1;
     }
 
     private String normalizeOrderStatus(String status) {

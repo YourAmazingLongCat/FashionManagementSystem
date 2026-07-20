@@ -10,7 +10,7 @@
                 <p class="order-eyebrow">Staff / Order Detail</p>
                 <h1 class="order-title">Manage Order</h1>
                 <p class="order-subtitle">
-                    Confirm the order, check payment, update shipping status, or cancel eligible orders.
+                    Move order status forward or backward one level at a time. Each change requires staff confirmation.
                 </p>
             </div>
             <div class="order-actions-row">
@@ -96,7 +96,7 @@
                                 <span class="material-symbols-outlined">payments</span>
                                 <div>
                                     <h2>Payment Information</h2>
-                                    <p>Staff should verify Cash/Wallet payment status before shipping.</p>
+                                    <p>Payment information is shown for reference. Order status can be changed without payment validation.</p>
                                 </div>
                             </div>
 
@@ -143,44 +143,70 @@
                                 <h3 class="order-section-title">Staff Actions</h3>
                             </div>
 
+                            <c:set var="nextStatus" value="" />
+                            <c:set var="previousStatus" value="" />
+
+                            <c:choose>
+                                <c:when test="${order.orderStatus eq 'Pending'}">
+                                    <c:set var="nextStatus" value="Confirmed" />
+                                </c:when>
+                                <c:when test="${order.orderStatus eq 'Confirmed'}">
+                                    <c:set var="nextStatus" value="Processing" />
+                                    <c:set var="previousStatus" value="Pending" />
+                                </c:when>
+                                <c:when test="${order.orderStatus eq 'Processing'}">
+                                    <c:set var="nextStatus" value="Shipping" />
+                                    <c:set var="previousStatus" value="Confirmed" />
+                                </c:when>
+                                <c:when test="${order.orderStatus eq 'Shipping'}">
+                                    <c:set var="nextStatus" value="Delivered" />
+                                    <c:set var="previousStatus" value="Processing" />
+                                </c:when>
+                                <c:when test="${order.orderStatus eq 'Delivered'}">
+                                    <c:set var="previousStatus" value="Shipping" />
+                                </c:when>
+                            </c:choose>
+
                             <div class="order-admin-actions">
-                                <c:if test="${order.orderStatus eq 'Pending'}">
-                                    <form class="order-inline-form" method="post" action="${pageContext.request.contextPath}/staff/confirm-order">
+                                <c:if test="${not empty nextStatus}">
+                                    <form class="order-inline-form" method="post"
+                                          action="${pageContext.request.contextPath}/staff/change-shipping-status"
+                                          onsubmit="return confirmOrderStatusChange('forward', '${order.orderStatus}', '${nextStatus}');">
                                         <input type="hidden" name="orderId" value="${order.orderId}" />
-                                        <button class="order-btn order-btn-success" type="submit">
-                                            <span class="material-symbols-outlined">verified</span>
-                                            Confirm order
+                                        <input type="hidden" name="newStatus" value="${nextStatus}" />
+                                        <button class="order-btn order-btn-primary" type="submit">
+                                            <span class="material-symbols-outlined">arrow_forward</span>
+                                            Move forward to ${nextStatus}
                                         </button>
                                     </form>
                                 </c:if>
 
-                                <c:if test="${order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing' or order.orderStatus eq 'Shipping'}">
-                                    <form class="order-inline-form" method="post" action="${pageContext.request.contextPath}/staff/change-shipping-status">
-                                        <input type="hidden" name="orderId" value="${order.orderId}" />
-                                        <label class="order-label" for="newStatus">Next status</label>
-                                        <select id="newStatus" name="newStatus" class="order-select" required>
-                                            <c:if test="${order.orderStatus eq 'Confirmed'}">
-                                                <option value="Processing">Processing</option>
-                                            </c:if>
-                                            <c:if test="${order.orderStatus eq 'Processing'}">
-                                                <option value="Shipping">Shipping</option>
-                                            </c:if>
-                                            <c:if test="${order.orderStatus eq 'Shipping'}">
-                                                <option value="Delivered">Delivered</option>
-                                            </c:if>
-                                        </select>
-                                        <button class="order-btn order-btn-primary" type="submit">
-                                            <span class="material-symbols-outlined">local_shipping</span>
-                                            Update shipping
+                                <c:choose>
+                                    <c:when test="${not empty previousStatus}">
+                                        <form class="order-inline-form" method="post"
+                                              action="${pageContext.request.contextPath}/staff/change-shipping-status"
+                                              onsubmit="return confirmOrderStatusChange('backward', '${order.orderStatus}', '${previousStatus}');">
+                                            <input type="hidden" name="orderId" value="${order.orderId}" />
+                                            <input type="hidden" name="newStatus" value="${previousStatus}" />
+                                            <button class="order-btn" type="submit">
+                                                <span class="material-symbols-outlined">arrow_back</span>
+                                                Move backward to ${previousStatus}
+                                            </button>
+                                        </form>
+                                    </c:when>
+                                    <c:when test="${order.orderStatus ne 'Cancelled'}">
+                                        <button class="order-btn" type="button" disabled
+                                                style="opacity: 0.45; cursor: not-allowed;">
+                                            <span class="material-symbols-outlined">block</span>
+                                            No previous status
                                         </button>
-                                    </form>
-                                    <div class="order-warning-box">
-                                        Wallet/VNPay orders must be Paid before shipping. Cash orders can move forward and will be marked Paid when Delivered.
-                                    </div>
-                                </c:if>
+                                    </c:when>
+                                </c:choose>
 
                                 <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">
-                                    <form class="order-inline-form" method="post" action="${pageContext.request.contextPath}/staff/cancel-order" onsubmit="return confirm('Cancel this order? Wallet payments will be refunded automatically if applicable.');">
+                                    <form class="order-inline-form" method="post"
+                                          action="${pageContext.request.contextPath}/staff/cancel-order"
+                                          onsubmit="return confirm('Cancel this order? Wallet payments will be refunded automatically if applicable.');">
                                         <input type="hidden" name="orderId" value="${order.orderId}" />
                                         <button class="order-btn order-btn-danger" type="submit">
                                             <span class="material-symbols-outlined">cancel</span>
@@ -189,11 +215,17 @@
                                     </form>
                                 </c:if>
 
-                                <c:if test="${order.orderStatus eq 'Delivered' or order.orderStatus eq 'Cancelled'}">
+                                <c:if test="${order.orderStatus eq 'Cancelled'}">
                                     <div class="order-warning-box">
-                                        This order is already ${order.orderStatus}. No further shipping action is available.
+                                        This order is already Cancelled. Status movement is not available.
                                     </div>
                                 </c:if>
+
+                                <div class="order-warning-box">
+                                    Forward and backward movement must be one status level each time.
+                                    Wallet/VNPay orders must be Paid before moving forward.
+                                    COD/Cash orders can move forward without payment being Paid and will be marked Paid automatically when Delivered.
+                                </div>
                             </div>
                         </div>
 
@@ -215,3 +247,11 @@
         </c:choose>
     </div>
 </div>
+
+
+<script>
+    function confirmOrderStatusChange(direction, currentStatus, targetStatus) {
+        var actionText = direction === 'backward' ? 'move backward' : 'move forward';
+        return confirm("Confirm to " + actionText + " order status from " + currentStatus + " to " + targetStatus + "?");
+    }
+</script>

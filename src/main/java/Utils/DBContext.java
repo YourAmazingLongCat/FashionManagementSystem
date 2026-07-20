@@ -13,7 +13,7 @@ public class DBContext {
             + "encrypt=true;"
             + "trustServerCertificate=true;";
     private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "132004";
+    private static final String DB_PASSWORD = "123456";
 
     public DBContext() {
         try {
