@@ -71,10 +71,7 @@ public class DepositWalletServlet extends HttpServlet {
     }
 
     private String normalizeDepositMethod(String method) {
-        if (PaymentMethod.VNPAY.equals(method)) {
-            return PaymentMethod.VNPAY;
-        }
-        return PaymentMethod.BANK_TRANSFER;
+        return PaymentMethod.VNPAY;
     }
 
     private BigDecimal parseAmount(String value) {

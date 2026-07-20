@@ -12,7 +12,7 @@
             <p class="wallet-breadcrumb">Customer / Wallet</p>
             <h1 class="wallet-title">My Wallet</h1>
             <p class="wallet-subtitle">
-                Deposit money into your web wallet and use the balance to pay orders.
+                Deposit money into your web wallet via VNPay and use the balance to pay orders.
             </p>
         </div>
         <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/customer/order-history">
@@ -47,7 +47,6 @@
 
             <label class="wallet-label" for="paymentMethod">Payment Method</label>
             <select class="wallet-input" id="paymentMethod" name="paymentMethod">
-                <option value="Bank Transfer">Bank Transfer</option>
                 <option value="VNPay">VNPay</option>
             </select>
 
@@ -91,7 +90,12 @@
                                 <tr>
                                     <td><strong>${payment.paymentId}</strong></td>
                                     <td>${payment.paymentType}</td>
-                                    <td>${payment.paymentMethod}</td>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${payment.paymentMethod eq 'COD'}">Cash On Delivery</c:when>
+                                            <c:otherwise>${payment.paymentMethod}</c:otherwise>
+                                        </c:choose>
+                                    </td>
                                     <td>
                                         <span class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">
                                             ${payment.paymentStatus}

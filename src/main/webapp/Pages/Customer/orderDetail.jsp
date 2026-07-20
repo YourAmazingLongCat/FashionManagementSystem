@@ -122,7 +122,7 @@
                         </c:when>
                         <c:when test="${not empty payment && payment.paymentMethod eq 'Cash'}">
                             <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                                Cash on Delivery selected. Please pay when the order is delivered.
+                                COD selected. Please pay when the order is delivered.
                             </div>
                         </c:when>
                         <c:when test="${order.orderStatus eq 'Cancelled' or order.orderStatus eq 'Delivered'}">

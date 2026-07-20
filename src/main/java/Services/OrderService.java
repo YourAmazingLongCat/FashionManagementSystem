@@ -162,7 +162,7 @@ public class OrderService {
          * - Forward: only one status level each time.
          * - Backward: only one status level each time.
          * - Payment check only applies to Wallet and VNPay when moving forward.
-         * - COD/Cash is not blocked by payment status and becomes Paid automatically when Delivered.
+         * - COD is not blocked by payment status and becomes Paid automatically when Delivered.
          */
         if (isForward) {
             if (newIndex - currentIndex != 1) {
