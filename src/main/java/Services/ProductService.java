@@ -1,16 +1,16 @@
 package Services;
 
-import DALs.ProductDAO;
-import DALs.ProductImageDAO;
-import DALs.ProductVariantDAO;
-import Controllers.ProductManagementServlet;
-import Models.Product;
-import Models.ProductVariant;
-
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+
+import Controllers.ProductManagementServlet;
+import DALs.ProductDAO;
+import DALs.ProductImageDAO;
+import DALs.ProductVariantDAO;
+import Models.Product;
+import Models.ProductVariant;
 
 public class ProductService {
 

@@ -1,7 +1,5 @@
 package DALs;
 
-import Utils.DBContext;
-import Controllers.ProductManagementServlet;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,6 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
+
+import Controllers.ProductManagementServlet;
+import Utils.DBContext;
 
 public class ProductImageDAO extends DBContext {
 
