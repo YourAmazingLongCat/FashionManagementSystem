@@ -3,6 +3,9 @@ package Controllers;
 import DALs.BillDAO;
 import Models.Bill;
 import Models.BillOrderItem;
+import Models.ProductOption;
+import Models.ProductSaleStat;
+import Models.ProductSalesRow;
 import Models.RevenueStat;
 
 import jakarta.servlet.ServletException;
@@ -26,6 +29,9 @@ import java.util.List;
  *  - (không truyền / "list")  -> xem + tìm kiếm + lọc danh sách hóa đơn
  *  - "detail"                 -> xem + tìm kiếm chi tiết 1 hóa đơn
  *  - "chartData"               -> trả JSON dữ liệu cho biểu đồ doanh thu (gọi bằng AJAX)
+ *  - "productOptions"          -> trả JSON danh sách sản phẩm (đổ dropdown lọc)
+ *  - "productChartData"        -> trả JSON dữ liệu biểu đồ số lượng bán theo sản phẩm
+ *  - "productSummary"          -> trả JSON bảng + tổng hợp chi tiết theo sản phẩm
  *
  * URL mapping: /BillServlet
  */
@@ -54,6 +60,15 @@ public class BillServlet extends HttpServlet {
                 break;
             case "chartData":
                 handleChartData(request, response);
+                break;
+            case "productOptions":
+                handleProductOptions(request, response);
+                break;
+            case "productChartData":
+                handleProductChartData(request, response);
+                break;
+            case "productSummary":
+                handleProductSummary(request, response);
                 break;
             case "list":
             default:
@@ -151,6 +166,132 @@ public class BillServlet extends HttpServlet {
         response.setContentType("application/json;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
             out.write(toJson(stats));
+        }
+    }
+
+    /**
+     * Trả JSON danh sách sản phẩm (id + tên) để đổ vào dropdown lọc theo
+     * sản phẩm ở màn hình thống kê "Theo sản phẩm".
+     */
+    private void handleProductOptions(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+
+        List<ProductOption> options = billDAO.getAllProductOptions();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < options.size(); i++) {
+            ProductOption o = options.get(i);
+            if (i > 0) sb.append(",");
+            sb.append("{");
+            sb.append("\"productId\":\"").append(escapeJson(o.getProductId())).append("\",");
+            sb.append("\"productName\":\"").append(escapeJson(o.getProductName())).append("\"");
+            sb.append("}");
+        }
+        sb.append("]");
+
+        response.setContentType("application/json;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.write(sb.toString());
+        }
+    }
+
+    /**
+     * Trả JSON cho biểu đồ "Số lượng hàng bán được" theo sản phẩm.
+     * Query params: periodType=day|week|month|year, fromDate, toDate,
+     * productId (bỏ trống/không truyền = tất cả sản phẩm).
+     */
+    private void handleProductChartData(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+
+        String periodType = trimOrNull(request.getParameter("periodType"));
+        if (periodType == null
+                || !(periodType.equals("day") || periodType.equals("week")
+                     || periodType.equals("month") || periodType.equals("year"))) {
+            periodType = "month"; // whitelist, mặc định an toàn
+        }
+
+        Date fromDate = parseDate(request.getParameter("fromDate"));
+        Date toDate = parseDate(request.getParameter("toDate"));
+        String productId = trimOrNull(request.getParameter("productId"));
+
+        List<ProductSaleStat> stats = billDAO.getProductSalesChart(periodType, fromDate, toDate, productId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < stats.size(); i++) {
+            ProductSaleStat s = stats.get(i);
+            if (i > 0) sb.append(",");
+            sb.append("{");
+            sb.append("\"periodLabel\":\"").append(escapeJson(s.getPeriodLabel())).append("\",");
+            sb.append("\"quantitySold\":").append(s.getQuantitySold()).append(",");
+            sb.append("\"revenuePaid\":").append(s.getRevenuePaid() == null ? 0 : s.getRevenuePaid());
+            sb.append("}");
+        }
+        sb.append("]");
+
+        response.setContentType("application/json;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.write(sb.toString());
+        }
+    }
+
+    /**
+     * Trả JSON bảng chi tiết + tổng hợp theo sản phẩm (tổng số lượng bán,
+     * tổng tiền đã thu Paid, tổng tiền còn thiếu) trong khoảng thời gian
+     * đang lọc. Query params: fromDate, toDate, productId (bỏ trống = tất cả).
+     */
+    private void handleProductSummary(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+
+        Date fromDate = parseDate(request.getParameter("fromDate"));
+        Date toDate = parseDate(request.getParameter("toDate"));
+        String productId = trimOrNull(request.getParameter("productId"));
+
+        List<ProductSalesRow> rows = billDAO.getProductSalesSummary(fromDate, toDate, productId);
+
+        int totalQuantity = 0;
+        int totalPaidQuantity = 0;
+        int totalUnpaidQuantity = 0;
+        BigDecimal totalPaid = BigDecimal.ZERO;
+        BigDecimal totalUnpaid = BigDecimal.ZERO;
+
+        StringBuilder rowsJson = new StringBuilder();
+        rowsJson.append("[");
+        for (int i = 0; i < rows.size(); i++) {
+            ProductSalesRow r = rows.get(i);
+            totalQuantity += r.getTotalQuantity();
+            totalPaidQuantity += r.getPaidQuantity();
+            totalUnpaidQuantity += r.getUnpaidQuantity();
+            totalPaid = totalPaid.add(r.getTotalRevenuePaid() == null ? BigDecimal.ZERO : r.getTotalRevenuePaid());
+            totalUnpaid = totalUnpaid.add(r.getTotalUnpaidAmount() == null ? BigDecimal.ZERO : r.getTotalUnpaidAmount());
+
+            if (i > 0) rowsJson.append(",");
+            rowsJson.append("{");
+            rowsJson.append("\"productId\":\"").append(escapeJson(r.getProductId())).append("\",");
+            rowsJson.append("\"productName\":\"").append(escapeJson(r.getProductName())).append("\",");
+            rowsJson.append("\"totalQuantity\":").append(r.getTotalQuantity()).append(",");
+            rowsJson.append("\"paidQuantity\":").append(r.getPaidQuantity()).append(",");
+            rowsJson.append("\"unpaidQuantity\":").append(r.getUnpaidQuantity()).append(",");
+            rowsJson.append("\"totalRevenuePaid\":").append(r.getTotalRevenuePaid()).append(",");
+            rowsJson.append("\"totalUnpaidAmount\":").append(r.getTotalUnpaidAmount());
+            rowsJson.append("}");
+        }
+        rowsJson.append("]");
+
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+        json.append("\"rows\":").append(rowsJson).append(",");
+        json.append("\"totalQuantity\":").append(totalQuantity).append(",");
+        json.append("\"totalPaidAmount\":").append(totalPaid).append(",");
+        json.append("\"totalUnpaidAmount\":").append(totalUnpaid).append(",");
+        json.append("\"totalPaidQuantity\":").append(totalPaidQuantity).append(",");
+        json.append("\"totalUnpaidQuantity\":").append(totalUnpaidQuantity);
+        json.append("}");
+
+        response.setContentType("application/json;charset=UTF-8");
+        try (PrintWriter out = response.getWriter()) {
+            out.write(json.toString());
         }
     }
 
