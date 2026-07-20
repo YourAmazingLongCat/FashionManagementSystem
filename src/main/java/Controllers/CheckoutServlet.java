@@ -103,7 +103,7 @@ public class CheckoutServlet extends HttpServlet {
 
         if (PaymentMethod.WALLET.equals(paymentMethod)
                 && !paymentService.canPayAmountByWallet(customerId, preview.getTotalAmount())) {
-            request.setAttribute("errorMessage", "Your wallet balance is not enough. Please deposit more money or choose Cash on Delivery.");
+            request.setAttribute("errorMessage", "Your wallet balance is not enough. Please deposit more money or choose COD.");
             request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
             request.setAttribute("checkoutTotal", preview.getTotalAmount());
             forwardLayout(request, response, CHECKOUT_PAGE);
@@ -125,14 +125,20 @@ public class CheckoutServlet extends HttpServlet {
             paymentHandled = paymentService.payOrderByWallet(customerId, orderId);
             session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
                     paymentHandled
-                            ? "Order created and paid successfully by wallet."
-                            : "Order was created, but wallet payment failed. Please pay again from order detail.");
+                            ? "Order created and paid successfully by Wallet."
+                            : "Order was created, but Wallet payment failed. Please pay again from order detail.");
+        } else if (PaymentMethod.VNPAY.equals(paymentMethod)) {
+            paymentHandled = paymentService.createVNPayPaymentForOrder(customerId, orderId);
+            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
+                    paymentHandled
+                            ? "Order created. VNPay payment record has been created and is waiting for payment confirmation."
+                            : "Order created, but VNPay payment record could not be created.");
         } else {
-            paymentHandled = paymentService.createCashPaymentForOrder(customerId, orderId);
+            paymentHandled = paymentService.createCODPaymentForOrder(customerId, orderId);
             session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
                     paymentHandled
                             ? "Order created. COD payment record has been created and will become Paid when delivered."
-                            : "Order created, but COD payment record could not be created. Please check the Payments table constraints/paymentMethod values.");
+                            : "Order created, but COD payment record could not be created.");
         }
 
         removeCheckedOutItemsFromDatabaseCart(session, customerId);
@@ -185,13 +191,6 @@ public class CheckoutServlet extends HttpServlet {
 
         if (PaymentMethod.VNPAY.equals(value)) {
             return PaymentMethod.VNPAY;
-        }
-
-        if (PaymentMethod.COD.equals(value)
-                || PaymentMethod.CASH.equals(value)
-                || PaymentMethod.CASH_ON_DELIVERY.equals(value)
-                || "Cash on Delivery".equalsIgnoreCase(value)) {
-            return PaymentMethod.COD;
         }
 
         return PaymentMethod.COD;

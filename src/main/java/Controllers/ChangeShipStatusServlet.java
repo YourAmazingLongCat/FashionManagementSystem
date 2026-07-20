@@ -43,7 +43,7 @@ public class ChangeShipStatusServlet extends HttpServlet {
         session.setAttribute(updated ? "successMessage" : "errorMessage",
                 updated
                         ? "Order status updated successfully."
-                        : "Invalid status change. Forward and backward must move one status level each time. Wallet/VNPay orders must be Paid before moving forward. COD/Cash orders can move forward and become Paid automatically when Delivered.");
+                        : "Invalid status change. Forward and backward must move one status level each time. Wallet/VNPay orders must be Paid before moving forward. COD orders can move forward and become Paid automatically when Delivered.");
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }

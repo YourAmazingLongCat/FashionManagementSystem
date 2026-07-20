@@ -122,7 +122,7 @@
                                         <span>Paid At</span>
                                         <strong><c:choose><c:when test="${empty payment.paidAt}">-</c:when><c:otherwise>${payment.paidAt}</c:otherwise></c:choose></strong>
                                     </div>
-                                    <c:if test="${payment.paymentMethod eq 'Cash' and payment.paymentStatus eq 'Pending'}">
+                                    <c:if test="${payment.paymentMethod eq 'COD' and payment.paymentStatus eq 'Pending'}">
                                         <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
                                             COD order: payment will be marked Paid automatically when status becomes Delivered.
                                         </div>
@@ -224,7 +224,7 @@
                                 <div class="order-warning-box">
                                     Forward and backward movement must be one status level each time.
                                     Wallet/VNPay orders must be Paid before moving forward.
-                                    COD/Cash orders can move forward without payment being Paid and will be marked Paid automatically when Delivered.
+                                    COD orders can move forward without payment being Paid and will be marked Paid automatically when Delivered.
                                 </div>
                             </div>
                         </div>

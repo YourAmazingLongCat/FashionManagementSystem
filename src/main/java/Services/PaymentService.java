@@ -137,6 +137,10 @@ public class PaymentService {
     }
 
     public boolean createCashPaymentForOrder(String accountId, String orderId) {
+        return createCODPaymentForOrder(accountId, orderId);
+    }
+
+    public boolean createCODPaymentForOrder(String accountId, String orderId) {
         if (isEmpty(accountId) || isEmpty(orderId)) {
             return false;
         }
@@ -147,10 +151,8 @@ public class PaymentService {
         Order order = orderDAO.getOrderByIdAndCustomerId(trimmedOrderId, trimmedAccountId);
 
         /*
-         * Some projects store the logged-in account ID under different session
-         * names. If the customer-scoped lookup fails but the order was just
-         * created successfully, fall back to orderId so payment record creation
-         * is not skipped.
+         * If the customer-scoped lookup fails but the order was just created,
+         * fall back to orderId so COD payment record creation is not skipped.
          */
         if (order == null) {
             order = orderDAO.getOrderById(trimmedOrderId);
@@ -168,36 +170,61 @@ public class PaymentService {
         Wallet wallet = getOrCreateWallet(trimmedAccountId);
         String walletId = wallet == null ? null : wallet.getWalletId();
 
-        /*
-         * Different database versions may use different labels for COD.
-         * Try COD first, then legacy Cash, then Cash On Delivery.
-         */
-        String[] methodCandidates = {
-            PaymentMethod.COD,
-            PaymentMethod.CASH,
-            PaymentMethod.CASH_ON_DELIVERY
-        };
+        Payment payment = new Payment(
+                generatePaymentId(),
+                walletId,
+                trimmedOrderId,
+                PaymentType.PURCHASE,
+                PaymentMethod.COD,
+                PaymentStatus.PENDING,
+                order.getTotalAmount(),
+                "COD payment for order " + trimmedOrderId,
+                LocalDateTime.now(),
+                null
+        );
 
-        for (String method : methodCandidates) {
-            Payment payment = new Payment(
-                    generatePaymentId(),
-                    walletId,
-                    trimmedOrderId,
-                    PaymentType.PURCHASE,
-                    method,
-                    PaymentStatus.PENDING,
-                    order.getTotalAmount(),
-                    "Cash on delivery for order " + trimmedOrderId,
-                    LocalDateTime.now(),
-                    null
-            );
+        return paymentDAO.createPayment(payment);
+    }
 
-            if (paymentDAO.createPayment(payment)) {
-                return true;
-            }
+    public boolean createVNPayPaymentForOrder(String accountId, String orderId) {
+        if (isEmpty(accountId) || isEmpty(orderId)) {
+            return false;
         }
 
-        return false;
+        String trimmedOrderId = orderId.trim();
+        String trimmedAccountId = accountId.trim();
+
+        Order order = orderDAO.getOrderByIdAndCustomerId(trimmedOrderId, trimmedAccountId);
+        if (order == null) {
+            order = orderDAO.getOrderById(trimmedOrderId);
+        }
+
+        if (order == null || order.getTotalAmount() == null) {
+            return false;
+        }
+
+        Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(trimmedOrderId);
+        if (existingPayment != null) {
+            return true;
+        }
+
+        Wallet wallet = getOrCreateWallet(trimmedAccountId);
+        String walletId = wallet == null ? null : wallet.getWalletId();
+
+        Payment payment = new Payment(
+                generatePaymentId(),
+                walletId,
+                trimmedOrderId,
+                PaymentType.PURCHASE,
+                PaymentMethod.VNPAY,
+                PaymentStatus.PENDING,
+                order.getTotalAmount(),
+                "VNPay payment request for order " + trimmedOrderId,
+                LocalDateTime.now(),
+                null
+        );
+
+        return paymentDAO.createPayment(payment);
     }
 
     public boolean canPayOrderByWallet(String accountId, String orderId) {
@@ -267,7 +294,7 @@ public class PaymentService {
         /*
          * Backward compatibility for old code paths.
          * Only Wallet and VNPay require Paid status before an order moves forward.
-         * COD/Cash orders can move forward without payment being Paid.
+         * COD orders can move forward without payment being Paid.
          */
         return canForwardOrderStatusByPayment(orderId);
     }
@@ -280,7 +307,7 @@ public class PaymentService {
         Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
 
         /*
-         * No payment record or COD/Cash record should not block order forwarding.
+         * No payment record or COD record should not block order forwarding.
          * Only Wallet and VNPay must be Paid before the order moves forward.
          */
         if (payment == null || isCashOnDeliveryMethod(payment.getPaymentMethod())) {
@@ -354,20 +381,11 @@ public class PaymentService {
             return false;
         }
 
-        String method = paymentMethod.trim();
-
-        return PaymentMethod.CASH.equalsIgnoreCase(method)
-                || PaymentMethod.COD.equalsIgnoreCase(method)
-                || PaymentMethod.CASH_ON_DELIVERY.equalsIgnoreCase(method)
-                || "Cash on Delivery".equalsIgnoreCase(method);
+        return PaymentMethod.COD.equalsIgnoreCase(paymentMethod.trim());
     }
 
     private String normalizeDepositMethod(String paymentMethod) {
-        if (PaymentMethod.VNPAY.equals(paymentMethod)) {
-            return PaymentMethod.VNPAY;
-        }
-
-        return PaymentMethod.BANK_TRANSFER;
+        return PaymentMethod.VNPAY;
     }
 
     private boolean isValidAmount(BigDecimal amount) {

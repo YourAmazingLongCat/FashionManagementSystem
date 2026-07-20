@@ -53,14 +53,15 @@
                             <span class="material-symbols-outlined">payments</span>
                             <div>
                                 <h2>Payment Method</h2>
-                                <p>Choose Wallet for instant payment or Cash on Delivery.</p>
+                                <p>Choose VNPay, Wallet or Cash On Delivery.</p>
                             </div>
                         </div>
 
                         <label class="wallet-label" for="paymentMethod">Payment Method</label>
                         <select class="wallet-input" id="paymentMethod" name="paymentMethod">
-                            <option value="Wallet">Wallet Balance</option>
-                            <option value="Cash" selected>Cash On Delivery</option>
+                            <option value="VNPay">VNPay</option>
+                            <option value="Wallet">Wallet</option>
+                            <option value="COD" selected>Cash On Delivery</option>
                         </select>
 
                         <div class="wallet-info-list">

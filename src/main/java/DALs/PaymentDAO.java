@@ -312,16 +312,14 @@ public class PaymentDAO extends DBContext {
                 + "WHERE orderId = ? "
                 + "AND paymentType = ? "
                 + "AND paymentStatus = ? "
-                + "AND (paymentMethod = ? OR paymentMethod = ? OR paymentMethod = ?)";
+                + "AND paymentMethod = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, PaymentStatus.PAID);
             ps.setString(2, orderId);
             ps.setString(3, PaymentType.PURCHASE);
             ps.setString(4, PaymentStatus.PENDING);
-            ps.setString(5, PaymentMethod.CASH);
-            ps.setString(6, PaymentMethod.COD);
-            ps.setString(7, PaymentMethod.CASH_ON_DELIVERY);
+            ps.setString(5, PaymentMethod.COD);
 
             return ps.executeUpdate() >= 0;
         } catch (SQLException e) {
