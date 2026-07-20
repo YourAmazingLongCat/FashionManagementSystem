@@ -131,8 +131,8 @@ public class CheckoutServlet extends HttpServlet {
             paymentHandled = paymentService.createCashPaymentForOrder(customerId, orderId);
             session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
                     paymentHandled
-                            ? "Order created. Please pay cash when the order is delivered."
-                            : "Order created, but payment record could not be created.");
+                            ? "Order created. COD payment record has been created and will become Paid when delivered."
+                            : "Order created, but COD payment record could not be created. Please check the Payments table constraints/paymentMethod values.");
         }
 
         removeCheckedOutItemsFromDatabaseCart(session, customerId);
@@ -182,7 +182,19 @@ public class CheckoutServlet extends HttpServlet {
         if (PaymentMethod.WALLET.equals(value)) {
             return PaymentMethod.WALLET;
         }
-        return PaymentMethod.CASH;
+
+        if (PaymentMethod.VNPAY.equals(value)) {
+            return PaymentMethod.VNPAY;
+        }
+
+        if (PaymentMethod.COD.equals(value)
+                || PaymentMethod.CASH.equals(value)
+                || PaymentMethod.CASH_ON_DELIVERY.equals(value)
+                || "Cash on Delivery".equalsIgnoreCase(value)) {
+            return PaymentMethod.COD;
+        }
+
+        return PaymentMethod.COD;
     }
 
     private String trim(String value) {
