@@ -21,6 +21,9 @@
         <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Staff'}">
             <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/BillServlet?action=list">BILL MANAGEMENT</a>
         </c:if>
+              <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Staff'}">
+        <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/BillServlet?action=list">BILL MANAGEMENT</a>
+    </c:if>
     </nav>
 
     <div class="categories-dropdown">

@@ -8,7 +8,18 @@ public class DBContext {
 
     // Khai báo biến connection
     protected Connection connection;
+<<<<<<< Updated upstream
     
+=======
+
+    private static final String DB_URL = "jdbc:sqlserver://localhost:1433;"
+            + "databaseName=FashionShopDB;"
+            + "encrypt=true;"
+            + "trustServerCertificate=true;";
+    private static final String DB_USER = "sa";
+    private static final String DB_PASSWORD = "123456";
+
+>>>>>>> Stashed changes
     public DBContext() {
         try {
             String url = "jdbc:sqlserver://localhost:1433;"
