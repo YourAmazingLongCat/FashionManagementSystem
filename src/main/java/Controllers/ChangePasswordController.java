@@ -1,3 +1,5 @@
+package Controllers;
+
 import java.io.IOException;
 
 import org.mindrot.jbcrypt.BCrypt;
@@ -26,8 +28,9 @@ public class ChangePasswordController extends HttpServlet {
             return;
         }
         
-        // Trỏ về đúng vị trí file ChangePassword.jsp
-        request.getRequestDispatcher("/Pages/Customer/ChangePassword.jsp").forward(request, response);
+        request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
+        request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 
     @Override
@@ -48,48 +51,44 @@ public class ChangePasswordController extends HttpServlet {
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        try {
-            // 3. Kiểm tra mật khẩu mới và xác nhận có giống nhau không
-            if (!newPassword.equals(confirmPassword)) {
-                request.setAttribute("error", "Mật khẩu xác nhận không khớp!");
-                request.getRequestDispatcher("/Pages/Customer/ChangePassword.jsp").forward(request, response);
-                return;
-            }
+        // 3. Kiểm tra mật khẩu mới và xác nhận có giống nhau không
+        if (!newPassword.equals(confirmPassword)) {
+            request.setAttribute("error", "Mật khẩu xác nhận không khớp!");
+            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
+            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            return;
+        }
 
-            // 4. Gọi DAO để lấy mật khẩu chuẩn từ Database lên đối chiếu
-            AccountDAO accountDAO = new AccountDAO();
-            Account accountInDb = accountDAO.getAccountById(currentUser.getAccountId());
-            
-            // 5. ĐÃ SỬA LẠI THÀNH getPassword() ĐỂ KHÔNG BỊ LỖI
-            if (accountInDb == null || accountInDb.getPassword() == null
-                    || !BCrypt.checkpw(oldPassword, accountInDb.getPassword())) {
-                request.setAttribute("error", "Mật khẩu hiện tại không đúng!");
-                request.getRequestDispatcher("/Pages/Customer/ChangePassword.jsp").forward(request, response);
-                return;
-            }
+        // 4. Gọi DAO để lấy mật khẩu chuẩn từ Database lên đối chiếu
+        AccountDAO accountDAO = new AccountDAO();
+        Account accountInDb = accountDAO.getAccountById(currentUser.getAccountId());
+        
+        // 5. ĐÃ SỬA LẠI THÀNH getPassword() ĐỂ KHÔNG BỊ LỖI
+        if (accountInDb == null || accountInDb.getPassword() == null
+                || !BCrypt.checkpw(oldPassword, accountInDb.getPassword())) {
+            request.setAttribute("error", "Mật khẩu hiện tại không đúng!");
+            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
+            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            return;
+        }
 
-            // 6. Thực hiện update mật khẩu mới vào cơ sở dữ liệu
-            boolean isUpdated = accountDAO.updatePassword(currentUser.getAccountId(), passwordUtil.hashPassword(newPassword));
-            
-            if (isUpdated) {
-                // Đổi mật khẩu thành công
-                request.setAttribute("success", "Đổi mật khẩu thành công!");
-                
-                // Cập nhật lại mật khẩu mới vào biến Session để đồng bộ
-                // ĐÃ SỬA LẠI THÀNH setPassword() ĐỂ KHÔNG BỊ LỖI
-                currentUser.setPassword(newPassword);
-                session.setAttribute("USER", currentUser);
-            } else {
-                // Lỗi thực thi SQL
-                request.setAttribute("error", "Có lỗi xảy ra khi cập nhật vào cơ sở dữ liệu!");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            request.setAttribute("error", "Lỗi hệ thống: " + e.getMessage());
+        // 6. Thực hiện update mật khẩu mới vào cơ sở dữ liệu
+        String hashedPassword = passwordUtil.hashPassword(newPassword);
+        boolean isUpdated = accountDAO.updatePassword(currentUser.getAccountId(), hashedPassword);
+        
+        if (isUpdated) {
+            request.setAttribute("success", "Đổi mật khẩu thành công!");
+            currentUser.setPassword(hashedPassword);
+            session.setAttribute("USER", currentUser);
+        } else {
+            request.setAttribute("error", "Có lỗi xảy ra khi cập nhật vào cơ sở dữ liệu!");
         }
 
         // 7. Dù cập nhật thành công hay thất bại, đều trả về lại trang JSP để hiển thị thông báo
-        request.getRequestDispatcher("/Pages/Customer/ChangePassword.jsp").forward(request, response);
+        request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
+        request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 }

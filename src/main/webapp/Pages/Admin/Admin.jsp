@@ -27,6 +27,8 @@
             background: #34495e; color: #fff; border-left-color: #1abc9c;
         }
         .sidebar .nav-link i { width: 24px; margin-right: 10px; }
+        .sidebar .nav { display: flex; flex-direction: column; min-height: calc(100vh - 130px); }
+        .sidebar .nav-item.mt-auto { margin-top: auto; }
         .main-content { padding: 20px 30px; }
         .stat-card {
             background: #fff; border-radius: 12px; padding: 20px;
@@ -115,6 +117,17 @@
                     <a class="nav-link ${param.section == 'profit' ? 'active' : ''}" 
                        href="?section=profit">
                         <i class="fas fa-chart-line"></i> Profit
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a class="nav-link ${param.section == 'profile' ? 'active' : ''}" 
+                       href="${pageContext.request.contextPath}/profile">
+                        <i class="fas fa-user"></i> Profile
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="${pageContext.request.contextPath}/auth/logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </li>
             </ul>

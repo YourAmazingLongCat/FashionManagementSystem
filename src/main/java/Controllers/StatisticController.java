@@ -8,18 +8,43 @@ package Controllers;
  *
  * @author Admin
  */
-import DALs.StatisticDAO;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
 import java.io.IOException;
 
-@WebServlet("/Admin")
+import DALs.AccountDAO;
+import DALs.StatisticDAO;
+import Models.Account;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
+@WebServlet(urlPatterns = {"/Admin", "/admin"})
 public class StatisticController extends HttpServlet {
+
+    private boolean checkAdmin(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return false;
+        }
+        Account currentUser = (Account) session.getAttribute("USER");
+        if (currentUser == null || !"Admin".equalsIgnoreCase(currentUser.getRole())) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return false;
+        }
+        return true;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        if (!checkAdmin(request, response)) {
+            return;
+        }
 
         loadDashboard(request);
         request.getRequestDispatcher("/Pages/Admin/Admin.jsp").forward(request, response);
@@ -29,12 +54,34 @@ public class StatisticController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        StatisticDAO dao = new StatisticDAO();
+        if (!checkAdmin(request, response)) {
+            return;
+        }
+
+        AccountDAO accountDao = new AccountDAO();
+        String action = request.getParameter("action");
+        String accountId = request.getParameter("accountId");
+
+        if ("updateRole".equals(action)) {
+            String newRole = request.getParameter("role");
+            if (accountId != null && !accountId.isEmpty() && newRole != null && !newRole.isEmpty()) {
+                accountDao.updateRole(accountId, newRole);
+                request.setAttribute("toastMsg", "Cập nhật quyền thành công!");
+            }
+        } else if ("updateStatus".equals(action)) {
+            String newStatus = request.getParameter("status");
+            if (accountId != null && !accountId.isEmpty() && newStatus != null && !newStatus.isEmpty()) {
+                accountDao.updateStatus(accountId, newStatus);
+                request.setAttribute("toastMsg", "Cập nhật trạng thái thành công!");
+            }
+        }
+
         loadDashboard(request); // load các dữ liệu cơ bản
 
         // Lấy tham số minOrders từ form (nếu có)
         String quantityParam = request.getParameter("quantity");
         if (quantityParam != null && !quantityParam.isEmpty()) {
+            StatisticDAO dao = new StatisticDAO();
             int quantity = Integer.parseInt(quantityParam);
             request.setAttribute("customerStatistics", dao.searchCustomerByOrderQuantity(quantity));
         }

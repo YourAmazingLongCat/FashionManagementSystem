@@ -5,33 +5,23 @@
 package Controllers;
 
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 
 import DALs.AccountDAO;
+import DALs.CategoryDAO;
 import Models.Account;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.http.Part;
 
 /**
  * Controller xử lý xem và cập nhật hồ sơ cá nhân
  */
 @WebServlet(name = "ProfileController", urlPatterns = {"/profile", "/profile/update"})
-// BẮT BUỘC CÓ DÒNG NÀY ĐỂ XỬ LÝ UPLOAD FILE:
-@MultipartConfig(fileSizeThreshold = 1024 * 1024 * 2, // 2MB
-                 maxFileSize = 1024 * 1024 * 10,      // Tối đa 10MB cho 1 file
-                 maxRequestSize = 1024 * 1024 * 50)   // Tối đa 50MB cho cả request
 public class ProfileController extends HttpServlet {
-
-    // THƯ MỤC LƯU ẢNH (Nằm trong thư mục web/assets/avatars của project)
-    private static final String UPLOAD_DIR = "assets/avatars";
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -47,8 +37,12 @@ public class ProfileController extends HttpServlet {
             return;
         }
 
-        // 2. Chuyển hướng sang giao diện Profile.jsp
-        request.getRequestDispatcher("/Pages/Customer/Profile.jsp").forward(request, response);
+        // 2. Lấy categories để Header.jsp hiển thị danh mục
+        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+        request.setAttribute("contentPage", "/Pages/Customer/Profile.jsp");
+
+        // 3. Chuyển hướng qua layout chung
+        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 
     @Override
@@ -69,40 +63,12 @@ public class ProfileController extends HttpServlet {
         // 1. Lấy dữ liệu text từ form
         String fullName = request.getParameter("fullName");
         String phone = request.getParameter("phone");
+        String address = request.getParameter("address");
 
-        // 2. Xử lý Upload Avatar
-        String avatarPath = user.getAvatar(); // Mặc định giữ nguyên ảnh cũ nếu người dùng ko up ảnh mới
-        Part filePart = request.getPart("avatarFile");
-
-        // Kiểm tra xem người dùng có chọn file không (kích thước > 0)
-        if (filePart != null && filePart.getSize() > 0) {
-            // Lấy đường dẫn tuyệt đối thư mục build trên server
-            String applicationPath = request.getServletContext().getRealPath("");
-            String uploadFilePath = applicationPath + File.separator + UPLOAD_DIR;
-            
-            // Tạo thư mục nếu chưa tồn tại
-            File uploadFolder = new File(uploadFilePath);
-            if (!uploadFolder.exists()) {
-                uploadFolder.mkdirs();
-            }
-
-            // Lấy tên file gốc
-            String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-            // Đổi tên file để không bị trùng (Ví dụ: avatar_ACC001_168923456.jpg)
-            String extension = fileName.substring(fileName.lastIndexOf("."));
-            String newFileName = "avatar_" + user.getAccountId() + "_" + System.currentTimeMillis() + extension;
-
-            // Lưu file vào ổ cứng server
-            filePart.write(uploadFilePath + File.separator + newFileName);
-            
-            // Đường dẫn lưu vào Database (đường dẫn tương đối)
-            avatarPath = UPLOAD_DIR + "/" + newFileName;
-        }
-
-        // 3. Cập nhật dữ liệu vào object Account hiện tại
+        // 2. Cập nhật dữ liệu vào object Account hiện tại
         user.setFullName(fullName);
         user.setPhone(phone);
-        user.setAvatar(avatarPath);
+        user.setAddress(address);
 
         // 4. Gọi DAO để cập nhật Database
         AccountDAO dao = new AccountDAO();

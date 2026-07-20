@@ -744,15 +744,15 @@ public class ProductManagementServlet extends HttpServlet {
 
         String storedFileName = "product-" + UUID.randomUUID().toString().replace("-", "") + extension;
 
-        // Luu vao Assets/Images/Product
-        String realPath = request.getServletContext().getRealPath("/");
-        Path uploadDir = Paths.get(realPath, "Assets", "Images", "Product");
+        // Save into external upload directory so images are served consistently via the
+        // ProductManagementServlet asset route (/assets/product-images/{filename}).
+        Path uploadDir = getExternalUploadDirectory();
         Files.createDirectories(uploadDir);
-        Path destination = uploadDir.resolve(storedFileName);
+        Path destination = uploadDir.resolve(storedFileName).normalize();
         imagePart.write(destination.toAbsolutePath().toString());
 
-        String imageUrl = "/Assets/Images/Product/" + storedFileName;
-        System.out.println("[ProductManagementServlet] Image saved: " + destination.toAbsolutePath());
+        String imageUrl = "/assets/product-images/" + storedFileName;
+        System.out.println("[ProductManagementServlet] Image saved to external dir: " + destination.toAbsolutePath());
         System.out.println("[ProductManagementServlet] Image URL: " + imageUrl);
         System.out.println("[ProductManagementServlet] File exists: " + Files.exists(destination));
         return imageUrl;

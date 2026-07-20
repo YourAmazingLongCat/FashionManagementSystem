@@ -75,11 +75,11 @@
                     <p class="sidebar-text">Inventory management, stock in/out</p>
                 </div>
                 <div class="sidebar-tabs">
-                    <a class="sidebar-tab ${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/inventory">
+                    <a class="sidebar-tab ${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
                         <span class="icon">&#128203;</span>
                         <span>Inventory</span>
                     </a>
-                    <a class="sidebar-tab ${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/import">
+                    <a class="sidebar-tab ${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">
                         <span class="icon">&#10133;</span>
                         <span>Stock In</span>
                     </a>
@@ -117,7 +117,7 @@
                 <div class="table-panel">
                     <div class="table-header">
                         <h3>Stock List</h3>
-                        <form class="search-toolbar" method="get" action="${pageContext.request.contextPath}/admin/warehouse/inventory">
+                        <form class="search-toolbar" method="get" action="${pageContext.request.contextPath}/staff/warehouse/inventory">
                             <input class="search-input" type="text" name="keyword" value="${currentKeyword}" placeholder="Search by product name or SKU..." />
                             <select class="filter-select" name="sizeFilter">
                                 <option value="">All Sizes</option>
@@ -132,7 +132,7 @@
                                 </c:forEach>
                             </select>
                             <button class="search-btn" type="submit">Search</button>
-                            <a class="reset-btn" href="${pageContext.request.contextPath}/admin/warehouse/inventory">Reset</a>
+                            <a class="reset-btn" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Reset</a>
                         </form>
                     </div>
                     <div class="table-wrapper">

@@ -93,14 +93,23 @@ public class ProductService {
             imageSaved = imageDAO.upsertPrimaryImage(product.getProductId(), product.getPrimaryImageUrl());
         }
 
-        boolean variantsSaved = variantDAO.replaceVariants(product.getProductId(), product.getVariants());
-
-        if (!variantsSaved && product.getVariants() != null && !product.getVariants().isEmpty()) {
-            productDAO.deleteProduct(product.getProductId());
-            return false;
+        boolean variantsSaved = true;
+        try {
+            variantsSaved = variantDAO.replaceVariants(product.getProductId(), product.getVariants());
+        } catch (Exception ex) {
+            System.out.println("saveProductExtras: replaceVariants threw: " + ex.getMessage());
+            variantsSaved = false;
         }
 
-        return imageSaved && variantsSaved;
+        // If variants replacement fails (for example due to FK constraints with existing order items),
+        // do NOT delete the product. Permit updating description and primary image so staff can adjust
+        // non-variant fields after checkout. Return success when at least the image update succeeded
+        // or variant replacement succeeded.
+        if (!variantsSaved) {
+            System.out.println("saveProductExtras: variant replacement failed for product " + product.getProductId() + ", preserving existing variants and keeping product.");
+        }
+
+        return imageSaved || variantsSaved;
     }
 
     private void deleteOldImageFile(String imageUrl) {

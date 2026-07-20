@@ -1,7 +1,11 @@
 package Controllers;
 
+import java.io.IOException;
+import java.util.List;
+
 import DALs.CartDAO;
 import DALs.CartItemDAO;
+import DALs.CategoryDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItem;
@@ -10,8 +14,6 @@ import Models.Wallet;
 import Services.OrderService;
 import Services.PaymentService;
 import Utils.PaymentMethod;
-import java.io.IOException;
-import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -46,8 +48,7 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        Wallet wallet = paymentService.getOrCreateWallet(customerId);
-        request.setAttribute("wallet", wallet);
+        prepareCheckoutPage(request, session, customerId);
 
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
         if (cart != null && !cart.isEmpty()) {
@@ -78,17 +79,32 @@ public class CheckoutServlet extends HttpServlet {
         List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
         if (cart == null || cart.isEmpty()) {
             request.setAttribute("errorMessage", "Your cart is empty.");
+            prepareCheckoutPage(request, session, customerId);
             forwardLayout(request, response, CHECKOUT_PAGE);
             return;
         }
 
+        prepareCheckoutPage(request, session, customerId);
         String shippingAddress = trim(request.getParameter("shippingAddress"));
         String phone = trim(request.getParameter("phone"));
         String paymentMethod = normalizePaymentMethod(request.getParameter("paymentMethod"));
 
+        Account user = (Account) session.getAttribute("USER");
+        if (user != null) {
+            if (isEmpty(shippingAddress)) {
+                shippingAddress = user.getAddress();
+            }
+            if (isEmpty(phone)) {
+                phone = user.getPhone();
+            }
+        }
+
+        request.setAttribute("shippingAddress", shippingAddress);
+        request.setAttribute("phone", phone);
+        request.setAttribute("paymentMethod", paymentMethod);
+
         if (isEmpty(shippingAddress) || isEmpty(phone)) {
             request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
-            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
             forwardLayout(request, response, CHECKOUT_PAGE);
             return;
         }
@@ -104,7 +120,6 @@ public class CheckoutServlet extends HttpServlet {
         if (PaymentMethod.WALLET.equals(paymentMethod)
                 && !paymentService.canPayAmountByWallet(customerId, preview.getTotalAmount())) {
             request.setAttribute("errorMessage", "Your wallet balance is not enough. Please deposit more money or choose COD.");
-            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
             request.setAttribute("checkoutTotal", preview.getTotalAmount());
             forwardLayout(request, response, CHECKOUT_PAGE);
             return;
@@ -114,7 +129,6 @@ public class CheckoutServlet extends HttpServlet {
 
         if (orderId == null) {
             request.setAttribute("errorMessage", "Checkout failed. Please check your information.");
-            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
             request.setAttribute("checkoutTotal", preview.getTotalAmount());
             forwardLayout(request, response, CHECKOUT_PAGE);
             return;
@@ -194,6 +208,19 @@ public class CheckoutServlet extends HttpServlet {
         }
 
         return PaymentMethod.COD;
+    }
+
+    private void prepareCheckoutPage(HttpServletRequest request, HttpSession session, String customerId) {
+        Wallet wallet = paymentService.getOrCreateWallet(customerId);
+        request.setAttribute("wallet", wallet);
+        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+
+        Account user = (Account) session.getAttribute("USER");
+        if (user != null) {
+            request.setAttribute("shippingAddress", user.getAddress());
+            request.setAttribute("phone", user.getPhone());
+            request.setAttribute("paymentMethod", PaymentMethod.COD);
+        }
     }
 
     private String trim(String value) {

@@ -27,7 +27,9 @@
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
             background: rgba(255,255,255,0.08); color: #fff; border-left-color: #38bdf8;
         }
+        .sidebar .nav { display: flex; flex-direction: column; min-height: calc(100vh - 130px); }
         .sidebar .nav-link i { width: 24px; margin-right: 10px; }
+        .sidebar .nav-item.mt-auto { margin-top: auto; }
         .sidebar .nav-link.back-home {
             margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 20px;
             color: #f8d66d;
@@ -79,6 +81,13 @@
                         <i class="fas fa-gauge-high"></i> Overview
                     </a>
                 </li>
+                <c:if test="${sessionScope.USER.role ne 'Admin'}">
+                    <li class="nav-item">
+                        <a class="nav-link ${param.section == 'profile' ? 'active' : ''}" href="${pageContext.request.contextPath}/profile">
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                    </li>
+                </c:if>
                 <li class="nav-item">
                     <a class="nav-link ${param.section == 'orderManagement' ? 'active' : ''}" href="?section=orderManagement">
                         <i class="fas fa-shopping-cart"></i> Order Management
@@ -109,6 +118,20 @@
                         <i class="fas fa-home"></i> Back to Home
                     </a>
                 </li>
+                <c:if test="${sessionScope.USER.role eq 'Admin'}">
+                    <li class="nav-item mt-auto">
+                        <a class="nav-link ${param.section == 'profile' ? 'active' : ''}" href="${pageContext.request.contextPath}/profile">
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                    </li>
+                </c:if>
+                <c:if test="${sessionScope.USER.role eq 'Admin' || sessionScope.USER.role eq 'Staff'}">
+                    <li class="nav-item">
+                        <a class="nav-link back-home" href="${pageContext.request.contextPath}/auth/logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </c:if>
             </ul>
         </div>
 

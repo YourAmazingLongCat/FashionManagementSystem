@@ -13,6 +13,7 @@ public class Account {
     private String role;
     private String status;
     private String phone;
+    private String address;
     private String avatar;
 
     public Account() {
@@ -81,6 +82,14 @@ public class Account {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public String getAvatar() {
