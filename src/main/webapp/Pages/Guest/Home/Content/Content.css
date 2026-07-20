@@ -207,27 +207,23 @@ a {
     justify-content: center;
     align-items: center;
     cursor: pointer;
+    color: #000;
     transition: all 0.2s;
     z-index: 10;
 }
 
 .favorite-btn:hover {
     background-color: #000;
+    color: #fff;
 }
 
 .favorite-btn span {
     font-size: 18px;
+}
+
+.favorite-btn span.active {
     color: #000;
-}
-
-.favorite-btn:hover span {
-    color: #fff;
-}
-
-.favorite-btn.active .material-symbols-outlined,
-.favorite-btn .material-symbols-outlined.active {
-    color: #ef4444;
-    font-variation-settings: 'FILL' 1;
+    font-variation-settings: 'FILL' 1; 
 }
 
 /* ================= TYPOGRAPHY TRONG CARD ================= */
@@ -382,25 +378,6 @@ a {
     font-size: 0.88rem;
 }
 
-.detail-chip-button {
-    background: #ffffff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.detail-chip-button:hover {
-    background: #f3f4f6;
-    border-color: #7c3aed;
-}
-
-.detail-chip-button.active {
-    background: #7c3aed;
-    border-color: #7c3aed;
-    color: #ffffff;
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
-}
-
 /* Selection Summary - Qty + Add to Cart */
 .detail-selection-summary {
     margin-bottom: 20px;
@@ -552,4 +529,359 @@ a {
     .variant-table-row, .variant-table-head {
         flex-direction: column;
     }
+}
+
+/* ================= COMMENT BUTTON ================= */
+.detail-comment-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding: 10px 18px;
+    background: #ffffff;
+    color: #000000;
+    border: 1.5px solid #111827;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.2s ease;
+}
+
+.detail-comment-btn:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.comment-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: #111827;
+    color: #ffffff;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.detail-comment-btn:hover .comment-count-badge {
+    background: #ffffff;
+    color: #111827;
+}
+
+/* ================= COMMENTS MODAL ================= */
+.comments-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.comments-modal-overlay.active {
+    display: flex;
+}
+
+.comments-modal {
+    background: #ffffff;
+    width: min(560px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #111827;
+}
+
+.comments-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 2px solid #111827;
+}
+
+.comments-modal-header h3 {
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+}
+
+.comments-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #111827;
+    padding: 0;
+}
+
+.comments-modal-body {
+    padding: 18px 22px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.comments-loading, .comments-empty {
+    color: #6b7280;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 30px 0;
+}
+
+.comments-list {
+    display: grid;
+    gap: 16px;
+}
+
+.comment-item {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 14px;
+}
+
+.comment-item.comment-hidden {
+    opacity: 0.5;
+}
+
+.comment-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.comment-item-head strong {
+    font-size: 0.92rem;
+}
+
+.comment-stars {
+    color: #f59e0b;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+}
+
+.comment-content {
+    margin: 0 0 6px;
+    color: #1f2937;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.comment-meta {
+    font-size: 0.78rem;
+    color: #9ca3af;
+}
+
+.comment-hidden-tag {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.comment-item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.comment-action-btn {
+    background: none;
+    border: 1px solid #111827;
+    padding: 5px 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #111827;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.comment-action-btn:hover {
+    background: #111827;
+    color: #ffffff;
+}
+
+.comment-action-btn.comment-danger-btn {
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+.comment-action-btn.comment-danger-btn:hover {
+    background: #dc2626;
+    color: #ffffff;
+}
+
+.comment-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.comment-item-editing {
+    background: #fafafa;
+    padding: 14px;
+    border: 1px dashed #9ca3af;
+}
+
+.inline-rating-picker {
+    display: flex;
+    gap: 4px;
+    margin: 8px 0;
+}
+
+.inline-rating-picker .rating-star {
+    font-size: 1.3rem;
+}
+
+.edit-content-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1.5px solid #111827;
+    padding: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    resize: vertical;
+    margin-bottom: 10px;
+}
+
+.comment-edit-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.comment-save-btn {
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+.comment-save-btn:hover {
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.comments-add-panel {
+    padding: 18px 22px;
+    border-top: 2px solid #111827;
+}
+
+.comments-rating-picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.rating-star {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #d1d5db;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s ease;
+}
+
+.rating-star.selected {
+    color: #f59e0b;
+}
+
+.comments-add-panel textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1.5px solid #111827;
+    padding: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    resize: vertical;
+    margin-bottom: 12px;
+}
+
+.comments-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #000000;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border-radius: 0;
+}
+
+.comments-submit-btn:hover {
+    background: #333333;
+    border-color: #333333;
+}
+
+.comments-login-note {
+    padding: 16px 22px;
+    border-top: 2px solid #111827;
+    color: #6b7280;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .comments-modal {
+        max-height: 92vh;
+    }
+}
+/* Rating trên product card (trang chủ + related products) */
+.product-rating-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.85rem;
+}
+.product-stars {
+    color: #f59e0b;
+    letter-spacing: 1px;
+    font-size: 0.95rem;
+}
+.product-review-count {
+    color: var(--gray-dark);
+}
+.product-no-rating {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.8rem;
+}
+
+/* Rating trên trang chi tiết sản phẩm */
+.detail-rating-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+}
+.detail-stars {
+    color: #f59e0b;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+}
+.detail-rating-value {
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+.detail-review-count {
+    color: #6b7280;
+    font-size: 0.88rem;
+}
+.detail-no-rating {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.88rem;
 }
