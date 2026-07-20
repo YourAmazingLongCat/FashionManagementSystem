@@ -3,6 +3,7 @@ package Controllers;
 import DALs.CartDAO;
 import DALs.CartItemDAO;
 import DALs.CategoryDAO;
+import DALs.CommentDAO;
 import DALs.WishlistDAO;
 import DALs.ProductDAO;
 import Models.Account;
@@ -17,7 +18,9 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -44,18 +47,32 @@ public class HomeControllers extends HttpServlet {
         try {
             CategoryDAO categoryDAO = new CategoryDAO();
             ProductDAO productDAO = new ProductDAO();
+            CommentDAO commentDAO = new CommentDAO();
 
             List<Category> categories = categoryDAO.getAllCategories();
             List<Product> latestProducts = productDAO.getLatestProducts(HOME_SECTION_LIMIT);
+            List<Product> tops = productDAO.getProductsByCategoryName("Tops & Tees", HOME_SECTION_LIMIT);
+            List<Product> outerwear = productDAO.getProductsByCategoryName("Outerwear", HOME_SECTION_LIMIT);
+            List<Product> accessories = productDAO.getProductsByCategoryName("Accessories", HOME_SECTION_LIMIT);
 
             request.setAttribute("categories", categories);
             request.setAttribute("newArrivals", latestProducts);
-            request.setAttribute("tops", productDAO.getProductsByCategoryName("Tops & Tees", HOME_SECTION_LIMIT));
-            request.setAttribute("outerwear", productDAO.getProductsByCategoryName("Outerwear", HOME_SECTION_LIMIT));
-            request.setAttribute("accessories", productDAO.getProductsByCategoryName("Accessories", HOME_SECTION_LIMIT));
+            request.setAttribute("tops", tops);
+            request.setAttribute("outerwear", outerwear);
+            request.setAttribute("accessories", accessories);
             request.setAttribute("productDAO", productDAO);
             request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
             request.setAttribute("cartCount", getCartCount(request));
+
+            // Gom productId từ tất cả các section để lấy rating trong 1 lần query
+            List<String> allProductIds = new ArrayList<>();
+            allProductIds.addAll(collectProductIds(latestProducts));
+            allProductIds.addAll(collectProductIds(tops));
+            allProductIds.addAll(collectProductIds(outerwear));
+            allProductIds.addAll(collectProductIds(accessories));
+
+            Map<String, double[]> ratingMap = commentDAO.getRatingSummaryMap(allProductIds);
+            request.setAttribute("ratingMap", ratingMap);
 
             String contentPage = "/Pages/Guest/Home/Content/Content.jsp";
             request.setAttribute("contentPage", contentPage);
@@ -71,6 +88,7 @@ public class HomeControllers extends HttpServlet {
     private void showProductDetail(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         ProductDAO productDAO = new ProductDAO();
+        CommentDAO commentDAO = new CommentDAO();
         String productId = request.getParameter("productId");
         Product product = productDAO.getProductById(productId);
 
@@ -79,12 +97,24 @@ public class HomeControllers extends HttpServlet {
             return;
         }
 
+        List<Product> relatedProducts = productDAO.getProductsByCategoryName(product.getCategoryName(), 4);
+
         request.setAttribute("product", product);
         request.setAttribute("displayPrice", productDAO.getDisplayPrice(product));
-        request.setAttribute("relatedProducts", productDAO.getProductsByCategoryName(product.getCategoryName(), 4));
+        request.setAttribute("relatedProducts", relatedProducts);
         request.setAttribute("productDAO", productDAO);
         request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
         request.setAttribute("cartCount", getCartCount(request));
+
+        // Rating của sản phẩm đang xem
+        double[] ratingSummary = commentDAO.getRatingSummary(productId);
+        request.setAttribute("ratingSummary", ratingSummary);
+
+        // Rating của các sản phẩm liên quan
+        List<String> relatedIds = collectProductIds(relatedProducts);
+        Map<String, double[]> ratingMap = commentDAO.getRatingSummaryMap(relatedIds);
+        request.setAttribute("ratingMap", ratingMap);
+
         request.setAttribute("contentPage", "/Pages/Guest/Home/Content/ProductDetail.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
@@ -128,5 +158,14 @@ public class HomeControllers extends HttpServlet {
             return new java.util.LinkedHashSet<>();
         }
         return new WishlistDAO().getWishlistProductIdsByAccountId(user.getAccountId());
+    }
+
+    private List<String> collectProductIds(List<Product> products) {
+        if (products == null || products.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return products.stream()
+                .map(Product::getProductId)
+                .collect(Collectors.toList());
     }
 }

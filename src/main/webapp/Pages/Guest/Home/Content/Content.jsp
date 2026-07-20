@@ -51,7 +51,7 @@
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
-                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : pageContext.request.contextPath.concat(p.primaryImageUrl)}" alt="${p.name}" />
+                            <img class="product-image" src="${empty p.primaryImageUrl ? 'https://via.placeholder.com/600x800?text=No+Image' : p.primaryImageUrl}" alt="${p.name}" />
                             <button type="button" class="favorite-btn" onclick="event.preventDefault(); toggleWishlist('${p.productId}', this)">
                                 <span class="material-symbols-outlined ${wishlistProductIds != null && wishlistProductIds.contains(p.productId) ? 'active' : ''}">
                                     favorite
@@ -62,6 +62,20 @@
                             <div class="product-name">${p.name}</div>
                             <div class="product-price-row">
                                 <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
+                            </div>
+                            <c:set var="rs" value="${ratingMap[p.productId]}" />
+                            <div class="product-rating-row">
+                                <c:choose>
+                                    <c:when test="${not empty rs && rs[1] > 0}">
+                                        <span class="product-stars">
+                                            <c:forEach begin="1" end="5" var="i">${i <= rs[0] + 0.5 ? '★' : '☆'}</c:forEach>
+                                        </span>
+                                        <span class="product-review-count">(${rs[1]})</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="product-no-rating">Chưa có đánh giá</span>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
                         </div>
                     </div>
