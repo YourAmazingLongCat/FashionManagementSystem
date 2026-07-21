@@ -1,8 +1,9 @@
 package Controllers;
 
+import java.io.IOException;
+
 import DALs.AccountDAO;
 import Models.Account;
-import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -56,10 +57,12 @@ public class LoginControllers extends HttpServlet {
             HttpSession session = request.getSession();
             session.setAttribute("USER", acc);
 
-            // Chuyển hướng Staff đến Product Management, Admin/Customer đến Home
+            // Chuyển hướng Staff đến Product Management, Admin đến Admin dashboard, Customer đến Home
             String role = acc.getRole();
             if (role != null && role.equalsIgnoreCase("Staff")) {
                 response.sendRedirect(request.getContextPath() + "/staff/products");
+            } else if (role != null && role.equalsIgnoreCase("Admin")) {
+                response.sendRedirect(request.getContextPath() + "/Admin");
             } else {
                 response.sendRedirect(request.getContextPath() + "/home");
             }

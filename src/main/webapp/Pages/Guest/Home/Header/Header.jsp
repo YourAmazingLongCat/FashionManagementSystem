@@ -16,20 +16,16 @@
     <nav class="quick-nav">
         <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
 
+        <c:if test="${not empty sessionScope.USER}">
+            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
+            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/wallet">WALLET</a>
+        </c:if>
+
         <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
             <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
         </c:if>
         <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Staff'}">
             <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/BillServlet?action=list">BILL MANAGEMENT</a>
-        </c:if>
-             
-
-        <c:if test="${not empty sessionScope.USER}">
-            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
-            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/wallet">WALLET</a>
-        </c:if>
-        <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
-            <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
         </c:if>
         <c:if test="${not empty sessionScope.USER and (sessionScope.USER.role eq 'Staff' or sessionScope.USER.role eq 'Admin')}">
             <a class="quick-nav-link quick-nav-link--accent order-nav-accent" href="${pageContext.request.contextPath}/staff/orders">ORDER MANAGEMENT</a>
@@ -89,13 +85,17 @@
         </c:if>
         <c:choose>
             <c:when test="${not empty sessionScope.USER}">
-                <div class="user-logged-info" style="display: flex; align-items: center; gap: 15px;">
-                    <span class="user-name-display" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 0.9rem; text-transform: uppercase; color: #ffffff; letter-spacing: 0.5px;">
-                        HI, ${sessionScope.USER.fullName}
-                    </span>
-                    <a class="login-btn" href="${pageContext.request.contextPath}/auth/logout" style="background-color: #ff3333; color: #ffffff; border-color: #000000;">
-                        LOGOUT
-                    </a>
+                <div class="user-menu">
+                    <button class="user-menu-button" type="button">
+                        <span class="user-greeting">HI,</span>
+                        <span class="user-name">${sessionScope.USER.fullName}</span>
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </button>
+                    <div class="user-dropdown">
+                        <a href="${pageContext.request.contextPath}/profile">My Profile</a>
+                        <a href="${pageContext.request.contextPath}/change-password">Change Password</a>
+                        <a href="${pageContext.request.contextPath}/auth/logout">Logout</a>
+                    </div>
                 </div>
             </c:when>
             <c:otherwise>
@@ -129,6 +129,8 @@
 
     const headerSearchForm = document.getElementById('headerSearchForm');
     const headerSearchInput = document.getElementById('headerSearchInput');
+    const userMenuButton = document.querySelector('.user-menu-button');
+    const userDropdown = document.querySelector('.user-dropdown');
 
     if (headerSearchForm && headerSearchInput) {
         headerSearchInput.addEventListener('keydown', function (event) {
@@ -136,6 +138,21 @@
                 event.preventDefault();
                 headerSearchForm.submit();
             }
+        });
+    }
+
+    if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function (event) {
+            event.stopPropagation();
+            userDropdown.classList.toggle('visible');
+        });
+
+        document.addEventListener('click', function () {
+            userDropdown.classList.remove('visible');
+        });
+
+        userDropdown.addEventListener('click', function (event) {
+            event.stopPropagation();
         });
     }
 </script>

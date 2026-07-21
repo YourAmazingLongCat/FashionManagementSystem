@@ -1,5 +1,17 @@
 package Controllers;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import DALs.CategoryDAO;
 import DALs.ColorDAO;
 import DALs.SizeDAO;
@@ -17,18 +29,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @WebServlet(name = "ProductManagementServlet", urlPatterns = {"/staff/products", "/assets/product-images/*"})
 @MultipartConfig
@@ -744,15 +744,15 @@ public class ProductManagementServlet extends HttpServlet {
 
         String storedFileName = "product-" + UUID.randomUUID().toString().replace("-", "") + extension;
 
-        // Luu vao Assets/Images/Product
-        String realPath = request.getServletContext().getRealPath("/");
-        Path uploadDir = Paths.get(realPath, "Assets", "Images", "Product");
+        // Save into external upload directory so images are served consistently via the
+        // ProductManagementServlet asset route (/assets/product-images/{filename}).
+        Path uploadDir = getExternalUploadDirectory();
         Files.createDirectories(uploadDir);
-        Path destination = uploadDir.resolve(storedFileName);
+        Path destination = uploadDir.resolve(storedFileName).normalize();
         imagePart.write(destination.toAbsolutePath().toString());
 
-        String imageUrl = "/Assets/Images/Product/" + storedFileName;
-        System.out.println("[ProductManagementServlet] Image saved: " + destination.toAbsolutePath());
+        String imageUrl = "/assets/product-images/" + storedFileName;
+        System.out.println("[ProductManagementServlet] Image saved to external dir: " + destination.toAbsolutePath());
         System.out.println("[ProductManagementServlet] Image URL: " + imageUrl);
         System.out.println("[ProductManagementServlet] File exists: " + Files.exists(destination));
         return imageUrl;

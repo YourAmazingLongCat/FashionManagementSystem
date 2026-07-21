@@ -28,9 +28,16 @@
             .home-link { background: rgba(255, 255, 255, 0.12); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.18); }
             .sidebar-tab:hover, .home-link:hover, .primary-btn:hover, .table-btn:hover { transform: translateY(-2px); }
             .content-panel { padding: 24px; }
-            .hero-panel { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding: 30px; background: linear-gradient(135deg, #ffffff 0%, #ede9fe 100%); border: 1px solid #e2e8f0; border-radius: 26px; }
-            .hero-panel h2 { font-size: 2.15rem; }
-            .hero-stats { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 16px; }
+            .hero-panel { position: relative; display: flex; flex-direction: column; gap: 24px; padding: 30px; background: linear-gradient(135deg, #ffffff 0%, #ede9fe 100%); border: 1px solid #e2e8f0; border-radius: 26px; }
+            .hero-panel h2 { font-size: 2.15rem; margin: 0; }
+            .hero-actions { position: absolute; top: 24px; right: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+            .profile-btn, .logout-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 24px; border-radius: 999px; background: #111827; color: #ffffff; text-transform: uppercase; font-weight: 800; font-size: 0.9rem; text-decoration: none; box-shadow: 0 20px 36px rgba(17, 24, 39, 0.18); transition: transform 0.2s ease, background-color 0.2s ease; }
+            .profile-btn:hover, .logout-btn:hover { background: #1f2937; transform: translateY(-1px); }
+            .logout-btn { background: #ef4444; }
+            .logout-btn:hover { background: #dc2626; }
+            .hero-stats { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 16px; margin-top: 16px; }
+            @media (max-width: 900px) { .hero-panel { padding: 24px; } .hero-actions { position: static; width: 100%; } .profile-btn, .logout-btn { width: 100%; } .hero-stats { grid-template-columns: repeat(2, minmax(150px, 1fr)); } }
+            @media (max-width: 600px) { .hero-stats { grid-template-columns: 1fr; } }
             .stat-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; min-width: 150px; }
             .stat-card span { display: block; color: #64748b; font-size: 0.88rem; margin-bottom: 8px; }
             .stat-card strong { font-size: 1.8rem; }
@@ -144,9 +151,10 @@
                         <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span><span class="tab-badge">${totalCategories}</span></a>
                         <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span><span class="tab-badge">${totalColors}</span></a>
                         <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span><span class="tab-badge">${totalSizes}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/inventory"><span>Warehouse</span><span class="tab-badge">&#128203;</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory"><span>Warehouse</span><span class="tab-badge">&#128203;</span></a>
                     </div>
                 </div>
+                <!-- Profile & Logout removed per UI requirements -->
             </aside>
 
             <main class="content-panel">
@@ -155,6 +163,7 @@
                         <p class="eyebrow">Admin panel</p>
                         <h2>${activeTab eq 'categories' ? 'Category Management' : (activeTab eq 'colors' ? 'Color Management' : (activeTab eq 'sizes' ? 'Size Management' : 'Product Management'))}</h2>
                     </div>
+                    <a class="profile-btn" href="${pageContext.request.contextPath}/profile">My Profile</a>
                     <div class="hero-stats">
                         <div class="stat-card"><span>Total products</span><strong>${totalProducts}</strong></div>
                         <div class="stat-card"><span>Total categories</span><strong>${totalCategories}</strong></div>
