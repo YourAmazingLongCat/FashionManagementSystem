@@ -23,7 +23,7 @@ public class WarehouseDAO extends DBContext {
 
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT pv.variantId, pv.productId, p.name AS productName, "
-                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, pv.stockQty "
+                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, (pv.stockQty - pv.reservedQty) AS stockQty "
                 + "FROM ProductVariants pv "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
@@ -116,13 +116,13 @@ public class WarehouseDAO extends DBContext {
         if (connection == null) return items;
 
         String sql = "SELECT pv.variantId, pv.productId, p.name AS productName, "
-                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.stockQty "
+                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, (pv.stockQty - pv.reservedQty) AS stockQty "
                 + "FROM ProductVariants pv "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "WHERE pv.stockQty <= ? "
-                + "ORDER BY pv.stockQty ASC";
+                + "WHERE (pv.stockQty - pv.reservedQty) <= ? "
+                + "ORDER BY (pv.stockQty - pv.reservedQty) ASC";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, threshold);
@@ -149,7 +149,7 @@ public class WarehouseDAO extends DBContext {
     public int getCurrentStock(String variantId) {
         if (connection == null || isBlank(variantId)) return 0;
         
-        String sql = "SELECT stockQty FROM ProductVariants WHERE variantId = ?";
+        String sql = "SELECT (stockQty - reservedQty) AS stockQty FROM ProductVariants WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, variantId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -163,15 +163,12 @@ public class WarehouseDAO extends DBContext {
 
     public boolean addStock(String variantId, int quantity) {
         if (connection == null || isBlank(variantId) || quantity <= 0) return false;
-        
-        int currentStock = getCurrentStock(variantId);
-        int newStock = currentStock + quantity;
 
-        String sql = "UPDATE ProductVariants SET stockQty = ? WHERE variantId = ?";
+        String sql = "UPDATE ProductVariants SET stockQty = stockQty + ? WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, newStock);
+            ps.setInt(1, quantity);
             ps.setString(2, variantId);
-            return ps.executeUpdate() > 0;
+            return ps.executeUpdate() == 1;
         } catch (SQLException ex) {
             System.out.println("addStock error: " + ex.getMessage());
             return false;
@@ -180,41 +177,30 @@ public class WarehouseDAO extends DBContext {
 
     public boolean deductStock(String variantId, int quantity) {
         if (connection == null || isBlank(variantId) || quantity <= 0) return false;
-        
-        int currentStock = getCurrentStock(variantId);
-        if (currentStock < quantity) return false;
-        
-        int newStock = currentStock - quantity;
 
-        String sql = "UPDATE ProductVariants SET stockQty = ? WHERE variantId = ?";
+        /* Never export units that belong to a Pending order reservation. */
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET stockQty = stockQty - ? "
+                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, newStock);
+            ps.setInt(1, quantity);
             ps.setString(2, variantId);
-            return ps.executeUpdate() > 0;
+            ps.setInt(3, quantity);
+            return ps.executeUpdate() == 1;
         } catch (SQLException ex) {
             System.out.println("deductStock error: " + ex.getMessage());
             return false;
         }
     }
 
+    /**
+     * Inventory for an order is now committed atomically by OrderDAO when the
+     * status changes from Pending to Confirmed. Keeping this old method as a
+     * no-op prevents a second stock deduction from legacy callers.
+     */
+    @Deprecated
     public boolean deductStockForOrder(String orderId) {
-        if (connection == null || isBlank(orderId)) return false;
-
-        String selectSql = "SELECT od.variantId, od.quantity FROM OrderDetails od WHERE od.orderId = ?";
-        try (PreparedStatement psSelect = connection.prepareStatement(selectSql)) {
-            psSelect.setString(1, orderId);
-            try (ResultSet rs = psSelect.executeQuery()) {
-                while (rs.next()) {
-                    String variantId = rs.getString("variantId");
-                    int quantity = rs.getInt("quantity");
-                    deductStock(variantId, quantity);
-                }
-            }
-        } catch (SQLException ex) {
-            System.out.println("deductStockForOrder error: " + ex.getMessage());
-            return false;
-        }
-        return true;
+        return false;
     }
 
     private boolean isBlank(String value) {

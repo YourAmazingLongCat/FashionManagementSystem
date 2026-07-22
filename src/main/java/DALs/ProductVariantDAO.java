@@ -22,7 +22,7 @@ public class ProductVariantDAO extends DBContext {
             return variants;
         }
 
-        String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, c.hexCode, pv.sku, pv.stockQty, pv.priceOverride "
+        String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride "
                 + "FROM ProductVariants pv "
                 + "INNER JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "INNER JOIN Colors c ON pv.colorId = c.colorId "
@@ -43,6 +43,7 @@ public class ProductVariantDAO extends DBContext {
                     variant.setColorHexCode(rs.getString("hexCode"));
                     variant.setSku(rs.getString("sku"));
                     variant.setStockQty(rs.getInt("stockQty"));
+                    variant.setReservedQty(rs.getInt("reservedQty"));
                     variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
                     variants.add(variant);
                 }
@@ -138,7 +139,7 @@ public class ProductVariantDAO extends DBContext {
             return 0;
         }
 
-        String sql = "SELECT ISNULL(SUM(stockQty), 0) AS totalStockQty FROM ProductVariants WHERE productId = ?";
+        String sql = "SELECT ISNULL(SUM(stockQty - reservedQty), 0) AS totalStockQty FROM ProductVariants WHERE productId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, productId);
             try (ResultSet rs = ps.executeQuery()) {

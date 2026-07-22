@@ -101,18 +101,18 @@
                 </div>
                 <div class="variant-table-list" id="variantTableList">
                     <c:forEach var="variant" items="${product.variants}">
-                        <div class="variant-table-row ${variant.stockQty <= 0 ? 'out-of-stock' : ''}"
+                        <div class="variant-table-row ${variant.availableQty <= 0 ? 'out-of-stock' : ''}"
                              data-variant-id="${variant.variantId}"
                              data-color-name="${variant.colorName}"
                              data-size-name="${variant.sizeName}"
-                             data-stock-qty="${variant.stockQty}"
+                             data-stock-qty="${variant.availableQty}"
                              data-price="${variant.priceOverride != null ? variant.priceOverride : product.basePrice}">
                             <div>
                                 <strong>${variant.colorName} / ${variant.sizeName}</strong>
                             </div>
                             <div>
                                 <strong><fmt:formatNumber value="${variant.priceOverride != null ? variant.priceOverride : product.basePrice}" type="number" groupingUsed="true"/> đ</strong>
-                                <span>${variant.stockQty > 0 ? variant.stockQty : 0} available</span>
+                                <span>${variant.availableQty > 0 ? variant.availableQty : 0} available</span>
                             </div>
                         </div>
                     </c:forEach>
