@@ -10,10 +10,7 @@ import Models.Account;
 import Models.Cart;
 import Models.CartItem;
 import Models.Order;
-import Models.Wallet;
 import Services.OrderService;
-import Services.PaymentService;
-import Utils.PaymentMethod;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -28,12 +25,10 @@ public class CheckoutServlet extends HttpServlet {
     private static final String CHECKOUT_PAGE = "/Pages/Customer/checkout.jsp";
 
     private OrderService orderService;
-    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
-        paymentService = new PaymentService();
     }
 
     @Override
@@ -87,7 +82,6 @@ public class CheckoutServlet extends HttpServlet {
         prepareCheckoutPage(request, session, customerId);
         String shippingAddress = trim(request.getParameter("shippingAddress"));
         String phone = trim(request.getParameter("phone"));
-        String paymentMethod = normalizePaymentMethod(request.getParameter("paymentMethod"));
 
         Account user = (Account) session.getAttribute("USER");
         if (user != null) {
@@ -101,7 +95,6 @@ public class CheckoutServlet extends HttpServlet {
 
         request.setAttribute("shippingAddress", shippingAddress);
         request.setAttribute("phone", phone);
-        request.setAttribute("paymentMethod", paymentMethod);
 
         if (isEmpty(shippingAddress) || isEmpty(phone)) {
             request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
@@ -112,19 +105,11 @@ public class CheckoutServlet extends HttpServlet {
         Order preview = orderService.reviewOrder(customerId, shippingAddress, phone, cart);
         if (preview == null) {
             request.setAttribute("errorMessage", "Cannot create order. Please check your cart again.");
-            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
             forwardLayout(request, response, CHECKOUT_PAGE);
             return;
         }
 
-        if (PaymentMethod.WALLET.equals(paymentMethod)
-                && !paymentService.canPayAmountByWallet(customerId, preview.getTotalAmount())) {
-            request.setAttribute("errorMessage", "Your wallet balance is not enough. Please deposit more money or choose COD.");
-            request.setAttribute("checkoutTotal", preview.getTotalAmount());
-            forwardLayout(request, response, CHECKOUT_PAGE);
-            return;
-        }
-
+        // Create order directly - Bill will be created when staff confirms the order
         String orderId = orderService.checkout(customerId, shippingAddress, phone, cart);
 
         if (orderId == null) {
@@ -134,26 +119,7 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        boolean paymentHandled;
-        if (PaymentMethod.WALLET.equals(paymentMethod)) {
-            paymentHandled = paymentService.payOrderByWallet(customerId, orderId);
-            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
-                    paymentHandled
-                            ? "Order created and paid successfully by Wallet."
-                            : "Order was created, but Wallet payment failed. Please pay again from order detail.");
-        } else if (PaymentMethod.VNPAY.equals(paymentMethod)) {
-            paymentHandled = paymentService.createVNPayPaymentForOrder(customerId, orderId);
-            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
-                    paymentHandled
-                            ? "Order created. VNPay payment record has been created and is waiting for payment confirmation."
-                            : "Order created, but VNPay payment record could not be created.");
-        } else {
-            paymentHandled = paymentService.createCODPaymentForOrder(customerId, orderId);
-            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
-                    paymentHandled
-                            ? "Order created. COD payment record has been created and will become Paid when delivered."
-                            : "Order created, but COD payment record could not be created.");
-        }
+        session.setAttribute("successMessage", "Order created successfully! Order ID: " + orderId);
 
         removeCheckedOutItemsFromDatabaseCart(session, customerId);
         session.removeAttribute("cart");
@@ -198,28 +164,13 @@ public class CheckoutServlet extends HttpServlet {
         return null;
     }
 
-    private String normalizePaymentMethod(String value) {
-        if (PaymentMethod.WALLET.equals(value)) {
-            return PaymentMethod.WALLET;
-        }
-
-        if (PaymentMethod.VNPAY.equals(value)) {
-            return PaymentMethod.VNPAY;
-        }
-
-        return PaymentMethod.COD;
-    }
-
     private void prepareCheckoutPage(HttpServletRequest request, HttpSession session, String customerId) {
-        Wallet wallet = paymentService.getOrCreateWallet(customerId);
-        request.setAttribute("wallet", wallet);
         request.setAttribute("categories", new CategoryDAO().getAllCategories());
 
         Account user = (Account) session.getAttribute("USER");
         if (user != null) {
             request.setAttribute("shippingAddress", user.getAddress());
             request.setAttribute("phone", user.getPhone());
-            request.setAttribute("paymentMethod", PaymentMethod.COD);
         }
     }
 

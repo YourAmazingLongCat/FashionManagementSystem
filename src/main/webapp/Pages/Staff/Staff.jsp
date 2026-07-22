@@ -178,6 +178,13 @@
                         <div class="row g-3">
                             <div class="col-md-6 col-xl-3">
                                 <div class="quick-link-card">
+                                    <h6>Product Management</h6>
+                                    <p>Manage product catalogue, variants and inventory.</p>
+                                    <a href="${pageContext.request.contextPath}/staff/products" class="btn btn-outline-secondary btn-sm">Open Products</a>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="quick-link-card">
                                     <h6>Order Management</h6>
                                     <p>Review, confirm, cancel and track shipping status for customer orders.</p>
                                     <a href="${pageContext.request.contextPath}/staff/orders" class="btn btn-primary btn-sm">Open Orders</a>
@@ -185,23 +192,16 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="quick-link-card">
+                                    <h6>Bill Management</h6>
+                                    <p>View bills, revenue charts and payment tracking.</p>
+                                    <a href="${pageContext.request.contextPath}/BillServlet?action=list" class="btn btn-primary btn-sm">Open Bills</a>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="quick-link-card">
                                     <h6>Payment Management</h6>
-                                    <p>Handle deposit approvals, payment records and order payment monitoring.</p>
+                                    <p>Handle deposit approvals and payment records.</p>
                                     <a href="${pageContext.request.contextPath}/staff/payments" class="btn btn-primary btn-sm">Open Payments</a>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <div class="quick-link-card">
-                                    <h6>Product Management</h6>
-                                    <p>Manage product catalogue and variants in the existing staff module.</p>
-                                    <a href="${pageContext.request.contextPath}/staff/products" class="btn btn-outline-secondary btn-sm">Open Products</a>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <div class="quick-link-card">
-                                    <h6>More Tools</h6>
-                                    <p>Warehouse, support and other tools will be placed here in the next phase.</p>
-                                    <a href="?section=warehouseManagement" class="btn btn-outline-secondary btn-sm">View Placeholder</a>
                                 </div>
                             </div>
                         </div>

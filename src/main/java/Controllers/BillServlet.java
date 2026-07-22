@@ -90,7 +90,24 @@ public class BillServlet extends HttpServlet {
         Date fromDate = parseDate(request.getParameter("fromDate"));
         Date toDate = parseDate(request.getParameter("toDate"));
 
-        List<Bill> bills = billDAO.searchBills(keyword, paymentStatus, orderStatus, fromDate, toDate);
+        int page = 1;
+        int pageSize = 10;
+        try {
+            if (request.getParameter("page") != null) {
+                page = Math.max(1, Integer.parseInt(request.getParameter("page")));
+            }
+            if (request.getParameter("pageSize") != null) {
+                pageSize = Math.max(5, Math.min(50, Integer.parseInt(request.getParameter("pageSize"))));
+            }
+        } catch (NumberFormatException ignored) {}
+
+        int totalBills = billDAO.countBills(keyword, paymentStatus, orderStatus, fromDate, toDate);
+        int totalPages = (int) Math.ceil((double) totalBills / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (page > totalPages) page = totalPages;
+
+        int offset = (page - 1) * pageSize;
+        List<Bill> bills = billDAO.searchBillsPaginated(keyword, paymentStatus, orderStatus, fromDate, toDate, offset, pageSize);
 
         // Tính tổng doanh thu của kết quả đang hiển thị (tiện cho người dùng xem nhanh)
         BigDecimal totalOfList = BigDecimal.ZERO;
@@ -102,6 +119,10 @@ public class BillServlet extends HttpServlet {
 
         request.setAttribute("bills", bills);
         request.setAttribute("totalOfList", totalOfList);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalBills", totalBills);
 
         // Trả lại các giá trị filter để giữ nguyên trên form sau khi submit
         request.setAttribute("keyword", keyword);

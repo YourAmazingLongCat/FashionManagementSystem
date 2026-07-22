@@ -149,6 +149,38 @@ public class PaymentDAO extends DBContext {
         return payments;
     }
 
+    public int countAllPayments() {
+        String query = "SELECT COUNT(*) FROM Payments";
+        try (PreparedStatement ps = connection.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.out.println("countAllPayments error: " + e);
+        }
+        return 0;
+    }
+
+    public List<Payment> getAllPaymentsPaginated(int offset, int limit) {
+        List<Payment> payments = new ArrayList<>();
+        String query = "SELECT * FROM Payments ORDER BY createdAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, offset);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    payments.add(getPaymentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getAllPaymentsPaginated error: " + e);
+        }
+
+        return payments;
+    }
+
     public List<Payment> getPendingDeposits() {
         List<Payment> payments = new ArrayList<>();
         String query = "SELECT * FROM Payments "

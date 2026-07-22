@@ -2,10 +2,10 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Quản lý hóa đơn</title>
+    <title>Bill Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
@@ -20,97 +20,98 @@
 <body class="p-4">
 <div class="container-fluid">
 
-    <h3 class="mb-4">Quản lý hóa đơn (Bill Management)</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">Bill Management</h3>
+        <a href="${pageContext.request.contextPath}/staff/products" class="btn btn-outline-secondary btn-sm">Back to Product Management</a>
+    </div>
 
     <c:if test="${not empty errorMessage}">
         <div class="alert alert-danger">${errorMessage}</div>
     </c:if>
 
-    <!-- ===== Chuyển đổi chế độ xem: Doanh thu / Theo sản phẩm ===== -->
+    <!-- ===== View mode toggle: Revenue / By Product ===== -->
     <div class="btn-group mb-3" role="group">
-        <button type="button" id="btnModeRevenue" class="btn btn-outline-primary">📈 Doanh thu</button>
-        <button type="button" id="btnModeProduct" class="btn btn-outline-primary">📦 Theo sản phẩm</button>
+        <button type="button" id="btnModeRevenue" class="btn btn-outline-primary">📈 Revenue</button>
+        <button type="button" id="btnModeProduct" class="btn btn-outline-primary">📦 By Product</button>
     </div>
 
-    <!-- ===== Biểu đồ tăng trưởng doanh thu ===== -->
+    <!-- ===== Revenue Chart ===== -->
     <div class="card p-3 mb-4" id="revenuePanel">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Biểu đồ tăng trưởng doanh thu</h5>
+            <h5 class="mb-0">Revenue Growth Chart</h5>
             <div class="d-flex gap-2 align-items-center">
                 <select id="periodType" class="form-select form-select-sm" style="width:130px;">
-<!--                    <option value="day">Theo ngày</option>-->
-                    <option value="week" ${empty param.chartPeriodType || param.chartPeriodType == 'week' ? 'selected' : ''}>Theo tuần</option>
-                    <option value="month" ${param.chartPeriodType == 'month' ? 'selected' : ''}>Theo tháng</option>
-                    <option value="year" ${param.chartPeriodType == 'year' ? 'selected' : ''}>Theo năm</option>
+                    <option value="week" ${empty param.chartPeriodType || param.chartPeriodType == 'week' ? 'selected' : ''}>By Week</option>
+                    <option value="month" ${param.chartPeriodType == 'month' ? 'selected' : ''}>By Month</option>
+                    <option value="year" ${param.chartPeriodType == 'year' ? 'selected' : ''}>By Year</option>
                 </select>
                 <input type="date" id="chartFromDate" class="form-control form-control-sm" style="width:150px;" value="${param.chartFromDate}">
                 <input type="date" id="chartToDate" class="form-control form-control-sm" style="width:150px;" value="${param.chartToDate}">
-                <button id="btnLoadChart" class="btn btn-sm btn-primary">Xem</button>
+                <button id="btnLoadChart" class="btn btn-sm btn-primary">View</button>
             </div>
         </div>
         <canvas id="revenueChart" height="90"></canvas>
     </div>
 
-    <!-- ===== Thống kê theo sản phẩm ===== -->
+    <!-- ===== By Product Stats ===== -->
     <div id="productPanel" style="display:none;">
         <div class="card p-3 mb-4">
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Số lượng hàng bán được (theo sản phẩm)</h5>
+                <h5 class="mb-0">Products Sold (by product)</h5>
                 <div class="d-flex gap-2 align-items-center flex-wrap">
                     <select id="productPeriodType" class="form-select form-select-sm" style="width:130px;">
-                        <option value="day" ${param.productPeriodType == 'day' ? 'selected' : ''}>Theo ngày</option>
-                        <option value="week" ${param.productPeriodType == 'week' ? 'selected' : ''}>Theo tuần</option>
-                        <option value="month" ${empty param.productPeriodType || param.productPeriodType == 'month' ? 'selected' : ''}>Theo tháng</option>
-                        <option value="year" ${param.productPeriodType == 'year' ? 'selected' : ''}>Theo năm</option>
+                        <option value="day" ${param.productPeriodType == 'day' ? 'selected' : ''}>By Day</option>
+                        <option value="week" ${param.productPeriodType == 'week' ? 'selected' : ''}>By Week</option>
+                        <option value="month" ${empty param.productPeriodType || param.productPeriodType == 'month' ? 'selected' : ''}>By Month</option>
+                        <option value="year" ${param.productPeriodType == 'year' ? 'selected' : ''}>By Year</option>
                     </select>
                     <select id="productFilterSelect" class="form-select form-select-sm" style="width:200px;">
-                        <option value="">-- Tất cả sản phẩm --</option>
-                        <!-- các option sản phẩm được đổ vào bằng JS (fetch productOptions) -->
+                        <option value="">-- All Products --</option>
                     </select>
                     <input type="date" id="productFromDate" class="form-control form-control-sm" style="width:150px;" value="${param.productFromDate}">
                     <input type="date" id="productToDate" class="form-control form-control-sm" style="width:150px;" value="${param.productToDate}">
-                    <button id="btnLoadProduct" class="btn btn-sm btn-primary">Xem</button>
+                    <button id="btnLoadProduct" class="btn btn-sm btn-primary">View</button>
                 </div>
             </div>
             <canvas id="productChart" height="90"></canvas>
         </div>
 
-        <!-- ===== Thẻ tổng hợp ===== -->
+        <!-- ===== Summary Cards ===== -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card p-3 text-center">
-                    <div class="text-muted small">Tổng số sản phẩm đã bán</div>
+                    <div class="text-muted small">Total Products Sold</div>
                     <div class="fs-4 fw-bold" id="sumTotalQuantity">0</div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card p-3 text-center">
-                    <div class="text-muted small">Tổng tiền đã thu (Paid)</div>
-                    <div class="fs-4 fw-bold text-success" id="sumTotalPaid">0 đ</div>
-                    <div class="text-muted small mt-1"><span id="sumPaidQtyCount">0</span> sản phẩm đã thanh toán</div>
+                    <div class="text-muted small">Total Revenue (Paid)</div>
+                    <div class="fs-4 fw-bold text-success" id="sumTotalPaid">0 VND</div>
+                    <div class="text-muted small mt-1"><span id="sumPaidQtyCount">0</span> products paid</div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card p-3 text-center">
-                    <div class="text-muted small">Tổng tiền còn thiếu</div>
-                    <div class="fs-4 fw-bold text-danger" id="sumTotalUnpaid">0 đ</div>
-                    <div class="text-muted small mt-1"><span id="sumUnpaidQtyCount">0</span> sản phẩm chưa thanh toán</div>
+                    <div class="text-muted small">Total Outstanding</div>
+                    <div class="fs-4 fw-bold text-danger" id="sumTotalUnpaid">0 VND</div>
+                    <div class="text-muted small mt-1"><span id="sumUnpaidQtyCount">0</span> products unpaid</div>
                 </div>
             </div>
         </div>
 
-        <!-- ===== Bảng chi tiết theo sản phẩm ===== -->
+        <!-- ===== Product Detail Table ===== -->
         <div class="card p-3 mb-4">
-            <h5 class="mb-3">Chi tiết theo sản phẩm</h5>
+            <h5 class="mb-3">Product Details</h5>
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                 <tr>
-                    <th>Sản phẩm</th>
-                    <th class="text-end">Số lượng bán</th>
-                    <th class="text-end">SL đã thanh toán</th>
-                    <th class="text-end">Tiền đã thu (Paid)</th>
-                    <th class="text-end">SL chưa thanh toán</th>
-                    <th class="text-end">Tiền còn thiếu</th>
+                    <th>Product</th>
+                    <th class="text-end">Qty Sold</th>
+                    <th class="text-end">Paid Qty</th>
+                    <th class="text-end">Paid Amount</th>
+                    <th class="text-end">Unpaid Qty</th>
+                    <th class="text-end">Outstanding Amount</th>
                 </tr>
                 </thead>
                 <tbody id="productSummaryBody">
@@ -119,118 +120,149 @@
         </div>
     </div>
 
-    <!-- ===== Danh sách hóa đơn (form tìm kiếm + bảng) - chỉ hiện ở chế độ Doanh thu ===== -->
+    <!-- ===== Bill List Section ===== -->
     <div id="billListSection">
 
-    <!-- ===== Form tìm kiếm / lọc hóa đơn ===== -->
-    <div class="card p-3 mb-4">
-        <form method="get" action="${pageContext.request.contextPath}/BillServlet" class="row g-2 align-items-end" id="billSearchForm">
-            <input type="hidden" name="action" value="list">
+        <!-- ===== Search / Filter Form ===== -->
+        <div class="card p-3 mb-4">
+            <form method="get" action="${pageContext.request.contextPath}/BillServlet" class="row g-2 align-items-end" id="billSearchForm">
+                <input type="hidden" name="action" value="list">
+                <input type="hidden" id="hf_chartMode" name="chartMode" value="${param.chartMode}">
+                <input type="hidden" id="hf_chartPeriodType" name="chartPeriodType" value="${param.chartPeriodType}">
+                <input type="hidden" id="hf_chartFromDate" name="chartFromDate" value="${param.chartFromDate}">
+                <input type="hidden" id="hf_chartToDate" name="chartToDate" value="${param.chartToDate}">
+                <input type="hidden" id="hf_productPeriodType" name="productPeriodType" value="${param.productPeriodType}">
+                <input type="hidden" id="hf_productFilterId" name="productFilterId" value="${param.productFilterId}">
+                <input type="hidden" id="hf_productFromDate" name="productFromDate" value="${param.productFromDate}">
+                <input type="hidden" id="hf_productToDate" name="productToDate" value="${param.productToDate}">
 
-            <!-- Các trường ẩn này dùng để "mang theo" trạng thái bộ lọc của
-                 2 biểu đồ phía trên khi form này submit (reload trang), để
-                 biểu đồ không bị reset về mặc định sau khi tìm hóa đơn. -->
-            <input type="hidden" id="hf_chartMode" name="chartMode" value="${param.chartMode}">
-            <input type="hidden" id="hf_chartPeriodType" name="chartPeriodType" value="${param.chartPeriodType}">
-            <input type="hidden" id="hf_chartFromDate" name="chartFromDate" value="${param.chartFromDate}">
-            <input type="hidden" id="hf_chartToDate" name="chartToDate" value="${param.chartToDate}">
-            <input type="hidden" id="hf_productPeriodType" name="productPeriodType" value="${param.productPeriodType}">
-            <input type="hidden" id="hf_productFilterId" name="productFilterId" value="${param.productFilterId}">
-            <input type="hidden" id="hf_productFromDate" name="productFromDate" value="${param.productFromDate}">
-            <input type="hidden" id="hf_productToDate" name="productToDate" value="${param.productToDate}">
+                <div class="col-md-3">
+                    <label class="form-label">Keyword</label>
+                    <input type="text" name="keyword" value="${keyword}" class="form-control"
+                           placeholder="Bill ID, Order ID, Customer name, Phone...">
+                </div>
 
-            <div class="col-md-3">
-                <label class="form-label">Từ khóa</label>
-                <input type="text" name="keyword" value="${keyword}" class="form-control"
-                       placeholder="Mã HĐ, mã ĐH, tên KH, SĐT...">
-            </div>
+                <div class="col-md-2">
+                    <label class="form-label">Payment Status</label>
+                    <select name="paymentStatus" class="form-select">
+                        <option value="">-- All --</option>
+                        <c:forEach var="s" items="${['Pending','Paid','Failed','Refunded']}">
+                            <option value="${s}" ${paymentStatus == s ? 'selected' : ''}>${s}</option>
+                        </c:forEach>
+                    </select>
+                </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Trạng thái thanh toán</label>
-                <select name="paymentStatus" class="form-select">
-                    <option value="">-- Tất cả --</option>
-                    <c:forEach var="s" items="${['Pending','Paid','Failed','Refunded']}">
-                        <option value="${s}" ${paymentStatus == s ? 'selected' : ''}>${s}</option>
-                    </c:forEach>
-                </select>
-            </div>
+                <div class="col-md-2">
+                    <label class="form-label">Order Status</label>
+                    <select name="orderStatus" class="form-select">
+                        <option value="">-- All --</option>
+                        <c:forEach var="s" items="${['Pending','Confirmed','Processing','Shipping','Delivered','Cancelled']}">
+                            <option value="${s}" ${orderStatus == s ? 'selected' : ''}>${s}</option>
+                        </c:forEach>
+                    </select>
+                </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Trạng thái đơn hàng</label>
-                <select name="orderStatus" class="form-select">
-                    <option value="">-- Tất cả --</option>
-                    <c:forEach var="s" items="${['Pending','Confirmed','Processing','Shipping','Delivered','Cancelled']}">
-                        <option value="${s}" ${orderStatus == s ? 'selected' : ''}>${s}</option>
-                    </c:forEach>
-                </select>
-            </div>
+                <div class="col-md-2">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="fromDate" value="${fromDate}" class="form-control">
+                </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Từ ngày</label>
-                <input type="date" name="fromDate" value="${fromDate}" class="form-control">
-            </div>
+                <div class="col-md-2">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="toDate" value="${toDate}" class="form-control">
+                </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Đến ngày</label>
-                <input type="date" name="toDate" value="${toDate}" class="form-control">
-            </div>
-
-            <div class="col-md-1 d-grid">
-                <button type="submit" class="btn btn-primary">Lọc</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- ===== Danh sách hóa đơn ===== -->
-    <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="mb-0">Danh sách hóa đơn (${bills.size()} kết quả)</h5>
-            <div class="fw-bold">
-                Tổng: <fmt:formatNumber value="${totalOfList}" type="number" groupingUsed="true"/> đ
-            </div>
+                <div class="col-md-1 d-grid">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                </div>
+            </form>
         </div>
 
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-            <tr>
-                <th>Mã hóa đơn</th>
-                <th>Mã đơn hàng</th>
-                <th>Khách hàng</th>
-                <th>SĐT</th>
-                <th>Phương thức TT</th>
-                <th>Trạng thái TT</th>
-                <th>Trạng thái đơn</th>
-                <th>Ngày lập</th>
-                <th>Tổng tiền</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <c:forEach var="b" items="${bills}">
+        <!-- ===== Bill List ===== -->
+        <div class="card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Bill List (${totalBills} results)</h5>
+                <div class="fw-bold">
+                    Total: <fmt:formatNumber value="${totalOfList}" type="number" groupingUsed="true"/> VND
+                </div>
+            </div>
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
                 <tr>
-                    <td>${b.billId}</td>
-                    <td>${b.orderId}</td>
-                    <td>${b.customerName}</td>
-                    <td>${b.customerPhone}</td>
-                    <td>${b.paymentMethod}</td>
-                    <td><span class="badge badge-${b.paymentStatus}">${b.paymentStatus}</span></td>
-                    <td>${b.orderStatus}</td>
-                    <td><fmt:formatDate value="${b.issuedDate}" pattern="dd/MM/yyyy HH:mm"/></td>
-                    <td><fmt:formatNumber value="${b.totalAmount}" type="number" groupingUsed="true"/> đ</td>
-                    <td>
-                        <a class="btn btn-sm btn-outline-primary"
-                           href="${pageContext.request.contextPath}/BillServlet?action=detail&billId=${b.billId}">
-                            Xem chi tiết
-                        </a>
-                    </td>
+                    <th>Bill ID</th>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Payment Method</th>
+                    <th>Payment Status</th>
+                    <th>Order Status</th>
+                    <th>Issued Date</th>
+                    <th>Total</th>
+                    <th></th>
                 </tr>
-            </c:forEach>
-            <c:if test="${empty bills}">
-                <tr><td colspan="10" class="text-center text-muted">Không có hóa đơn nào phù hợp.</td></tr>
+                </thead>
+                <tbody>
+                <c:forEach var="b" items="${bills}">
+                    <tr>
+                        <td>${b.billId}</td>
+                        <td>${b.orderId}</td>
+                        <td>${b.customerName}</td>
+                        <td>${b.customerPhone}</td>
+                        <td>${b.paymentMethod}</td>
+                        <td><span class="badge badge-${b.paymentStatus}">${b.paymentStatus}</span></td>
+                        <td>${b.orderStatus}</td>
+                        <td><fmt:formatDate value="${b.issuedDate}" pattern="dd/MM/yyyy HH:mm"/></td>
+                        <td><fmt:formatNumber value="${b.totalAmount}" type="number" groupingUsed="true"/> VND</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="${pageContext.request.contextPath}/BillServlet?action=detail&billId=${b.billId}">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                </c:forEach>
+                <c:if test="${empty bills}">
+                    <tr><td colspan="10" class="text-center text-muted">No bills found.</td></tr>
+                </c:if>
+                </tbody>
+            </table>
+
+            <c:if test="${totalPages > 1}">
+                <div class="d-flex justify-content-center mt-3">
+                    <nav>
+                        <ul class="pagination mb-0">
+                            <c:if test="${currentPage > 1}">
+                                <li class="page-item">
+                                    <a class="page-link" href="?action=list&page=${currentPage - 1}&keyword=${keyword}&paymentStatus=${paymentStatus}&orderStatus=${orderStatus}&fromDate=${fromDate}&toDate=${toDate}">‹</a>
+                                </li>
+                            </c:if>
+                            <c:forEach var="i" begin="1" end="${totalPages}">
+                                <c:choose>
+                                    <c:when test="${i == currentPage}">
+                                        <li class="page-item active"><span class="page-link">${i}</span></li>
+                                    </c:when>
+                                    <c:when test="${i <= 3 || i > totalPages - 3 || (i >= currentPage - 1 && i <= currentPage + 1)}">
+                                        <li class="page-item"><a class="page-link" href="?action=list&page=${i}&keyword=${keyword}&paymentStatus=${paymentStatus}&orderStatus=${orderStatus}&fromDate=${fromDate}&toDate=${toDate}">${i}</a></li>
+                                    </c:when>
+                                    <c:when test="${i == 4 && currentPage > 5}">
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    </c:when>
+                                    <c:when test="${i == totalPages - 3 && currentPage < totalPages - 4}">
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    </c:when>
+                                </c:choose>
+                            </c:forEach>
+                            <c:if test="${currentPage < totalPages}">
+                                <li class="page-item">
+                                    <a class="page-link" href="?action=list&page=${currentPage + 1}&keyword=${keyword}&paymentStatus=${paymentStatus}&orderStatus=${orderStatus}&fromDate=${fromDate}&toDate=${toDate}">›</a>
+                                </li>
+                            </c:if>
+                        </ul>
+                    </nav>
+                </div>
             </c:if>
-            </tbody>
-        </table>
-    </div>
+        </div>
 
     </div> <!-- /#billListSection -->
 </div>
@@ -241,7 +273,7 @@ let productChart = null;
 
 const contextPath = '${pageContext.request.contextPath}';
 
-// ================= Biểu đồ doanh thu =================
+// ================= Revenue Chart =================
 function loadChart() {
     const periodType = document.getElementById('periodType').value;
     const fromDate = document.getElementById('chartFromDate').value;
@@ -265,7 +297,7 @@ function loadChart() {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Doanh thu',
+                        label: 'Revenue',
                         data: values,
                         borderColor: '#0d6efd',
                         backgroundColor: 'rgba(13,110,253,0.15)',
@@ -283,10 +315,10 @@ function loadChart() {
                 }
             });
         })
-        .catch(err => console.error('Lỗi tải dữ liệu biểu đồ:', err));
+        .catch(err => console.error('Chart load error:', err));
 }
 
-// ================= Dropdown sản phẩm =================
+// ================= Product Dropdown =================
 function loadProductOptions() {
     return fetch(contextPath + '/BillServlet?action=productOptions')
         .then(res => res.json())
@@ -303,17 +335,17 @@ function loadProductOptions() {
                 select.value = savedProductId;
             }
         })
-        .catch(err => console.error('Lỗi tải danh sách sản phẩm:', err));
+        .catch(err => console.error('Product list load error:', err));
 }
 
-// ================= Biểu đồ + bảng thống kê theo sản phẩm =================
+// ================= Product Chart + Detail Table =================
 function loadProductData() {
     const periodType = document.getElementById('productPeriodType').value;
     const productId = document.getElementById('productFilterSelect').value;
     const fromDate = document.getElementById('productFromDate').value;
     const toDate = document.getElementById('productToDate').value;
 
-    // ---- biểu đồ số lượng bán ----
+    // ---- chart ----
     const chartParams = new URLSearchParams({ action: 'productChartData', periodType });
     if (productId) chartParams.append('productId', productId);
     if (fromDate) chartParams.append('fromDate', fromDate);
@@ -334,7 +366,7 @@ function loadProductData() {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Số lượng bán ra',
+                        label: 'Quantity Sold',
                         data: qty,
                         backgroundColor: 'rgba(25,135,84,0.6)'
                     }]
@@ -345,7 +377,7 @@ function loadProductData() {
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                afterLabel: (item) => 'Tiền đã thu: ' + Number(revenue[item.dataIndex]).toLocaleString('vi-VN') + ' đ'
+                                afterLabel: (item) => 'Revenue: ' + Number(revenue[item.dataIndex]).toLocaleString('vi-VN') + ' VND'
                             }
                         }
                     },
@@ -355,9 +387,9 @@ function loadProductData() {
                 }
             });
         })
-        .catch(err => console.error('Lỗi tải biểu đồ sản phẩm:', err));
+        .catch(err => console.error('Product chart load error:', err));
 
-    // ---- thẻ tổng hợp + bảng chi tiết ----
+    // ---- summary cards + table ----
     const summaryParams = new URLSearchParams({ action: 'productSummary' });
     if (productId) summaryParams.append('productId', productId);
     if (fromDate) summaryParams.append('fromDate', fromDate);
@@ -367,8 +399,8 @@ function loadProductData() {
         .then(res => res.json())
         .then(data => {
             document.getElementById('sumTotalQuantity').textContent = Number(data.totalQuantity).toLocaleString('vi-VN');
-            document.getElementById('sumTotalPaid').textContent = Number(data.totalPaidAmount).toLocaleString('vi-VN') + ' đ';
-            document.getElementById('sumTotalUnpaid').textContent = Number(data.totalUnpaidAmount).toLocaleString('vi-VN') + ' đ';
+            document.getElementById('sumTotalPaid').textContent = Number(data.totalPaidAmount).toLocaleString('vi-VN') + ' VND';
+            document.getElementById('sumTotalUnpaid').textContent = Number(data.totalUnpaidAmount).toLocaleString('vi-VN') + ' VND';
             document.getElementById('sumPaidQtyCount').textContent = Number(data.totalPaidQuantity).toLocaleString('vi-VN');
             document.getElementById('sumUnpaidQtyCount').textContent = Number(data.totalUnpaidQuantity).toLocaleString('vi-VN');
 
@@ -380,7 +412,7 @@ function loadProductData() {
                 const td = document.createElement('td');
                 td.colSpan = 6;
                 td.className = 'text-center text-muted';
-                td.textContent = 'Không có dữ liệu.';
+                td.textContent = 'No data found.';
                 tr.appendChild(td);
                 tbody.appendChild(tr);
                 return;
@@ -406,24 +438,23 @@ function loadProductData() {
 
                 const tdPaid = document.createElement('td');
                 tdPaid.className = 'text-end';
-                tdPaid.textContent = Number(r.totalRevenuePaid).toLocaleString('vi-VN') + ' đ';
+                tdPaid.textContent = Number(r.totalRevenuePaid).toLocaleString('vi-VN') + ' VND';
 
                 const tdUnpaid = document.createElement('td');
                 tdUnpaid.className = 'text-end';
-                tdUnpaid.textContent = Number(r.totalUnpaidAmount).toLocaleString('vi-VN') + ' đ';
+                tdUnpaid.textContent = Number(r.totalUnpaidAmount).toLocaleString('vi-VN') + ' VND';
 
                 tr.append(tdName, tdQty, tdPaidQty, tdPaid, tdUnpaidQty, tdUnpaid);
                 tbody.appendChild(tr);
             });
         })
-        .catch(err => console.error('Lỗi tải thống kê sản phẩm:', err));
+        .catch(err => console.error('Product summary load error:', err));
 }
 
-// ================= Chuyển đổi chế độ xem =================
+// ================= View Mode Toggle =================
 function switchMode(mode) {
     document.getElementById('revenuePanel').style.display = mode === 'revenue' ? '' : 'none';
     document.getElementById('productPanel').style.display = mode === 'product' ? '' : 'none';
-    // Danh sách hóa đơn (form tìm kiếm + bảng) chỉ hiện ở chế độ Doanh thu
     document.getElementById('billListSection').style.display = mode === 'revenue' ? '' : 'none';
     document.getElementById('btnModeRevenue').classList.toggle('active', mode === 'revenue');
     document.getElementById('btnModeProduct').classList.toggle('active', mode === 'product');
@@ -440,9 +471,6 @@ document.getElementById('btnLoadChart').addEventListener('click', loadChart);
 document.getElementById('periodType').addEventListener('change', loadChart);
 document.getElementById('btnLoadProduct').addEventListener('click', loadProductData);
 
-// Trước khi submit form tìm kiếm hóa đơn phía dưới, đồng bộ trạng thái
-// hiện tại của 2 biểu đồ vào các trường hidden để mang theo qua querystring
-// -> sau khi trang reload, biểu đồ khôi phục lại đúng bộ lọc cũ.
 document.getElementById('billSearchForm').addEventListener('submit', function () {
     document.getElementById('hf_chartPeriodType').value = document.getElementById('periodType').value;
     document.getElementById('hf_chartFromDate').value = document.getElementById('chartFromDate').value;
@@ -453,13 +481,9 @@ document.getElementById('billSearchForm').addEventListener('submit', function ()
     document.getElementById('hf_productToDate').value = document.getElementById('productToDate').value;
 });
 
-// ================= Khởi tạo khi mở trang =================
+// ================= Initialize =================
 const initialMode = '${empty param.chartMode ? "revenue" : param.chartMode}';
 
-// QUAN TRỌNG: phải set display cho CẢ HAI panel (kể cả panel đang active),
-// vì productPanel có sẵn style="display:none" trong HTML ban đầu -> nếu
-// không set lại "display: ''" thì canvas nằm trong div ẩn, Chart.js không
-// đo được kích thước nên vẽ biểu đồ ra không hiển thị được.
 document.getElementById('revenuePanel').style.display = initialMode === 'revenue' ? '' : 'none';
 document.getElementById('productPanel').style.display = initialMode === 'product' ? '' : 'none';
 document.getElementById('billListSection').style.display = initialMode === 'revenue' ? '' : 'none';

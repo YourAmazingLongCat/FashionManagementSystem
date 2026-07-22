@@ -11,7 +11,7 @@
         <div>
             <p class="wallet-breadcrumb">Customer / Order Detail</p>
             <h1 class="wallet-title">Order Detail</h1>
-            <p class="wallet-subtitle">Review your order, payment status and shipping progress.</p>
+            <p class="wallet-subtitle">Review your order and shipping progress.</p>
         </div>
         <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/customer/order-history">
             <span class="material-symbols-outlined">arrow_back</span>
@@ -75,17 +75,27 @@
                     <div class="wallet-form-head">
                         <span class="material-symbols-outlined">payments</span>
                         <div>
-                            <h2>Payment</h2>
-                            <p>You can pay by wallet or cash on delivery.</p>
+                            <h2>Bill</h2>
+                            <p>Your order bill information.</p>
                         </div>
+                    </div>
+
+                    <div class="wallet-payment-row">
+                        <span>Bill ID</span>
+                        <strong>
+                            <c:choose>
+                                <c:when test="${not empty bill}">${bill.billId}</c:when>
+                                <c:otherwise>-</c:otherwise>
+                            </c:choose>
+                        </strong>
                     </div>
 
                     <div class="wallet-payment-row">
                         <span>Payment Method</span>
                         <strong>
                             <c:choose>
-                                <c:when test="${not empty payment}">${payment.paymentMethod}</c:when>
-                                <c:otherwise>Not selected</c:otherwise>
+                                <c:when test="${not empty bill}">${bill.paymentMethod}</c:when>
+                                <c:otherwise>COD (Cash on Delivery)</c:otherwise>
                             </c:choose>
                         </strong>
                     </div>
@@ -93,11 +103,11 @@
                     <div class="wallet-payment-row">
                         <span>Payment Status</span>
                         <c:choose>
-                            <c:when test="${not empty payment}">
-                                <strong class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
+                            <c:when test="${not empty bill}">
+                                <strong class="payment-status payment-status-${fn:toLowerCase(bill.paymentStatus)}">${bill.paymentStatus}</strong>
                             </c:when>
                             <c:otherwise>
-                                <strong class="payment-status payment-status-pending">Unpaid</strong>
+                                <strong class="payment-status payment-status-pending">Pending</strong>
                             </c:otherwise>
                         </c:choose>
                     </div>
@@ -107,42 +117,23 @@
                         <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
                     </div>
 
-                    <c:if test="${not empty wallet}">
-                        <div class="wallet-payment-row">
-                            <span>Wallet Balance</span>
-                            <strong><fmt:formatNumber value="${wallet.balance}" type="number" groupingUsed="true" /> VND</strong>
+                    <c:if test="${not empty bill && bill.paymentStatus eq 'Pending' && bill.paymentMethod eq 'COD'}">
+                        <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
+                            COD selected. Please pay when the order is delivered.
                         </div>
                     </c:if>
 
-                    <c:choose>
-                        <c:when test="${not empty payment && payment.paymentStatus eq 'Paid'}">
-                            <a class="wallet-outline-btn wallet-full-btn" href="${pageContext.request.contextPath}/customer/wallet">
-                                View Wallet History
-                            </a>
-                        </c:when>
-                        <c:when test="${not empty payment && payment.paymentMethod eq 'Cash'}">
-                            <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                                COD selected. Please pay when the order is delivered.
-                            </div>
-                        </c:when>
-                        <c:when test="${order.orderStatus eq 'Cancelled' or order.orderStatus eq 'Delivered'}">
-                            <div class="wallet-alert wallet-alert-error" style="margin-top: 12px;">
-                                Payment action is not available for this order status.
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            <form action="${pageContext.request.contextPath}/customer/pay-with-wallet" method="post">
-                                <input type="hidden" name="orderId" value="${order.orderId}" />
-                                <button class="wallet-primary-btn wallet-full-btn" type="submit">
-                                    <span class="material-symbols-outlined">wallet</span>
-                                    Pay With Wallet
-                                </button>
-                            </form>
-                            <a class="wallet-outline-btn wallet-full-btn" href="${pageContext.request.contextPath}/customer/wallet">
-                                Deposit More Money
-                            </a>
-                        </c:otherwise>
-                    </c:choose>
+                    <c:if test="${order.orderStatus eq 'Cancelled'}">
+                        <div class="wallet-alert wallet-alert-error" style="margin-top: 12px;">
+                            This order has been cancelled.
+                        </div>
+                    </c:if>
+
+                    <c:if test="${order.orderStatus eq 'Delivered'}">
+                        <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
+                            Order has been delivered successfully!
+                        </div>
+                    </c:if>
                 </aside>
             </div>
         </c:otherwise>

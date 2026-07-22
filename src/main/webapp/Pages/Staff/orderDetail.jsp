@@ -95,34 +95,34 @@
                             <div class="wallet-form-head">
                                 <span class="material-symbols-outlined">payments</span>
                                 <div>
-                                    <h2>Payment Information</h2>
-                                    <p>Payment information is shown for reference. Order status can be changed without payment validation.</p>
+                                    <h2>Bill Information</h2>
+                                    <p>Bill is automatically created when order is confirmed. Payment status updates when order is delivered.</p>
                                 </div>
                             </div>
 
                             <c:choose>
-                                <c:when test="${not empty payment}">
+                                <c:when test="${not empty bill}">
                                     <div class="wallet-payment-row">
-                                        <span>Payment ID</span>
-                                        <strong>${payment.paymentId}</strong>
+                                        <span>Bill ID</span>
+                                        <strong>${bill.billId}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Method</span>
-                                        <strong>${payment.paymentMethod}</strong>
+                                        <span>Issued Date</span>
+                                        <strong>${bill.issuedDate}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Status</span>
-                                        <strong class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
+                                        <span>Payment Method</span>
+                                        <strong>${bill.paymentMethod}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Amount</span>
-                                        <strong><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</strong>
+                                        <span>Payment Status</span>
+                                        <strong class="payment-status payment-status-${fn:toLowerCase(bill.paymentStatus)}">${bill.paymentStatus}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Paid At</span>
-                                        <strong><c:choose><c:when test="${empty payment.paidAt}">-</c:when><c:otherwise>${payment.paidAt}</c:otherwise></c:choose></strong>
+                                        <span>Total Amount</span>
+                                        <strong><fmt:formatNumber value="${bill.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
                                     </div>
-                                    <c:if test="${payment.paymentMethod eq 'COD' and payment.paymentStatus eq 'Pending'}">
+                                    <c:if test="${bill.paymentMethod eq 'COD' and bill.paymentStatus eq 'Pending'}">
                                         <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
                                             COD order: payment will be marked Paid automatically when status becomes Delivered.
                                         </div>
@@ -130,9 +130,9 @@
                                 </c:when>
                                 <c:otherwise>
                                     <div class="wallet-empty wallet-empty-small">
-                                        <span class="material-symbols-outlined">money_off</span>
-                                        <h3>No payment found</h3>
-                                        <p>Ask customer to pay by wallet or recreate the payment record.</p>
+                                        <span class="material-symbols-outlined">receipt_long</span>
+                                        <h3>No Bill yet</h3>
+                                        <p>Bill will be created when order is confirmed.</p>
                                     </div>
                                 </c:otherwise>
                             </c:choose>
@@ -206,7 +206,7 @@
                                 <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">
                                     <form class="order-inline-form" method="post"
                                           action="${pageContext.request.contextPath}/staff/cancel-order"
-                                          onsubmit="return confirm('Cancel this order? Wallet payments will be refunded automatically if applicable.');">
+                                          onsubmit="return confirm('Cancel this order?');">
                                         <input type="hidden" name="orderId" value="${order.orderId}" />
                                         <button class="order-btn order-btn-danger" type="submit">
                                             <span class="material-symbols-outlined">cancel</span>
@@ -223,8 +223,7 @@
 
                                 <div class="order-warning-box">
                                     Forward and backward movement must be one status level each time.
-                                    Wallet/VNPay orders must be Paid before moving forward.
-                                    COD orders can move forward without payment being Paid and will be marked Paid automatically when Delivered.
+                                    COD orders will be marked Paid automatically when Delivered.
                                 </div>
                             </div>
                         </div>

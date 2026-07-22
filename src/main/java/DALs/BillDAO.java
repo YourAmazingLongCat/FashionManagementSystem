@@ -116,6 +116,143 @@ public class BillDAO {
     }
 
     /**
+     * Đếm tổng số bills thỏa điều kiện filter.
+     */
+    public int countBills(String keyword, String paymentStatus, String orderStatus,
+                          java.sql.Date fromDate, java.sql.Date toDate) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM Bills b "
+              + "JOIN Orders o ON b.orderId = o.orderId "
+              + "JOIN Accounts a ON o.customerId = a.accountId "
+              + "WHERE 1 = 1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (b.billId LIKE ? OR b.orderId LIKE ? OR a.fullName LIKE ? OR a.phone LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
+            sql.append("AND b.paymentStatus = ? ");
+            params.add(paymentStatus.trim());
+        }
+
+        if (orderStatus != null && !orderStatus.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(orderStatus.trim());
+        }
+
+        if (fromDate != null) {
+            sql.append("AND b.issuedDate >= ? ");
+            params.add(new Timestamp(fromDate.getTime()));
+        }
+
+        if (toDate != null) {
+            sql.append("AND b.issuedDate < DATEADD(day, 1, ?) ");
+            params.add(new Timestamp(toDate.getTime()));
+        }
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Tìm kiếm + lọc hóa đơn có phân trang.
+     */
+    public List<Bill> searchBillsPaginated(String keyword, String paymentStatus, String orderStatus,
+                                            java.sql.Date fromDate, java.sql.Date toDate,
+                                            int offset, int limit) {
+        List<Bill> list = new ArrayList<>();
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT b.billId, b.orderId, b.paymentMethod, b.paymentStatus, b.issuedDate, b.totalAmount, "
+              + "       o.customerId, o.orderStatus, o.shippingAddress, o.placedAt, "
+              + "       a.fullName AS customerName, a.phone AS customerPhone "
+              + "FROM Bills b "
+              + "JOIN Orders o ON b.orderId = o.orderId "
+              + "JOIN Accounts a ON o.customerId = a.accountId "
+              + "WHERE 1 = 1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (b.billId LIKE ? OR b.orderId LIKE ? OR a.fullName LIKE ? OR a.phone LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
+            sql.append("AND b.paymentStatus = ? ");
+            params.add(paymentStatus.trim());
+        }
+
+        if (orderStatus != null && !orderStatus.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(orderStatus.trim());
+        }
+
+        if (fromDate != null) {
+            sql.append("AND b.issuedDate >= ? ");
+            params.add(new Timestamp(fromDate.getTime()));
+        }
+
+        if (toDate != null) {
+            sql.append("AND b.issuedDate < DATEADD(day, 1, ?) ");
+            params.add(new Timestamp(toDate.getTime()));
+        }
+
+        sql.append("ORDER BY b.issuedDate DESC ");
+        sql.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapBill(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    /**
      * Lấy 1 hóa đơn theo billId, kèm thông tin khách hàng / đơn hàng.
      */
     public Bill getBillById(String billId) {
@@ -573,5 +710,166 @@ public class BillDAO {
         }
 
         return result;
+    }
+
+    // ================= INSERT / UPDATE BILL =================
+
+    /**
+     * Insert a new Bill into the database.
+     *
+     * @param bill the Bill object to insert (only DB columns are used)
+     * @return true if insert successful
+     */
+    public boolean insertBill(Bill bill) {
+        if (bill == null || isEmpty(bill.getBillId()) || isEmpty(bill.getOrderId())) {
+            return false;
+        }
+
+        String sql = """
+            INSERT INTO Bills (billId, orderId, paymentMethod, paymentStatus, issuedDate, totalAmount)
+            VALUES (?, ?, ?, ?, GETDATE(), ?)
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, bill.getBillId());
+            ps.setString(2, bill.getOrderId());
+            ps.setString(3, bill.getPaymentMethod() != null ? bill.getPaymentMethod() : "COD");
+            ps.setString(4, bill.getPaymentStatus() != null ? bill.getPaymentStatus() : "Pending");
+            ps.setBigDecimal(5, bill.getTotalAmount());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("insertBill error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Update the payment status of an existing Bill.
+     *
+     * @param billId        the billId to update
+     * @param paymentStatus new payment status (e.g., Paid, Refunded)
+     * @return true if update successful
+     */
+    public boolean updatePaymentStatus(String billId, String paymentStatus) {
+        if (isEmpty(billId) || isEmpty(paymentStatus)) {
+            return false;
+        }
+
+        String sql = "UPDATE Bills SET paymentStatus = ? WHERE billId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, paymentStatus.trim());
+            ps.setString(2, billId.trim());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("updatePaymentStatus error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Update payment status by orderId (when order is delivered, payment becomes Paid).
+     */
+    public boolean updatePaymentStatusByOrderId(String orderId, String paymentStatus) {
+        if (isEmpty(orderId) || isEmpty(paymentStatus)) {
+            return false;
+        }
+
+        String sql = "UPDATE Bills SET paymentStatus = ? WHERE orderId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, paymentStatus.trim());
+            ps.setString(2, orderId.trim());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("updatePaymentStatusByOrderId error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a Bill already exists for an order.
+     *
+     * @param orderId the orderId to check
+     * @return true if a Bill exists for this order
+     */
+    public boolean billExistsForOrder(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) FROM Bills WHERE orderId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, orderId.trim());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("billExistsForOrder error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * Get Bill by orderId.
+     */
+    public Bill getBillByOrderId(String orderId) {
+        if (isEmpty(orderId)) {
+            return null;
+        }
+
+        String sql = "SELECT b.billId, b.orderId, b.paymentMethod, b.paymentStatus, b.issuedDate, b.totalAmount, "
+                   + "       o.customerId, o.orderStatus, o.shippingAddress, o.placedAt, "
+                   + "       a.fullName AS customerName, a.phone AS customerPhone "
+                   + "FROM Bills b "
+                   + "JOIN Orders o ON b.orderId = o.orderId "
+                   + "JOIN Accounts a ON o.customerId = a.accountId "
+                   + "WHERE b.orderId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, orderId.trim());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapBill(rs);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("getBillByOrderId error: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

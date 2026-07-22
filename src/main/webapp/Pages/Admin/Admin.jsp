@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,9 +97,15 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link ${param.section == 'customers' ? 'active' : ''}" 
+                    <a class="nav-link ${param.section == 'customers' ? 'active' : ''}"
                        href="?section=customers">
                         <i class="fas fa-users"></i> Customers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link ${param.section == 'accounts' ? 'active' : ''}"
+                       href="?section=accounts">
+                        <i class="fas fa-user-shield"></i> Accounts
                     </a>
                 </li>
                 <li class="nav-item">
@@ -353,6 +360,102 @@
                 </div>
             </div>
 
+            <!-- ==================== ACCOUNTS ==================== -->
+            <div id="accounts" class="section-card ${currentSection != 'accounts' ? 'hidden-section' : ''}">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                        <span><i class="fas fa-user-shield me-2"></i> Account Management</span>
+                        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
+                            <i class="fas fa-plus"></i> Create Account
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form method="get" action="${pageContext.request.contextPath}/Admin" class="mb-3">
+                            <input type="hidden" name="section" value="accounts"/>
+                            <div class="input-group">
+                                <input type="text" name="searchAccount" class="form-control" placeholder="Search by email or phone..." value="${fn:escapeXml(param.searchAccount)}"/>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+                                <a href="${pageContext.request.contextPath}/Admin?section=accounts" class="btn btn-outline-secondary"><i class="fas fa-times"></i> Clear</a>
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Account ID</th>
+                                        <th>Email</th>
+                                        <th>Full Name</th>
+                                        <th>Phone</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:choose>
+                                        <c:when test="${not empty pagedAccounts}">
+                                            <c:forEach var="acc" items="${pagedAccounts}" varStatus="loop">
+                                                <tr>
+                                                    <td>${(accountPage - 1) * accountPageSize + loop.index + 1}</td>
+                                                    <td><code>${acc.accountId}</code></td>
+                                                    <td>${acc.email}</td>
+                                                    <td>${acc.fullName}</td>
+                                                    <td>${not empty acc.phone ? acc.phone : '-'}</td>
+                                                    <td>
+                                                        <span class="badge ${acc.role == 'Admin' ? 'bg-danger' : acc.role == 'Staff' ? 'bg-warning text-dark' : 'bg-secondary'}">
+                                                            ${acc.role}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <c:if test="${acc.role != 'Admin'}">
+                                                            <form action="${pageContext.request.contextPath}/Admin" method="post" class="d-inline">
+                                                                <input type="hidden" name="section" value="accounts"/>
+                                                                <input type="hidden" name="action" value="updateStatus"/>
+                                                                <input type="hidden" name="accountId" value="${acc.accountId}"/>
+                                                                <select name="status" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
+                                                                    <option value="Active" ${acc.status == 'Active' ? 'selected' : ''}>Active</option>
+                                                                    <option value="Banned" ${acc.status == 'Banned' ? 'selected' : ''}>Banned</option>
+                                                                </select>
+                                                            </form>
+                                                        </c:if>
+                                                        <c:if test="${acc.role == 'Admin'}">
+                                                            <span class="badge ${acc.status == 'Active' ? 'bg-success' : 'bg-danger'}">${acc.status}</span>
+                                                        </c:if>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise><tr><td colspan="7" class="text-center text-muted">No accounts found</td></tr></c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <c:if test="${accountTotalPages > 1}">
+                            <nav aria-label="Account pagination">
+                                <ul class="pagination justify-content-center flex-wrap mb-0 pagination-sm">
+                                    <li class="page-item ${accountPage == 1 ? 'disabled' : ''}">
+                                        <a class="page-link" href="?section=accounts&page=${accountPage - 1}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if>">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    <c:forEach var="i" begin="1" end="${accountTotalPages}">
+                                        <li class="page-item ${i == accountPage ? 'active' : ''}">
+                                            <a class="page-link" href="?section=accounts&page=${i}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if>">${i}</a>
+                                        </li>
+                                    </c:forEach>
+                                    <li class="page-item ${accountPage == accountTotalPages ? 'disabled' : ''}">
+                                        <a class="page-link" href="?section=accounts&page=${accountPage + 1}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if>">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            </c:if>
+                    </div>
+                </div>
+            </div>
+
             <!-- ==================== PRODUCTS ==================== -->
             <div id="products" class="section-card ${currentSection != 'products' ? 'hidden-section' : ''}">
                 <div class="card">
@@ -416,12 +519,12 @@
                                 <tbody>
                                     <c:choose>
                                         <c:when test="${not empty orderStatistics}">
-                                            <c:forEach var="o" items="${orderStatistics}">
-                                                <tr>
-                                                    <td><span class="badge bg-${o.status == 'Completed' ? 'success' : o.status == 'Pending' ? 'warning' : 'danger'}">${o.status}</span></td>
-                                                    <td class="text-end fw-bold">${o.quantity}</td>
-                                                </tr>
-                                            </c:forEach>
+                                                    <c:forEach var="o" items="${orderStatistics}">
+                                                        <tr>
+                                                            <td><span class="badge bg-${o.status == 'Delivered' ? 'success' : o.status == 'Pending' || o.status == 'Processing' || o.status == 'Confirmed' ? 'warning' : 'danger'}">${o.status}</span></td>
+                                                            <td class="text-end fw-bold">${o.quantity}</td>
+                                                        </tr>
+                                                    </c:forEach>
                                         </c:when>
                                         <c:otherwise><tr><td colspan="2" class="text-center text-muted">No orders found</td></tr></c:otherwise>
                                     </c:choose>
@@ -437,7 +540,7 @@
                                         <span>${o.quantity} orders</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-${o.status == 'Completed' ? 'success' : o.status == 'Pending' ? 'warning' : 'danger'}"
+                                        <div class="progress-bar bg-${o.status == 'Delivered' ? 'success' : o.status == 'Pending' || o.status == 'Processing' || o.status == 'Confirmed' ? 'warning' : 'danger'}"
                                              role="progressbar" style="width: ${o.quantity / totalOrders * 100}%;"></div>
                                     </div>
                                 </div>
@@ -525,5 +628,74 @@
 </div><!-- end container-fluid -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Toast Notifications -->
+<c:if test="${not empty toastMsg}">
+<div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+    <div class="toast show align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body"><i class="fas fa-check-circle me-2"></i>${toastMsg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+<script>setTimeout(() => { document.querySelector('.toast')?.remove(); }, 3000);</script>
+</c:if>
+<c:if test="${not empty toastErr}">
+<div class="position-fixed top-0 end-0 p-3" style="z-index:9999">
+    <div class="toast show align-items-center text-white bg-danger border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body"><i class="fas fa-exclamation-circle me-2"></i>${toastErr}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+<script>setTimeout(() => { document.querySelector('.toast')?.remove(); }, 3000);</script>
+</c:if>
+
+<!-- Create Account Modal -->
+<div class="modal fade" id="createAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create New Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="${pageContext.request.contextPath}/Admin" method="post">
+                <input type="hidden" name="section" value="accounts"/>
+                <input type="hidden" name="action" value="createAccount"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control" required placeholder="example@email.com"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password <span class="text-danger">*</span></label>
+                        <input type="password" name="password" class="form-control" required minlength="6" placeholder="Min 6 characters"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" name="fullName" class="form-control" required placeholder="Nguyen Van A"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="phone" class="form-control" placeholder="0912 345 678"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role <span class="text-danger">*</span></label>
+                        <select name="role" class="form-select" required>
+                            <option value="Staff">Staff</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 </body>
 </html>

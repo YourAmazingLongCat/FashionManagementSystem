@@ -20,7 +20,6 @@ public class StatisticDAO extends DBContext {
         super();
     }
 
-
     public int getTotalCustomers() {
         String sql = "SELECT COUNT(*) FROM Accounts WHERE role='Customer'";
         try (PreparedStatement ps = connection.prepareStatement(sql);
@@ -47,8 +46,9 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
+    // Revenue: sum of Orders.totalAmount (Bills table is empty, use Orders instead)
     public double getRevenue() {
-        String sql = "SELECT ISNULL(SUM(totalAmount),0) FROM Bills WHERE paymentStatus='Paid'";
+        String sql = "SELECT ISNULL(SUM(totalAmount), 0) FROM Orders WHERE orderStatus <> 'Cancelled'";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
@@ -63,10 +63,12 @@ public class StatisticDAO extends DBContext {
     public double getProfit() {
         String sql = """
                      SELECT ISNULL(
-                         SUM((OI.unitPrice - P.costPrice) * OI.quantity),0)
+                         SUM((OI.unitPrice - P.basePrice) * OI.quantity),0)
                      FROM OrderItems OI
                      JOIN ProductVariants PV ON OI.variantId = PV.variantId
                      JOIN Products P ON PV.productId = P.productId
+                     JOIN Orders O ON OI.orderId = O.orderId
+                     WHERE O.orderStatus <> 'Cancelled'
                      """;
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -89,6 +91,7 @@ public class StatisticDAO extends DBContext {
                      FROM Accounts A
                      JOIN Orders O ON A.accountId = O.customerId
                      WHERE A.role='Customer'
+                       AND O.orderStatus <> 'Cancelled'
                      GROUP BY A.accountId, A.fullName
                      ORDER BY TotalOrders DESC
                      """;
@@ -141,6 +144,7 @@ public class StatisticDAO extends DBContext {
                      FROM Accounts A
                      JOIN Orders O ON A.accountId = O.customerId
                      WHERE A.role='Customer'
+                       AND O.orderStatus <> 'Cancelled'
                      GROUP BY A.accountId, A.fullName
                      HAVING COUNT(O.orderId) >= ?
                      ORDER BY TotalOrders DESC
@@ -161,21 +165,20 @@ public class StatisticDAO extends DBContext {
         return list;
     }
 
-
-    // Lấy doanh thu theo khoảng thời gian
+    // Revenue by date range: use Orders.totalAmount (not Bills, which is empty)
     public double getRevenue(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT ISNULL(SUM(totalAmount), 0)
-            FROM Bills
-            WHERE paymentStatus='Paid'
+            FROM Orders
+            WHERE orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
-            sql.append(" AND issuedDate >= ?");
+            sql.append(" AND placedAt >= ?");
             params.add(fromDate);
         }
         if (toDate != null && !toDate.isEmpty()) {
-            sql.append(" AND issuedDate <= ?");
+            sql.append(" AND placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -192,15 +195,15 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    // Lấy lợi nhuận theo khoảng thời gian
+    // Profit by date range
     public double getProfit(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
-            SELECT ISNULL(SUM((OI.unitPrice - P.costPrice) * OI.quantity), 0)
+            SELECT ISNULL(SUM((OI.unitPrice - P.basePrice) * OI.quantity), 0)
             FROM OrderItems OI
             JOIN ProductVariants PV ON OI.variantId = PV.variantId
             JOIN Products P ON PV.productId = P.productId
             JOIN Orders O ON OI.orderId = O.orderId
-            WHERE 1=1
+            WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
@@ -225,15 +228,15 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    // Tổng giá vốn (Cost of Goods Sold) theo khoảng thời gian
+    // Cost of Goods Sold by date range
     public double getCostOfGoodsSold(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
-            SELECT ISNULL(SUM(P.costPrice * OI.quantity), 0)
+            SELECT ISNULL(SUM(P.basePrice * OI.quantity), 0)
             FROM OrderItems OI
             JOIN ProductVariants PV ON OI.variantId = PV.variantId
             JOIN Products P ON PV.productId = P.productId
             JOIN Orders O ON OI.orderId = O.orderId
-            WHERE 1=1
+            WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
@@ -258,13 +261,13 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    // Tổng số lượng sản phẩm đã bán
+    // Total products sold by date range
     public int getTotalProductSold(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT ISNULL(SUM(OI.quantity), 0)
             FROM OrderItems OI
             JOIN Orders O ON OI.orderId = O.orderId
-            WHERE 1=1
+            WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
@@ -289,26 +292,24 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    // Danh sách sản phẩm bán chạy (giới hạn)
+    // Top selling products (limited)
     public List<ProductSale> getTopProducts(int limit, String fromDate, String toDate) {
         List<ProductSale> list = new ArrayList<>();
-        // Lưu ý: Nếu bảng Products có cột productCode thì thay P.productId thành P.productCode
-        // Ở đây tạm dùng productId làm mã sản phẩm
         StringBuilder sql = new StringBuilder("""
             SELECT TOP (?)
                 P.productId,
                 P.productId AS productCode,
                 P.name AS productName,
-                P.costPrice AS unitCost,
-                OI.unitPrice,
+                MIN(P.basePrice) AS unitCost,
+                AVG(OI.unitPrice) AS avgUnitPrice,
                 SUM(OI.quantity) AS totalQty,
                 SUM(OI.unitPrice * OI.quantity) AS revenue,
-                SUM((OI.unitPrice - P.costPrice) * OI.quantity) AS profit
+                SUM((OI.unitPrice - P.basePrice) * OI.quantity) AS profit
             FROM OrderItems OI
             JOIN ProductVariants PV ON OI.variantId = PV.variantId
             JOIN Products P ON PV.productId = P.productId
             JOIN Orders O ON OI.orderId = O.orderId
-            WHERE 1=1
+            WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         params.add(limit);
@@ -320,7 +321,7 @@ public class StatisticDAO extends DBContext {
             sql.append(" AND O.placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
-        sql.append(" GROUP BY P.productId, P.name, P.costPrice, OI.unitPrice");
+        sql.append(" GROUP BY P.productId, P.name, P.basePrice");
         sql.append(" ORDER BY totalQty DESC, revenue DESC");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -334,7 +335,7 @@ public class StatisticDAO extends DBContext {
                 p.setProductCode(rs.getString("productCode"));
                 p.setProductName(rs.getString("productName"));
                 p.setUnitCost(rs.getDouble("unitCost"));
-                p.setUnitPrice(rs.getDouble("unitPrice"));
+                p.setUnitPrice(rs.getDouble("avgUnitPrice"));
                 p.setQuantitySold(rs.getInt("totalQty"));
                 p.setRevenue(rs.getDouble("revenue"));
                 p.setProfit(rs.getDouble("profit"));
@@ -346,7 +347,7 @@ public class StatisticDAO extends DBContext {
         return list;
     }
 
-    // Chi tiết tất cả sản phẩm đã bán (không giới hạn)
+    // All product sales (no limit)
     public List<ProductSale> getProductSales(String fromDate, String toDate) {
         List<ProductSale> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder("""
@@ -354,16 +355,16 @@ public class StatisticDAO extends DBContext {
                 P.productId,
                 P.productId AS productCode,
                 P.name AS productName,
-                P.costPrice AS unitCost,
-                OI.unitPrice,
+                MIN(P.basePrice) AS unitCost,
+                AVG(OI.unitPrice) AS avgUnitPrice,
                 SUM(OI.quantity) AS totalQty,
                 SUM(OI.unitPrice * OI.quantity) AS revenue,
-                SUM((OI.unitPrice - P.costPrice) * OI.quantity) AS profit
+                SUM((OI.unitPrice - P.basePrice) * OI.quantity) AS profit
             FROM OrderItems OI
             JOIN ProductVariants PV ON OI.variantId = PV.variantId
             JOIN Products P ON PV.productId = P.productId
             JOIN Orders O ON OI.orderId = O.orderId
-            WHERE 1=1
+            WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
@@ -374,7 +375,7 @@ public class StatisticDAO extends DBContext {
             sql.append(" AND O.placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
-        sql.append(" GROUP BY P.productId, P.name, P.costPrice, OI.unitPrice");
+        sql.append(" GROUP BY P.productId, P.name, P.basePrice");
         sql.append(" ORDER BY P.name");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -388,7 +389,7 @@ public class StatisticDAO extends DBContext {
                 p.setProductCode(rs.getString("productCode"));
                 p.setProductName(rs.getString("productName"));
                 p.setUnitCost(rs.getDouble("unitCost"));
-                p.setUnitPrice(rs.getDouble("unitPrice"));
+                p.setUnitPrice(rs.getDouble("avgUnitPrice"));
                 p.setQuantitySold(rs.getInt("totalQty"));
                 p.setRevenue(rs.getDouble("revenue"));
                 p.setProfit(rs.getDouble("profit"));
@@ -400,7 +401,7 @@ public class StatisticDAO extends DBContext {
         return list;
     }
 
-    // Danh sách khách hàng chi tiêu nhiều nhất (top spenders)
+    // Top spenders: compute spending from Orders.totalAmount (not Bills, which is empty)
     public List<CustomerStatistic> getTopSpenders(int limit, String fromDate, String toDate) {
         List<CustomerStatistic> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder("""
@@ -408,21 +409,20 @@ public class StatisticDAO extends DBContext {
                 A.accountId,
                 A.fullName,
                 COUNT(O.orderId) AS totalOrders,
-                ISNULL(SUM(B.totalAmount), 0) AS totalSpent
+                ISNULL(SUM(O.totalAmount), 0) AS totalSpent
             FROM Accounts A
             JOIN Orders O ON A.accountId = O.customerId
-            JOIN Bills B ON O.orderId = B.orderId
             WHERE A.role = 'Customer'
-              AND B.paymentStatus = 'Paid'
+              AND O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         params.add(limit);
         if (fromDate != null && !fromDate.isEmpty()) {
-            sql.append(" AND B.issuedDate >= ?");
+            sql.append(" AND O.placedAt >= ?");
             params.add(fromDate);
         }
         if (toDate != null && !toDate.isEmpty()) {
-            sql.append(" AND B.issuedDate <= ?");
+            sql.append(" AND O.placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
         sql.append(" GROUP BY A.accountId, A.fullName");

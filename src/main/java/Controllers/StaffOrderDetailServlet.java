@@ -1,11 +1,11 @@
 package Controllers;
 
+import DALs.BillDAO;
 import Models.Account;
+import Models.Bill;
 import Models.Order;
 import Models.OrderItem;
-import Models.Payment;
 import Services.OrderService;
-import Services.PaymentService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -19,12 +19,12 @@ import jakarta.servlet.http.HttpSession;
 public class StaffOrderDetailServlet extends HttpServlet {
 
     private OrderService orderService;
-    private PaymentService paymentService;
+    private BillDAO billDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
-        paymentService = new PaymentService();
+        billDAO = new BillDAO();
     }
 
     @Override
@@ -50,17 +50,19 @@ public class StaffOrderDetailServlet extends HttpServlet {
         if (order == null) {
             request.setAttribute("errorMessage", "Order not found.");
             request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
+            request.setAttribute("hideStaffHeader", "true");
             request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
             return;
         }
 
         List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId.trim());
-        Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
+        Bill bill = billDAO.getBillByOrderId(orderId.trim());
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        request.setAttribute("payment", payment);
+        request.setAttribute("bill", bill);
         request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
+        request.setAttribute("hideStaffHeader", "true");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 

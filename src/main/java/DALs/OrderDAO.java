@@ -19,6 +19,69 @@ public class OrderDAO extends DBContext {
         super();
     }
 
+    public int countOrders(String keyword) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Orders o WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (o.orderId LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("countOrders error: " + e);
+        }
+        return 0;
+    }
+
+    public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {
+        List<Order> listOrders = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+            "SELECT * FROM Orders o WHERE 1=1 "
+        );
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (o.orderId LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        sql.append("ORDER BY o.placedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    listOrders.add(getOrderFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getOrdersPaginated error: " + e);
+        }
+        return listOrders;
+    }
+
     public List<Order> getAllOrders() {
         List<Order> listOrders = new ArrayList<>();
         String query = "SELECT * FROM Orders ORDER BY placedAt DESC";
@@ -121,6 +184,42 @@ public class OrderDAO extends DBContext {
 
         } catch (SQLException e) {
             System.out.println("searchOrdersByCustomerId error: " + e);
+        }
+
+        return listOrders;
+    }
+
+    public List<Order> searchOrdersPaginated(String keyword, int offset, int limit) {
+        List<Order> listOrders = new ArrayList<>();
+
+        String query = "SELECT * FROM Orders "
+                + "WHERE orderId LIKE ? "
+                + "OR customerId LIKE ? "
+                + "OR orderStatus LIKE ? "
+                + "OR phone LIKE ? "
+                + "OR shippingAddress LIKE ? "
+                + "ORDER BY placedAt DESC "
+                + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            String searchValue = "%" + keyword + "%";
+
+            ps.setString(1, searchValue);
+            ps.setString(2, searchValue);
+            ps.setString(3, searchValue);
+            ps.setString(4, searchValue);
+            ps.setString(5, searchValue);
+            ps.setInt(6, offset);
+            ps.setInt(7, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    listOrders.add(getOrderFromResultSet(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("searchOrdersPaginated error: " + e);
         }
 
         return listOrders;
