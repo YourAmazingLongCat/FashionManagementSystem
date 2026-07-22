@@ -21,23 +21,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
+/**
+ * Compatibility route for old links that still point to /customer/checkout.
+ *
+ * The project now uses one customer Order page for both cases:
+ * - immediately after the Cart Checkout button creates a Pending order;
+ * - when the customer returns later from Order History.
+ */
 @WebServlet(name = "CheckoutServlet", urlPatterns = {"/customer/checkout"})
 public class CheckoutServlet extends HttpServlet {
 
-    private static final String LAYOUT_PAGE = "/Pages/Guest/Home/Layout/Layout.jsp";
-    private static final String CHECKOUT_PAGE = "/Pages/Customer/checkout.jsp";
-
-    private OrderService orderService;
-    private PaymentService paymentService;
-
     @Override
-    public void init() throws ServletException {
-        orderService = new OrderService();
-        paymentService = new PaymentService();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
@@ -62,16 +56,15 @@ public class CheckoutServlet extends HttpServlet {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
+        redirectToOrderPage(request, response);
+    }
 
+    private void redirectToOrderPage(HttpServletRequest request,
+            HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession();
-        String customerId = getCustomerId(session);
-
-        if (customerId == null) {
+        if (getCustomerId(session) == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
@@ -169,19 +162,13 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        String[] selectedIds = (String[]) selectedIdsObject;
-        Cart cart = new CartDAO().getActiveCart(customerId);
-        if (cart == null) {
+        if (isEmpty(orderId)) {
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
-        new CartItemDAO().deleteItemsByIds(cart.getCartId(), selectedIds);
-    }
-
-    private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
-            throws ServletException, IOException {
-        request.setAttribute("contentPage", contentPage);
-        request.getRequestDispatcher(LAYOUT_PAGE).forward(request, response);
+        response.sendRedirect(request.getContextPath()
+                + "/customer/order-detail?orderId=" + orderId);
     }
 
     private String getCustomerId(HttpSession session) {

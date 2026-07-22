@@ -6,6 +6,7 @@ import Models.Account;
 import Models.Cart;
 import Models.CartItem;
 import Models.CartItemView;
+import Services.OrderService;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -19,6 +20,13 @@ import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "CartCheckoutServlet", urlPatterns = {"/cart/checkout"})
 public class CartCheckoutServlet extends HttpServlet {
+
+    private OrderService orderService;
+
+    @Override
+    public void init() throws ServletException {
+        orderService = new OrderService();
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -41,7 +49,8 @@ public class CartCheckoutServlet extends HttpServlet {
 
         String[] selectedItems = request.getParameterValues("selectedItems");
         if (selectedItems == null || selectedItems.length == 0) {
-            session.setAttribute("errorMessage", "Please select at least one product before checkout.");
+            session.setAttribute("errorMessage",
+                    "Please select at least one product before checkout.");
             response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
@@ -56,10 +65,12 @@ public class CartCheckoutServlet extends HttpServlet {
         }
 
         CartItemDAO cartItemDAO = new CartItemDAO();
-        List<CartItemView> selectedCartItems = cartItemDAO.getCartItemsByIds(cart.getCartId(), selectedItems);
+        List<CartItemView> selectedCartItems
+                = cartItemDAO.getCartItemsByIds(cart.getCartId(), selectedItems);
 
         if (selectedCartItems == null || selectedCartItems.isEmpty()) {
-            session.setAttribute("errorMessage", "Selected cart items are invalid or no longer available.");
+            session.setAttribute("errorMessage",
+                    "Selected cart items are invalid or no longer available.");
             response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
@@ -77,10 +88,44 @@ public class CartCheckoutServlet extends HttpServlet {
             checkoutCart.add(item);
         }
 
-        session.setAttribute("cart", checkoutCart);
-        session.setAttribute("checkoutCartItemIds", selectedItems);
-        session.setAttribute("customerId", account.getAccountId());
+        /*
+         * The business rule is applied here, at the actual Cart Checkout
+         * button. This transaction creates the Pending order, reserves stock,
+         * inserts OrderItems and removes the selected CartItems together.
+         */
+        String orderId = orderService.createPendingOrderFromCart(
+                account.getAccountId(),
+                "",
+                account.getPhone(),
+                checkoutCart,
+                cart.getCartId(),
+                selectedItems
+        );
 
-        response.sendRedirect(request.getContextPath() + "/customer/checkout");
+        if (orderId == null) {
+            session.setAttribute("errorMessage",
+                    "Checkout failed because the cart changed or one or more products no longer have enough available stock.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Refresh the header badge using only the products still in the cart.
+        List<CartItemView> remainingItems = cartItemDAO.getCartItems(cart.getCartId());
+        int remainingCount = remainingItems.stream()
+                .mapToInt(CartItemView::getQuantity)
+                .sum();
+
+        session.setAttribute("cartCount", remainingCount);
+        session.setAttribute("pendingCheckoutOrderId", orderId);
+        session.removeAttribute("cart");
+        session.removeAttribute("checkoutCartItemIds");
+
+        // A successful Cart Checkout must not display a toast/notification.
+        // The customer is taken directly to the single Order page instead.
+        session.removeAttribute("successMessage");
+        session.removeAttribute("errorMessage");
+
+        response.sendRedirect(request.getContextPath()
+                + "/customer/order-detail?orderId=" + orderId);
     }
 }

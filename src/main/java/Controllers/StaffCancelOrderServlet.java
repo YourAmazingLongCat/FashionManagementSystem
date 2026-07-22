@@ -40,7 +40,9 @@ public class StaffCancelOrderServlet extends HttpServlet {
 
         boolean cancelled = orderService.cancelOrder(orderId);
         session.setAttribute(cancelled ? "successMessage" : "errorMessage",
-                cancelled ? "Order cancelled successfully." : "This order cannot be cancelled now.");
+                cancelled
+                        ? "Order cancelled successfully."
+                        : "This order cannot be cancelled by staff before the customer presses Place order or after shipping begins.");
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }

@@ -52,7 +52,7 @@ public class CancelOrderServlet extends HttpServlet {
             return;
         }
 
-        boolean cancelled = orderService.cancelOrder(orderId);
+        boolean cancelled = orderService.cancelOrder(orderId, customerId);
         session.setAttribute(cancelled ? "successMessage" : "errorMessage",
                 cancelled ? "Order cancelled successfully." : "This order cannot be cancelled now.");
 

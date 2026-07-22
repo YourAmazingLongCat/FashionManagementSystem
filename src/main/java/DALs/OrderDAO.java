@@ -12,6 +12,10 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class OrderDAO extends DBContext {
 
@@ -21,7 +25,7 @@ public class OrderDAO extends DBContext {
 
     public List<Order> getAllOrders() {
         List<Order> listOrders = new ArrayList<>();
-        String query = "SELECT * FROM Orders ORDER BY placedAt DESC";
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query);
                 ResultSet rs = ps.executeQuery()) {
@@ -38,7 +42,7 @@ public class OrderDAO extends DBContext {
     }
 
     public Order getOrderById(String orderId) {
-        String query = "SELECT * FROM Orders WHERE orderId = ?";
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE o.orderId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -57,7 +61,7 @@ public class OrderDAO extends DBContext {
     }
 
     public Order getOrderByIdAndCustomerId(String orderId, String customerId) {
-        String query = "SELECT * FROM Orders WHERE orderId = ? AND customerId = ?";
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE o.orderId = ? AND o.customerId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -78,7 +82,7 @@ public class OrderDAO extends DBContext {
 
     public List<Order> getOrdersByCustomerId(String customerId) {
         List<Order> listOrders = new ArrayList<>();
-        String query = "SELECT * FROM Orders WHERE customerId = ? ORDER BY placedAt DESC";
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE o.customerId = ? ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, customerId);
@@ -99,10 +103,10 @@ public class OrderDAO extends DBContext {
     public List<Order> searchOrdersByCustomerId(String customerId, String keyword) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT * FROM Orders "
-                + "WHERE customerId = ? "
-                + "AND (orderId LIKE ? OR orderStatus LIKE ? OR phone LIKE ? OR shippingAddress LIKE ?) "
-                + "ORDER BY placedAt DESC";
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o "
+                + "WHERE o.customerId = ? "
+                + "AND (o.orderId LIKE ? OR o.orderStatus LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) "
+                + "ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             String searchValue = "%" + keyword + "%";
@@ -129,13 +133,13 @@ public class OrderDAO extends DBContext {
     public List<Order> searchOrdersForStaff(String keyword) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT * FROM Orders "
-                + "WHERE orderId LIKE ? "
-                + "OR customerId LIKE ? "
-                + "OR orderStatus LIKE ? "
-                + "OR phone LIKE ? "
-                + "OR shippingAddress LIKE ? "
-                + "ORDER BY placedAt DESC";
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o "
+                + "WHERE o.orderId LIKE ? "
+                + "OR o.customerId LIKE ? "
+                + "OR o.orderStatus LIKE ? "
+                + "OR o.phone LIKE ? "
+                + "OR o.shippingAddress LIKE ? "
+                + "ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             String searchValue = "%" + keyword + "%";
@@ -160,6 +164,38 @@ public class OrderDAO extends DBContext {
     }
 
     public boolean createOrder(Order order, List<OrderItem> orderItems) {
+        return createOrderInternal(order, orderItems, null, null);
+    }
+
+    /**
+     * Creates a Pending order, reserves its stock and removes the selected
+     * cart rows in one database transaction. This is the entry point used by
+     * the Cart Checkout button, so the cart cannot remain unchanged after an
+     * order has already been created.
+     */
+    public boolean createOrderFromCart(Order order, List<OrderItem> orderItems,
+            String cartId, String[] cartItemIds) {
+        if (isBlank(cartId) || cartItemIds == null || cartItemIds.length == 0) {
+            return false;
+        }
+
+        Set<String> uniqueItemIds = new LinkedHashSet<>();
+        for (String itemId : cartItemIds) {
+            if (!isBlank(itemId)) {
+                uniqueItemIds.add(itemId.trim());
+            }
+        }
+
+        if (uniqueItemIds.isEmpty()) {
+            return false;
+        }
+
+        return createOrderInternal(order, orderItems, cartId.trim(),
+                new ArrayList<>(uniqueItemIds));
+    }
+
+    private boolean createOrderInternal(Order order, List<OrderItem> orderItems,
+            String cartId, List<String> cartItemIds) {
         if (order == null || orderItems == null || orderItems.isEmpty()) {
             return false;
         }
@@ -167,6 +203,10 @@ public class OrderDAO extends DBContext {
         String orderQuery = "INSERT INTO Orders "
                 + "(orderId, customerId, orderStatus, shippingAddress, phone, placedAt, totalAmount) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        String reserveQuery = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET reservedQty = reservedQty + ? "
+                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
 
         String itemQuery = "INSERT INTO OrderItems "
                 + "(orderItemId, orderId, variantId, quantity, unitPrice, discountAmount) "
@@ -197,6 +237,25 @@ public class OrderDAO extends DBContext {
                 ps.executeUpdate();
             }
 
+            /*
+             * Reserve every variant inside the same database transaction that
+             * creates the Order. The conditional UPDATE is atomic, so two
+             * customers cannot both reserve the last available unit.
+             */
+            Map<String, Integer> quantitiesByVariant = aggregateQuantities(orderItems);
+            try (PreparedStatement ps = connection.prepareStatement(reserveQuery)) {
+                for (Map.Entry<String, Integer> entry : quantitiesByVariant.entrySet()) {
+                    int quantity = entry.getValue();
+                    ps.setInt(1, quantity);
+                    ps.setString(2, entry.getKey());
+                    ps.setInt(3, quantity);
+
+                    if (ps.executeUpdate() != 1) {
+                        throw new SQLException("Insufficient available stock for variant " + entry.getKey());
+                    }
+                }
+            }
+
             try (PreparedStatement ps = connection.prepareStatement(itemQuery)) {
                 for (OrderItem item : orderItems) {
                     ps.setString(1, item.getOrderItemId());
@@ -204,17 +263,38 @@ public class OrderDAO extends DBContext {
                     ps.setString(3, item.getVariantId());
                     ps.setInt(4, item.getQuantity());
                     ps.setBigDecimal(5, item.getUnitPrice());
-
-                    if (item.getDiscountAmount() == null) {
-                        ps.setBigDecimal(6, BigDecimal.ZERO);
-                    } else {
-                        ps.setBigDecimal(6, item.getDiscountAmount());
-                    }
-
+                    ps.setBigDecimal(6, item.getDiscountAmount() == null
+                            ? BigDecimal.ZERO : item.getDiscountAmount());
                     ps.addBatch();
                 }
 
                 ps.executeBatch();
+            }
+
+            if (cartId != null && cartItemIds != null && !cartItemIds.isEmpty()) {
+                StringBuilder placeholders = new StringBuilder();
+                for (int i = 0; i < cartItemIds.size(); i++) {
+                    if (i > 0) {
+                        placeholders.append(',');
+                    }
+                    placeholders.append('?');
+                }
+
+                String deleteCartSql = "DELETE FROM CartItems "
+                        + "WHERE cartId = ? AND cartItemId IN (" + placeholders + ")";
+
+                try (PreparedStatement ps = connection.prepareStatement(deleteCartSql)) {
+                    ps.setString(1, cartId);
+                    int parameterIndex = 2;
+                    for (String itemId : cartItemIds) {
+                        ps.setString(parameterIndex++, itemId);
+                    }
+
+                    int deletedRows = ps.executeUpdate();
+                    if (deletedRows != cartItemIds.size()) {
+                        throw new SQLException("The selected cart changed before checkout completed.");
+                    }
+                }
             }
 
             connection.commit();
@@ -222,9 +302,143 @@ public class OrderDAO extends DBContext {
 
         } catch (SQLException e) {
             rollback();
-            System.out.println("createOrder error: " + e);
+            System.out.println("createOrder error: " + e.getMessage());
             return false;
 
+        } finally {
+            restoreAutoCommit();
+        }
+    }
+
+
+    /**
+     * Changes an order status and performs the matching inventory transition
+     * in one transaction.
+     *
+     * Pending -> Confirmed: reserved stock becomes sold stock.
+     * Confirmed -> Pending: sold stock returns to a reservation.
+     * Other one-step status changes do not alter inventory.
+     */
+    public boolean changeOrderStatusWithInventory(String orderId,
+            String expectedCurrentStatus, String newStatus) {
+        if (isBlank(orderId) || isBlank(expectedCurrentStatus) || isBlank(newStatus)) {
+            return false;
+        }
+
+        String lockOrderSql = "SELECT orderStatus FROM Orders WITH (UPDLOCK, ROWLOCK) WHERE orderId = ?";
+        String updateOrderSql = "UPDATE Orders SET orderStatus = ? WHERE orderId = ? AND orderStatus = ?";
+
+        try {
+            connection.setAutoCommit(false);
+
+            String currentStatus;
+            try (PreparedStatement ps = connection.prepareStatement(lockOrderSql)) {
+                ps.setString(1, orderId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        rollback();
+                        return false;
+                    }
+                    currentStatus = rs.getString("orderStatus");
+                }
+            }
+
+            if (!expectedCurrentStatus.equals(currentStatus)) {
+                rollback();
+                return false;
+            }
+
+            if ("Pending".equals(currentStatus) && "Confirmed".equals(newStatus)) {
+                if (!commitReservedStock(orderId)) {
+                    rollback();
+                    return false;
+                }
+            } else if ("Confirmed".equals(currentStatus) && "Pending".equals(newStatus)) {
+                if (!moveCommittedStockBackToReservation(orderId)) {
+                    rollback();
+                    return false;
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(updateOrderSql)) {
+                ps.setString(1, newStatus);
+                ps.setString(2, orderId);
+                ps.setString(3, expectedCurrentStatus);
+                if (ps.executeUpdate() != 1) {
+                    rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback();
+            System.out.println("changeOrderStatusWithInventory error: " + e.getMessage());
+            return false;
+        } finally {
+            restoreAutoCommit();
+        }
+    }
+
+    /**
+     * Cancels an order and restores/release inventory consistently.
+     * Pending orders release reservedQty. Confirmed/Processing orders have
+     * already consumed physical stock, so that stock is returned.
+     */
+    public boolean cancelOrderAndAdjustInventory(String orderId) {
+        if (isBlank(orderId)) {
+            return false;
+        }
+
+        String lockOrderSql = "SELECT orderStatus FROM Orders WITH (UPDLOCK, ROWLOCK) WHERE orderId = ?";
+        String cancelSql = "UPDATE Orders SET orderStatus = 'Cancelled' WHERE orderId = ? AND orderStatus = ?";
+
+        try {
+            connection.setAutoCommit(false);
+
+            String currentStatus;
+            try (PreparedStatement ps = connection.prepareStatement(lockOrderSql)) {
+                ps.setString(1, orderId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        rollback();
+                        return false;
+                    }
+                    currentStatus = rs.getString("orderStatus");
+                }
+            }
+
+            if ("Pending".equals(currentStatus)) {
+                if (!releaseReservedStock(orderId)) {
+                    rollback();
+                    return false;
+                }
+            } else if ("Confirmed".equals(currentStatus) || "Processing".equals(currentStatus)) {
+                if (!restoreCommittedStock(orderId)) {
+                    rollback();
+                    return false;
+                }
+            } else {
+                rollback();
+                return false;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(cancelSql)) {
+                ps.setString(1, orderId);
+                ps.setString(2, currentStatus);
+                if (ps.executeUpdate() != 1) {
+                    rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback();
+            System.out.println("cancelOrderAndAdjustInventory error: " + e.getMessage());
+            return false;
         } finally {
             restoreAutoCommit();
         }
@@ -244,6 +458,29 @@ public class OrderDAO extends DBContext {
         }
 
         return false;
+    }
+
+    /**
+     * Allows the owning customer to update delivery details only while the
+     * order has not started shipping. The status condition is part of the
+     * UPDATE statement to avoid a race with staff changing the status.
+     */
+    public boolean updateDeliveryInformationForCustomer(String orderId,
+            String customerId, String shippingAddress, String phone) {
+        String query = "UPDATE Orders SET shippingAddress = ?, phone = ? "
+                + "WHERE orderId = ? AND customerId = ? "
+                + "AND orderStatus IN ('Pending', 'Confirmed', 'Processing')";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, shippingAddress);
+            ps.setString(2, phone);
+            ps.setString(3, orderId);
+            ps.setString(4, customerId);
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.out.println("updateDeliveryInformationForCustomer error: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean updateOrderById(String orderId, String orderStatus,
@@ -310,7 +547,7 @@ public class OrderDAO extends DBContext {
             placedAt = placedAtTimestamp.toLocalDateTime();
         }
 
-        return new Order(
+        Order order = new Order(
                 rs.getString("orderId"),
                 rs.getString("customerId"),
                 rs.getString("orderStatus"),
@@ -319,6 +556,117 @@ public class OrderDAO extends DBContext {
                 placedAt,
                 rs.getBigDecimal("totalAmount")
         );
+        order.setOrderPlaced(rs.getBoolean("orderPlaced"));
+        return order;
+    }
+
+
+    private Map<String, Integer> aggregateQuantities(List<OrderItem> orderItems) {
+        Map<String, Integer> quantities = new TreeMap<>();
+        for (OrderItem item : orderItems) {
+            quantities.merge(item.getVariantId(), item.getQuantity(), Integer::sum);
+        }
+        return quantities;
+    }
+
+    private Map<String, Integer> getOrderQuantities(String orderId) throws SQLException {
+        Map<String, Integer> quantities = new TreeMap<>();
+        String sql = "SELECT variantId, SUM(quantity) AS quantity "
+                + "FROM OrderItems WHERE orderId = ? GROUP BY variantId ORDER BY variantId";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    quantities.put(rs.getString("variantId"), rs.getInt("quantity"));
+                }
+            }
+        }
+        return quantities;
+    }
+
+    private boolean commitReservedStock(String orderId) throws SQLException {
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET stockQty = stockQty - ?, reservedQty = reservedQty - ? "
+                + "WHERE variantId = ? AND stockQty >= ? AND reservedQty >= ?";
+        return updateInventoryForOrder(orderId, sql, InventoryOperation.COMMIT_RESERVED);
+    }
+
+    private boolean releaseReservedStock(String orderId) throws SQLException {
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET reservedQty = reservedQty - ? "
+                + "WHERE variantId = ? AND reservedQty >= ?";
+        return updateInventoryForOrder(orderId, sql, InventoryOperation.RELEASE_RESERVED);
+    }
+
+    private boolean restoreCommittedStock(String orderId) throws SQLException {
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET stockQty = stockQty + ? WHERE variantId = ?";
+        return updateInventoryForOrder(orderId, sql, InventoryOperation.RESTORE_COMMITTED);
+    }
+
+    private boolean moveCommittedStockBackToReservation(String orderId) throws SQLException {
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET stockQty = stockQty + ?, reservedQty = reservedQty + ? "
+                + "WHERE variantId = ?";
+        return updateInventoryForOrder(orderId, sql, InventoryOperation.MOVE_BACK_TO_RESERVED);
+    }
+
+    private boolean updateInventoryForOrder(String orderId, String sql,
+            InventoryOperation operation) throws SQLException {
+        Map<String, Integer> quantities = getOrderQuantities(orderId);
+        if (quantities.isEmpty()) {
+            return false;
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (Map.Entry<String, Integer> entry : quantities.entrySet()) {
+                int quantity = entry.getValue();
+                String variantId = entry.getKey();
+
+                switch (operation) {
+                    case COMMIT_RESERVED:
+                        ps.setInt(1, quantity);
+                        ps.setInt(2, quantity);
+                        ps.setString(3, variantId);
+                        ps.setInt(4, quantity);
+                        ps.setInt(5, quantity);
+                        break;
+                    case RELEASE_RESERVED:
+                        ps.setInt(1, quantity);
+                        ps.setString(2, variantId);
+                        ps.setInt(3, quantity);
+                        break;
+                    case RESTORE_COMMITTED:
+                        ps.setInt(1, quantity);
+                        ps.setString(2, variantId);
+                        break;
+                    case MOVE_BACK_TO_RESERVED:
+                        ps.setInt(1, quantity);
+                        ps.setInt(2, quantity);
+                        ps.setString(3, variantId);
+                        break;
+                    default:
+                        return false;
+                }
+
+                if (ps.executeUpdate() != 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private enum InventoryOperation {
+        COMMIT_RESERVED,
+        RELEASE_RESERVED,
+        RESTORE_COMMITTED,
+        MOVE_BACK_TO_RESERVED
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     private void rollback() {

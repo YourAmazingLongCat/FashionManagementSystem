@@ -74,6 +74,78 @@ public class OrderService {
         return result ? orderId : null;
     }
 
+    /**
+     * Creates the Pending order as soon as the customer presses Checkout in
+     * the cart. Delivery details may still be empty at this point and are
+     * completed later from the checkout/order screen.
+     *
+     * Order creation, stock reservation and selected-cart-row removal are
+     * committed by OrderDAO in one transaction.
+     */
+    public String createPendingOrderFromCart(String customerId,
+            String initialShippingAddress, String initialPhone,
+            List<CartItem> cart, String cartId, String[] cartItemIds) {
+        if (isEmpty(customerId) || isEmpty(cartId)
+                || cartItemIds == null || cartItemIds.length == 0) {
+            return null;
+        }
+
+        if (cart == null || cart.isEmpty() || !isValidCart(cart)) {
+            return null;
+        }
+
+        String orderId = generateOrderId();
+        BigDecimal totalAmount = calculateTotalAmount(cart);
+        String shippingAddress = initialShippingAddress == null
+                ? "" : initialShippingAddress.trim();
+        String phone = initialPhone == null ? "" : initialPhone.trim();
+
+        Order order = new Order(
+                orderId,
+                customerId.trim(),
+                OrderStatus.PENDING,
+                shippingAddress,
+                phone,
+                LocalDateTime.now(),
+                totalAmount
+        );
+
+        List<OrderItem> orderItems = convertCartToOrderItems(orderId, cart);
+        boolean created = orderDAO.createOrderFromCart(
+                order, orderItems, cartId.trim(), cartItemIds);
+
+        return created ? orderId : null;
+    }
+
+    public boolean updateDeliveryInformationForCustomer(String customerId,
+            String orderId, String shippingAddress, String phone) {
+        if (isEmpty(customerId) || isEmpty(orderId)
+                || isEmpty(shippingAddress) || isEmpty(phone)) {
+            return false;
+        }
+
+        Order order = orderDAO.getOrderByIdAndCustomerId(
+                orderId.trim(), customerId.trim());
+        if (!canEditDeliveryInformation(order)) {
+            return false;
+        }
+
+        return orderDAO.updateDeliveryInformationForCustomer(
+                orderId.trim(), customerId.trim(),
+                shippingAddress.trim(), phone.trim());
+    }
+
+    public boolean canEditDeliveryInformation(Order order) {
+        if (order == null) {
+            return false;
+        }
+
+        String status = order.getOrderStatus();
+        return OrderStatus.PENDING.equals(status)
+                || OrderStatus.CONFIRMED.equals(status)
+                || OrderStatus.PROCESSING.equals(status);
+    }
+
     public boolean confirmOrder(String orderId) {
         if (isEmpty(orderId)) {
             return false;
@@ -89,7 +161,20 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CONFIRMED);
+        // A cart checkout creates an incomplete Pending order immediately.
+        // Staff must not confirm it until delivery details and payment method
+        // have been completed by the customer.
+        if (isEmpty(order.getShippingAddress()) || isEmpty(order.getPhone())
+                || paymentService.getPaymentByOrderId(orderId.trim()) == null) {
+            return false;
+        }
+
+        if (!paymentService.canForwardOrderStatusByPayment(orderId.trim())) {
+            return false;
+        }
+
+        return orderDAO.changeOrderStatusWithInventory(
+                orderId.trim(), OrderStatus.PENDING, OrderStatus.CONFIRMED);
     }
 
     public boolean cancelOrder(String orderId) {
@@ -99,11 +184,15 @@ public class OrderService {
 
         Order order = orderDAO.getOrderById(orderId.trim());
 
-        if (!canCancelOrder(order)) {
+        // This overload is used by Staff/Admin. A Cart Checkout only creates
+        // an incomplete Pending record; staff cannot change any status,
+        // including Cancelled, until the customer presses Place order.
+        if (!canCancelOrder(order)
+                || paymentService.getPaymentByOrderId(orderId.trim()) == null) {
             return false;
         }
 
-        boolean cancelled = orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
         if (cancelled) {
             paymentService.refundWalletPaymentIfNeeded(orderId.trim());
         }
@@ -121,7 +210,7 @@ public class OrderService {
             return false;
         }
 
-        boolean cancelled = orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
         if (cancelled) {
             paymentService.refundWalletPaymentIfNeeded(orderId.trim());
         }
@@ -145,7 +234,20 @@ public class OrderService {
             return false;
         }
 
+        // A Payment row is the project marker that the customer has pressed
+        // Place order. Before that point staff must not move the status in
+        // either direction.
+        if (paymentService.getPaymentByOrderId(orderId.trim()) == null) {
+            return false;
+        }
+
         String currentStatus = normalizeOrderStatus(order.getOrderStatus());
+
+        if (OrderStatus.PENDING.equals(currentStatus)
+                && OrderStatus.CONFIRMED.equals(normalizedStatus)
+                && (isEmpty(order.getShippingAddress()) || isEmpty(order.getPhone()))) {
+            return false;
+        }
 
         int currentIndex = getOrderStatusIndex(currentStatus);
         int newIndex = getOrderStatusIndex(normalizedStatus);
@@ -178,7 +280,8 @@ public class OrderService {
             return false;
         }
 
-        boolean updated = orderDAO.updateOrderStatus(orderId.trim(), normalizedStatus);
+        boolean updated = orderDAO.changeOrderStatusWithInventory(
+                orderId.trim(), currentStatus, normalizedStatus);
 
         if (updated && OrderStatus.DELIVERED.equals(normalizedStatus)) {
             paymentService.completeCashPaymentForDeliveredOrder(orderId.trim());

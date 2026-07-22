@@ -1,5 +1,10 @@
 package Utils;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Properties;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
@@ -57,4 +62,77 @@ public class EmailUtils {
             return false;
         }
     }
+    public static boolean sendOrderExpiredNotification(String toEmail, String customerName,
+            String orderId, LocalDateTime placedAt, BigDecimal totalAmount) {
+
+        String safeName = customerName == null || customerName.trim().isEmpty()
+                ? "Customer" : customerName.trim();
+        String checkoutTime = placedAt == null ? "Unknown"
+                : placedAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        String amount = totalAmount == null ? "0 VND"
+                : NumberFormat.getNumberInstance(new Locale("vi", "VN"))
+                        .format(totalAmount) + " VND";
+
+        Properties props = createMailProperties();
+        Session session = createMailSession(props);
+
+        try {
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(FROM_EMAIL));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
+            message.setSubject("ORDER EXPIRED - FASHION STORE");
+
+            String htmlContent = "<div style='font-family:Arial,sans-serif;padding:20px;"
+                    + "border:1px solid #ddd;max-width:560px'>"
+                    + "<h2 style='margin-top:0'>FASHION STORE</h2>"
+                    + "<p>Hello <strong>" + escapeHtml(safeName) + "</strong>,</p>"
+                    + "<p>Your order <strong>" + escapeHtml(orderId) + "</strong> "
+                    + "was not confirmed within 2 days and has been automatically removed.</p>"
+                    + "<p><strong>Checkout time:</strong> " + checkoutTime + "<br>"
+                    + "<strong>Order total:</strong> " + amount + "</p>"
+                    + "<p>If the order was paid by Wallet, the amount was returned automatically. "
+                    + "For VNPay, the project has recorded the refund status.</p>"
+                    + "<p>You can return to the store and place a new order at any time.</p>"
+                    + "</div>";
+
+            message.setContent(htmlContent, "text/html; charset=UTF-8");
+            Transport.send(message);
+            return true;
+        } catch (Exception e) {
+            System.out.println("sendOrderExpiredNotification error for order " + orderId);
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static Properties createMailProperties() {
+        Properties props = new Properties();
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        return props;
+    }
+
+    private static Session createMailSession(Properties props) {
+        return Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(FROM_EMAIL, APP_PASSWORD);
+            }
+        });
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
 }

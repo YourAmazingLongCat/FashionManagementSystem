@@ -328,10 +328,16 @@ public class PaymentService {
         Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
 
         /*
-         * No payment record or COD record should not block order forwarding.
-         * Only Wallet and VNPay must be Paid before the order moves forward.
+         * A payment record is required before staff can confirm an order.
+         * The Cart Checkout button creates the Pending order before the
+         * customer selects a payment method, so a null payment means checkout
+         * information is still incomplete. COD does not need to be Paid.
          */
-        if (payment == null || isCashOnDeliveryMethod(payment.getPaymentMethod())) {
+        if (payment == null) {
+            return false;
+        }
+
+        if (isCashOnDeliveryMethod(payment.getPaymentMethod())) {
             return true;
         }
 

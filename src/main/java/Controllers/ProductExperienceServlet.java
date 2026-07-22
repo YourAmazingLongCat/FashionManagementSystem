@@ -192,7 +192,7 @@ public class ProductExperienceServlet extends HttpServlet {
             }
         }
 
-        if (selectedVariant == null || selectedVariant.getStockQty() <= 0) {
+        if (selectedVariant == null || selectedVariant.getAvailableQty() <= 0) {
             response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
             return;
         }
@@ -221,7 +221,7 @@ public class ProductExperienceServlet extends HttpServlet {
             cart.add(existing);
         }
 
-        existing.setQuantity(Math.min(selectedVariant.getStockQty(), existing.getQuantity() + quantity));
+        existing.setQuantity(Math.min(selectedVariant.getAvailableQty(), existing.getQuantity() + quantity));
         request.getSession().setAttribute(SessionCartUtil.CART_SESSION_KEY, cart);
         response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=added-to-cart");
     }
