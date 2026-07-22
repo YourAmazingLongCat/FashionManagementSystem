@@ -22,11 +22,13 @@ public class PaymentService {
     private final WalletDAO walletDAO;
     private final PaymentDAO paymentDAO;
     private final OrderDAO orderDAO;
+    private final BillIntegrationService billIntegrationService;
 
     public PaymentService() {
         walletDAO = new WalletDAO();
         paymentDAO = new PaymentDAO();
         orderDAO = new OrderDAO();
+        billIntegrationService = new BillIntegrationService();
     }
 
     public Wallet getOrCreateWallet(String accountId) {
@@ -164,6 +166,7 @@ public class PaymentService {
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(trimmedOrderId);
         if (existingPayment != null) {
+            syncBillSafely(existingPayment);
             return true;
         }
 
@@ -183,7 +186,12 @@ public class PaymentService {
                 null
         );
 
-        return paymentDAO.createPayment(payment);
+        boolean created = paymentDAO.createPayment(payment);
+        if (created) {
+            syncBillSafely(payment);
+        }
+
+        return created;
     }
 
     public boolean createVNPayPaymentForOrder(String accountId, String orderId) {
@@ -205,6 +213,7 @@ public class PaymentService {
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(trimmedOrderId);
         if (existingPayment != null) {
+            syncBillSafely(existingPayment);
             return true;
         }
 
@@ -224,7 +233,12 @@ public class PaymentService {
                 null
         );
 
-        return paymentDAO.createPayment(payment);
+        boolean created = paymentDAO.createPayment(payment);
+        if (created) {
+            syncBillSafely(payment);
+        }
+
+        return created;
     }
 
     public boolean canPayOrderByWallet(String accountId, String orderId) {
@@ -278,16 +292,23 @@ public class PaymentService {
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
         if (existingPayment != null && PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+            syncBillSafely(existingPayment);
             return true;
         }
 
-        return paymentDAO.payOrderWithWallet(
+        boolean paid = paymentDAO.payOrderWithWallet(
                 generatePaymentId(),
                 accountId.trim(),
                 orderId.trim(),
                 order.getTotalAmount(),
                 "Pay order " + orderId.trim() + " by wallet"
         );
+
+        if (paid) {
+            syncBillSafely(orderId.trim(), PaymentMethod.WALLET, PaymentStatus.PAID, order.getTotalAmount());
+        }
+
+        return paid;
     }
 
     public boolean canMoveToShippingStatus(String orderId, String newStatus) {
@@ -333,10 +354,16 @@ public class PaymentService {
         }
 
         if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            syncBillSafely(payment);
             return true;
         }
 
-        return paymentDAO.completeCashPayment(orderId.trim());
+        boolean completed = paymentDAO.completeCashPayment(orderId.trim());
+        if (completed) {
+            syncBillSafely(orderId.trim(), PaymentMethod.COD, PaymentStatus.PAID, payment.getAmount());
+        }
+
+        return completed;
     }
 
     public boolean refundWalletPaymentIfNeeded(String orderId) {
@@ -344,7 +371,18 @@ public class PaymentService {
             return false;
         }
 
-        return paymentDAO.refundWalletPaymentIfNeeded(orderId.trim(), generatePaymentId());
+        boolean refunded = paymentDAO.refundWalletPaymentIfNeeded(orderId.trim(), generatePaymentId());
+
+        if (refunded) {
+            Payment latestPurchasePayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+            if (latestPurchasePayment != null
+                    && PaymentMethod.WALLET.equals(latestPurchasePayment.getPaymentMethod())
+                    && PaymentStatus.REFUNDED.equals(latestPurchasePayment.getPaymentStatus())) {
+                syncBillSafely(latestPurchasePayment);
+            }
+        }
+
+        return refunded;
     }
 
     public boolean lockWallet(String accountId) {
@@ -363,6 +401,23 @@ public class PaymentService {
         }
 
         return walletDAO.updateWalletStatus(wallet.getWalletId(), WalletStatus.ACTIVE);
+    }
+
+    private void syncBillSafely(Payment payment) {
+        try {
+            billIntegrationService.syncBillFromPayment(payment);
+        } catch (RuntimeException e) {
+            System.out.println("syncBillFromPayment warning: " + e.getMessage());
+        }
+    }
+
+    private void syncBillSafely(String orderId, String paymentMethod,
+            String paymentStatus, BigDecimal totalAmount) {
+        try {
+            billIntegrationService.syncBillForOrder(orderId, paymentMethod, paymentStatus, totalAmount);
+        } catch (RuntimeException e) {
+            System.out.println("syncBillForOrder warning: " + e.getMessage());
+        }
     }
 
     private boolean isWalletOrVNPayMethod(String paymentMethod) {
