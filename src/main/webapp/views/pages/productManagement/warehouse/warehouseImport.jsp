@@ -57,11 +57,11 @@
                     <p class="sidebar-text">Inventory management, stock in/out</p>
                 </div>
                 <div class="sidebar-tabs">
-                    <a class="sidebar-tab ${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/inventory">
+                    <a class="sidebar-tab ${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
                         <span class="icon">&#128203;</span>
                         <span>Inventory</span>
                     </a>
-                    <a class="sidebar-tab ${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/admin/warehouse/import">
+                    <a class="sidebar-tab ${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">
                         <span class="icon">&#10133;</span>
                         <span>Stock In</span>
                     </a>
@@ -106,7 +106,7 @@
                                             <span class="stock-badge ${item[8] <= 10 ? 'stock-low' : 'stock-high'}">${item[8]}</span>
                                         </td>
                                         <td>
-                                            <form method="post" action="${pageContext.request.contextPath}/admin/warehouse/import">
+                                            <form method="post" action="${pageContext.request.contextPath}/staff/warehouse/import">
                                                 <input type="hidden" name="action" value="import">
                                                 <input type="hidden" name="variantId" value="${item[0]}">
                                                 <div style="display: flex; gap: 8px; align-items: center;">

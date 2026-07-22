@@ -40,12 +40,12 @@
                 <form action="${pageContext.request.contextPath}/customer/checkout" method="post">
                     <div class="order-form-group">
                         <label class="order-label" for="shippingAddress">Shipping address</label>
-                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required>${param.shippingAddress}</textarea>
+                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required>${not empty shippingAddress ? shippingAddress : sessionScope.USER.address}</textarea>
                     </div>
 
                     <div class="order-form-group">
                         <label class="order-label" for="phone">Phone number</label>
-                        <input id="phone" name="phone" class="order-input" type="tel" value="${param.phone}" placeholder="Example: 0912345678" required />
+                        <input id="phone" name="phone" class="order-input" type="tel" value="${not empty phone ? phone : sessionScope.USER.phone}" placeholder="Example: 0912345678" required />
                     </div>
 
                     <div class="wallet-deposit-card wallet-checkout-payment-box" style="box-shadow: none; margin: 18px 0;">
@@ -59,9 +59,9 @@
 
                         <label class="wallet-label" for="paymentMethod">Payment Method</label>
                         <select class="wallet-input" id="paymentMethod" name="paymentMethod">
-                            <option value="VNPay">VNPay</option>
-                            <option value="Wallet">Wallet</option>
-                            <option value="COD" selected>Cash On Delivery</option>
+                            <option value="VNPay" ${paymentMethod == 'VNPay' ? 'selected' : ''}>VNPay</option>
+                            <option value="Wallet" ${paymentMethod == 'Wallet' ? 'selected' : ''}>Wallet</option>
+                            <option value="COD" ${paymentMethod == 'COD' || empty paymentMethod ? 'selected' : ''}>Cash On Delivery</option>
                         </select>
 
                         <div class="wallet-info-list">

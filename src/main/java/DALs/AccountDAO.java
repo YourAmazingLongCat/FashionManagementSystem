@@ -27,11 +27,12 @@ public class AccountDAO {
         acc.setRole(rs.getString("role"));
         acc.setStatus(rs.getString("status"));
         acc.setPhone(rs.getString("phone"));
+        acc.setAddress(rs.getString("address"));
         return acc;
     }
 
     public Account checkLogin(String email, String password) {
-        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts WHERE email = ?";
+        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone, address FROM Accounts WHERE email = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -57,7 +58,7 @@ public class AccountDAO {
     }
 
     public Account getAccountById(String accountId) {
-        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone FROM Accounts WHERE accountId = ?";
+        String query = "SELECT accountId, email, passwordHash, fullName, role, status, phone, address FROM Accounts WHERE accountId = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -77,14 +78,15 @@ public class AccountDAO {
     }
 
     public boolean updateProfile(Account account) {
-        String query = "UPDATE Accounts SET fullName = ?, phone = ? WHERE accountId = ?";
+        String query = "UPDATE Accounts SET fullName = ?, phone = ?, address = ? WHERE accountId = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setString(1, account.getFullName());
             ps.setString(2, account.getPhone());
-            ps.setString(3, account.getAccountId());
+            ps.setString(3, account.getAddress());
+            ps.setString(4, account.getAccountId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Lỗi SQL tại AccountDAO.updateProfile: " + e.getMessage());

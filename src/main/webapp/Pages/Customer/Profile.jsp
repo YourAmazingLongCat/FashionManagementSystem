@@ -1,220 +1,192 @@
-<%-- 
-    Document   : Profile
-    Created on : Jul 2, 2026, 10:38:41 AM
-    Author     : ADMIN
---%>
-
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Profile - Fashion X Store</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .profile-container {
-            max-width: 600px;
-            margin: 80px auto;
-            background: #ffffff;
-            padding: 40px;
-            border: 2px solid #000;
-            box-shadow: 8px 8px 0px rgba(0,0,0,1); 
-            border-radius: 0; 
-            text-align: center;
-        }
+<style>
+    body { background: #f3f4f6; }
+    header.header-guest-page {
+        display: none !important;
+    }
+    .account-page {
+        width: min(960px, calc(100% - 40px));
+        margin: 60px auto 40px;
+    }
+    .account-title {
+        text-align: center;
+        font-size: 2.6rem;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 28px;
+    }
+    .account-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        max-width: 700px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 24px;
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+    .account-panel {
+        padding: 32px;
+    }
+    .panel-heading {
+        display: block;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+    .panel-heading h3 {
+        margin: 0 0 6px 0;
+        font-size: 1.05rem;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: #111827;
+    }
+    .panel-heading .status-pill { display: none; }
 
-        .profile-header h2 {
-            margin: 0 0 30px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 800;
-            color: #000;
-        }
+    .actions-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        margin: 12px 0;
+    }
+    .actions-wrapper .action-pill {
+        width: 90%;
+        max-width: 640px;
+        padding: 14px 20px;
+        border-radius: 999px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 700;
+    }
+    .actions-wrapper .action-pill.primary { background: #eef2ff; color: #1d4ed8; }
+    .actions-wrapper .action-pill.secondary { background: #111827; color: #fff; }
+    .history-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 14px;
+    }
+    .history-item {
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        color: #475569;
+        min-height: 68px;
+    }
+    .history-item span {
+        display: block;
+        color: #0f172a;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+    .account-detail {
+        display: grid;
+        gap: 18px;
+    }
+    .detail-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    .detail-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.12em;
+    }
+    .detail-value,
+    .detail-input {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid #d1d5db;
+        background: #f8fafc;
+        color: #111827;
+        padding: 14px 16px;
+        font-size: 0.95rem;
+    }
+    .detail-input { background: #ffffff; }
+    .detail-value { cursor: default; }
+    .account-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .btn-primary,
+    .btn-secondary,
+    .btn-logout {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px 20px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .btn-primary { background: #111827; color: #ffffff; }
+    .btn-primary:hover { background: #1f2937; transform: translateY(-1px); }
+    .btn-secondary { background: #eef2ff; color: #1d4ed8; }
+    .btn-secondary:hover { background: #dbeafe; transform: translateY(-1px); }
+    .btn-logout { background: #ef4444; color: #ffffff; }
+    .btn-logout:hover { background: #dc2626; transform: translateY(-1px); }
+    @media (max-width: 880px) {
+        .account-card { grid-template-columns: 1fr; }
+    }
+</style>
 
-        /* KHU VỰC AVATAR */
-        .avatar-section {
-            position: relative;
-            width: 150px;
-            height: 150px;
-            margin: 0 auto 30px auto;
-        }
-
-        .avatar-img {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #000;
-        }
-
-        .avatar-default {
-            font-size: 150px;
-            color: #ccc;
-        }
-
-        .camera-btn {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            background: #000;
-            color: #fff;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            border: 2px solid #fff;
-            transition: all 0.3s;
-        }
-
-        .camera-btn:hover {
-            background: #ff3333;
-        }
-
-        #avatarInput {
-            display: none;
-        }
-
-        /* KHU VỰC THÔNG TIN */
-        .info-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .info-group label {
-            display: block;
-            font-size: 12px;
-            color: #555;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .info-group input {
-            width: 100%;
-            padding: 12px;
-            background: #fff;
-            border: 2px solid #ccc;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 15px;
-            color: #000;
-            font-weight: 500;
-            box-sizing: border-box;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        .info-group input:focus {
-            border-color: #ff5a00;
-        }
-        
-        .info-group input[readonly] {
-            background: #f0f0f0;
-            color: #888;
-            cursor: not-allowed;
-            border-color: #eee;
-        }
-
-        .btn-save {
-            background-color: #000;
-            color: #fff;
-            padding: 15px 30px;
-            border: 2px solid #000;
-            text-transform: uppercase;
-            font-weight: 800;
-            letter-spacing: 1px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-            transition: all 0.3s;
-        }
-
-        .btn-save:hover {
-            background-color: #ff5a00;
-            border-color: #ff5a00;
-            box-shadow: 4px 4px 0px rgba(0,0,0,1);
-            transform: translateY(-2px);
-        }
-    </style>
-</head>
-<body>
-
-    <jsp:include page="/Pages/Guest/Home/Header/Header.jsp" />
-
-    <div class="profile-container">
-        <div class="profile-header">
-            <h2>MY PROFILE</h2>
-        </div>
-
-        <form action="${pageContext.request.contextPath}/profile/update" method="post" enctype="multipart/form-data">
-            <div class="avatar-section">
-                <c:choose>
-                    <c:when test="${not empty sessionScope.USER.avatar}">
-                        <img id="avatarPreview" src="${pageContext.request.contextPath}/${sessionScope.USER.avatar}" class="avatar-img" alt="Avatar">
-                    </c:when>
-                    <c:otherwise>
-                        <span id="avatarPreview" class="material-icons avatar-default">account_circle</span>
-                    </c:otherwise>
-                </c:choose>
-
-                <label for="avatarInput" class="camera-btn" title="Thay đổi ảnh đại diện">
-                    <span class="material-icons" style="font-size: 20px;">photo_camera</span>
-                </label>
-                <input type="file" id="avatarInput" name="avatarFile" accept="image/png, image/jpeg" onchange="previewImage(event)">
+<div class="account-page">
+    <h1 class="account-title">Account</h1>
+    <div class="account-card">
+        <section class="account-panel">
+            <c:set var="homeUrl" value="${pageContext.request.contextPath}/home" />
+            <c:if test="${sessionScope.USER.role eq 'Staff'}">
+                <c:set var="homeUrl" value="${pageContext.request.contextPath}/staff/products" />
+            </c:if>
+            <c:if test="${sessionScope.USER.role eq 'Admin'}">
+                <c:set var="homeUrl" value="${pageContext.request.contextPath}/Admin" />
+            </c:if>
+            <div class="panel-heading">
+                <h3>Account details</h3>
             </div>
-
-            <div class="info-group">
-                <label>FULL NAME</label>
-                <input type="text" name="fullName" value="${sessionScope.USER.fullName}" required>
+            <div class="actions-wrapper">
+                <a class="action-pill action-pill-primary action-pill primary" href="${pageContext.request.contextPath}/change-password">Change Password</a>
+                <a class="action-pill action-pill-secondary action-pill secondary" href="${homeUrl}">Back to Home</a>
             </div>
-
-            <div class="info-group">
-                <label>EMAIL ADDRESS (READ-ONLY)</label>
-                <input type="email" value="${sessionScope.USER.email}" readonly>
-            </div>
-
-            <div class="info-group">
-                <label>PHONE NUMBER</label>
-                <input type="text" name="phone" value="${sessionScope.USER.phone}">
-            </div>
-
-            <button type="submit" class="btn-save">SAVE PROFILE</button>
-        </form>
+            <form action="${pageContext.request.contextPath}/profile/update" method="post" class="account-detail">
+                <div class="detail-row">
+                    <label class="detail-label">Full name</label>
+                    <input class="detail-input" type="text" name="fullName" value="${sessionScope.USER.fullName}" required>
+                </div>
+                <div class="detail-row">
+                    <label class="detail-label">Email</label>
+                    <div class="detail-value">${sessionScope.USER.email}</div>
+                </div>
+                <div class="detail-row">
+                    <label class="detail-label">Phone</label>
+                    <input class="detail-input" type="text" name="phone" value="${sessionScope.USER.phone}">
+                </div>
+                <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
+                    <div class="detail-row">
+                        <label class="detail-label">Shipping address</label>
+                        <input class="detail-input" type="text" name="address" value="${sessionScope.USER.address}">
+                    </div>
+                </c:if>
+                <div class="account-actions">
+                    <button type="submit" class="btn-primary">Save Change</button>
+                    <a class="btn-logout" href="${pageContext.request.contextPath}/auth/logout">Log Out</a>
+                </div>
+            </form>
+        </section>
     </div>
-
-    <script>
-        function previewImage(event) {
-            var reader = new FileReader();
-            reader.onload = function() {
-                var output = document.getElementById('avatarPreview');
-                if (output.tagName.toLowerCase() === 'span') {
-                    var img = document.createElement('img');
-                    img.id = 'avatarPreview';
-                    img.className = 'avatar-img';
-                    img.src = reader.result;
-                    output.parentNode.replaceChild(img, output);
-                } else {
-                    output.src = reader.result;
-                }
-            };
-            if(event.target.files[0]) {
-                reader.readAsDataURL(event.target.files[0]);
-            }
-        }
-    </script>
-</body>
-</html>
+</div>

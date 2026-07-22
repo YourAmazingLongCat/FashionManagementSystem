@@ -1,7 +1,5 @@
 package DALs;
 
-import Utils.DBContext;
-import Controllers.ProductManagementServlet;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,6 +7,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
+
+import Controllers.ProductManagementServlet;
+import Utils.DBContext;
 
 public class ProductImageDAO extends DBContext {
 
@@ -105,12 +106,24 @@ public class ProductImageDAO extends DBContext {
         try {
             String fileName = getImageFileNameByUrl(imageUrl);
             if (fileName == null) return;
-            // Duong dan Assets/Images/Product trong Tomcat webapps
-            Path uploadDir = Paths.get(System.getProperty("catalina.base"), "webapps", "FashionManagementSystem-1.0-SNAPSHOT", "Assets", "Images", "Product");
-            Path oldFilePath = uploadDir.resolve(fileName).normalize();
+            // Prefer external upload directory used by ProductManagementServlet
+            Path externalDir = ProductManagementServlet.getExternalUploadDirectory();
+            Path oldFilePath = externalDir.resolve(fileName).normalize();
             if (Files.exists(oldFilePath) && Files.isRegularFile(oldFilePath)) {
                 Files.delete(oldFilePath);
-                System.out.println("[ProductImageDAO] Deleted old image file: " + oldFilePath.toAbsolutePath());
+                System.out.println("[ProductImageDAO] Deleted old image file from external dir: " + oldFilePath.toAbsolutePath());
+                return;
+            }
+
+            // Fallback: check deployment webapps path (legacy behavior)
+            try {
+                Path webappsDir = Paths.get(System.getProperty("catalina.base"), "webapps", "FashionManagementSystem-1.0-SNAPSHOT", "Assets", "Images", "Product");
+                Path legacyPath = webappsDir.resolve(fileName).normalize();
+                if (Files.exists(legacyPath) && Files.isRegularFile(legacyPath)) {
+                    Files.delete(legacyPath);
+                    System.out.println("[ProductImageDAO] Deleted old image file from webapps dir: " + legacyPath.toAbsolutePath());
+                }
+            } catch (Exception ignore) {
             }
         } catch (Exception e) {
             System.out.println("[ProductImageDAO] Failed to delete old image: " + e.getMessage());

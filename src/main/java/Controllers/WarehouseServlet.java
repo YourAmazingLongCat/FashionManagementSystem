@@ -1,5 +1,8 @@
 package Controllers;
 
+import java.io.IOException;
+import java.util.List;
+
 import DALs.ProductDAO;
 import DALs.WarehouseDAO;
 import Models.Account;
@@ -9,14 +12,16 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.List;
 
 @WebServlet(name = "WarehouseServlet", urlPatterns = {
     "/admin/warehouse",
     "/admin/warehouse/inventory",
     "/admin/warehouse/import",
-    "/admin/warehouse/export"
+    "/admin/warehouse/export",
+    "/staff/warehouse",
+    "/staff/warehouse/inventory",
+    "/staff/warehouse/import",
+    "/staff/warehouse/export"
 })
 public class WarehouseServlet extends HttpServlet {
 
@@ -46,12 +51,16 @@ public class WarehouseServlet extends HttpServlet {
         switch (path) {
             case "/admin/warehouse":
             case "/admin/warehouse/inventory":
+            case "/staff/warehouse":
+            case "/staff/warehouse/inventory":
                 showInventory(request, response);
                 break;
             case "/admin/warehouse/import":
+            case "/staff/warehouse/import":
                 showImport(request, response);
                 break;
             case "/admin/warehouse/export":
+            case "/staff/warehouse/export":
                 showExport(request, response);
                 break;
             default:
@@ -74,8 +83,11 @@ public class WarehouseServlet extends HttpServlet {
         String message = "";
         String messageType = "success";
 
+        String servletPath = request.getServletPath();
+        String basePath = servletPath.startsWith("/staff/warehouse") ? request.getContextPath() + "/staff/warehouse" : request.getContextPath() + "/admin/warehouse";
+
         if (action == null) {
-            response.sendRedirect(request.getContextPath() + "/admin/warehouse/inventory");
+            response.sendRedirect(basePath + "/inventory");
             return;
         }
 
@@ -88,7 +100,7 @@ public class WarehouseServlet extends HttpServlet {
                     message = "Stock in failed. Please try again.";
                     messageType = "error";
                 }
-                response.sendRedirect(request.getContextPath() + "/admin/warehouse/import?message=" + 
+                response.sendRedirect(basePath + "/import?message=" + 
                         java.net.URLEncoder.encode(message, "UTF-8") + "&messageType=" + messageType);
                 break;
             case "export":
@@ -98,13 +110,13 @@ public class WarehouseServlet extends HttpServlet {
                     message = "Stock out failed. Check available stock.";
                     messageType = "error";
                 }
-                response.sendRedirect(request.getContextPath() + "/admin/warehouse/inventory?message=" + 
+                response.sendRedirect(basePath + "/inventory?message=" + 
                         java.net.URLEncoder.encode(message, "UTF-8") + "&messageType=" + messageType);
                 break;
             default:
                 message = "Invalid action.";
                 messageType = "error";
-                response.sendRedirect(request.getContextPath() + "/admin/warehouse/inventory?message=" + 
+                response.sendRedirect(basePath + "/inventory?message=" + 
                         java.net.URLEncoder.encode(message, "UTF-8") + "&messageType=" + messageType);
         }
     }
