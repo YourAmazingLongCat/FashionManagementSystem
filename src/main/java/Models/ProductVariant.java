@@ -83,12 +83,26 @@ public class ProductVariant {
         this.sku = sku;
     }
 
+    /** Total physical stock, including units currently reserved by Pending orders. */
     public int getStockQty() {
         return stockQty;
     }
 
     public void setStockQty(int stockQty) {
-        this.stockQty = stockQty;
+        this.stockQty = Math.max(0, stockQty);
+    }
+
+    public int getReservedQty() {
+        return reservedQty;
+    }
+
+    public void setReservedQty(int reservedQty) {
+        this.reservedQty = Math.max(0, reservedQty);
+    }
+
+    /** Quantity that another customer may currently buy. */
+    public int getAvailableQty() {
+        return Math.max(0, stockQty - reservedQty);
     }
 
     public int getReservedQty() {

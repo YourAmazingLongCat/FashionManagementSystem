@@ -415,7 +415,7 @@ public class ProductDAO extends DBContext {
 
         String sql = """
             SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, cl.colorName, cl.hexCode,
-                   pv.sku, pv.stockQty, pv.priceOverride
+                   pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride
             FROM ProductVariants pv
             INNER JOIN Sizes s ON pv.sizeId = s.sizeId
             INNER JOIN Colors cl ON pv.colorId = cl.colorId
@@ -462,7 +462,7 @@ public class ProductDAO extends DBContext {
 
         String sql = String.format("""
             SELECT pv.productId, pv.variantId, pv.sizeId, s.sizeName, pv.colorId, cl.colorName, cl.hexCode,
-                   pv.sku, pv.stockQty, pv.priceOverride
+                   pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride
             FROM ProductVariants pv
             INNER JOIN Sizes s ON pv.sizeId = s.sizeId
             INNER JOIN Colors cl ON pv.colorId = cl.colorId
@@ -490,7 +490,7 @@ public class ProductDAO extends DBContext {
                     String colorName = rs.getString("colorName");
 
                     int currentStock = stockMap.getOrDefault(pid, 0);
-                    stockMap.put(pid, currentStock + rs.getInt("stockQty"));
+                    stockMap.put(pid, currentStock + Math.max(0, rs.getInt("stockQty") - rs.getInt("reservedQty")));
 
                     sizeIdMap.computeIfAbsent(pid, k -> new ArrayList<>());
                     if (sizeId != null && !sizeIdMap.get(pid).contains(sizeId)) {
@@ -677,6 +677,7 @@ public class ProductDAO extends DBContext {
         variant.setColorHexCode(rs.getString("hexCode"));
         variant.setSku(rs.getString("sku"));
         variant.setStockQty(rs.getInt("stockQty"));
+        variant.setReservedQty(rs.getInt("reservedQty"));
         variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
         return variant;
     }
@@ -710,6 +711,7 @@ public class ProductDAO extends DBContext {
                     variant.setColorId(rs.getString("colorId"));
                     variant.setSku(rs.getString("sku"));
                     variant.setStockQty(rs.getInt("stockQty"));
+                    variant.setReservedQty(rs.getInt("reservedQty"));
                     variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
                     return variant;
                 }
