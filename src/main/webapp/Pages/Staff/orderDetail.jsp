@@ -95,34 +95,34 @@
                             <div class="wallet-form-head">
                                 <span class="material-symbols-outlined">payments</span>
                                 <div>
-                                    <h2>Payment Information</h2>
-                                    <p>A payment record means the customer has pressed Place order. Staff actions stay locked until that step is completed.</p>
+                                    <h2>Bill Information</h2>
+                                    <p>Bill is automatically created when order is confirmed. Payment status updates when order is delivered.</p>
                                 </div>
                             </div>
 
                             <c:choose>
-                                <c:when test="${not empty payment}">
+                                <c:when test="${not empty bill}">
                                     <div class="wallet-payment-row">
-                                        <span>Payment ID</span>
-                                        <strong>${payment.paymentId}</strong>
+                                        <span>Bill ID</span>
+                                        <strong>${bill.billId}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Method</span>
-                                        <strong>${payment.paymentMethod}</strong>
+                                        <span>Issued Date</span>
+                                        <strong>${bill.issuedDate}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Status</span>
-                                        <strong class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
+                                        <span>Payment Method</span>
+                                        <strong>${bill.paymentMethod}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Amount</span>
-                                        <strong><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</strong>
+                                        <span>Payment Status</span>
+                                        <strong class="payment-status payment-status-${fn:toLowerCase(bill.paymentStatus)}">${bill.paymentStatus}</strong>
                                     </div>
                                     <div class="wallet-payment-row">
-                                        <span>Paid At</span>
-                                        <strong><c:choose><c:when test="${empty payment.paidAt}">-</c:when><c:otherwise>${payment.paidAt}</c:otherwise></c:choose></strong>
+                                        <span>Total Amount</span>
+                                        <strong><fmt:formatNumber value="${bill.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
                                     </div>
-                                    <c:if test="${payment.paymentMethod eq 'COD' and payment.paymentStatus eq 'Pending'}">
+                                    <c:if test="${bill.paymentMethod eq 'COD' and bill.paymentStatus eq 'Pending'}">
                                         <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
                                             COD order: payment will be marked Paid automatically when status becomes Delivered.
                                         </div>
@@ -130,9 +130,9 @@
                                 </c:when>
                                 <c:otherwise>
                                     <div class="wallet-empty wallet-empty-small">
-                                        <span class="material-symbols-outlined">money_off</span>
-                                        <h3>Customer has not placed this order</h3>
-                                        <p>The Cart Checkout button only created a Pending reservation. Wait until the customer completes the shared Order page.</p>
+                                        <span class="material-symbols-outlined">receipt_long</span>
+                                        <h3>No Bill yet</h3>
+                                        <p>Bill will be created when order is confirmed.</p>
                                     </div>
                                 </c:otherwise>
                             </c:choose>
@@ -168,79 +168,63 @@
                             </c:choose>
 
                             <div class="order-admin-actions">
+                                <c:if test="${not empty nextStatus}">
+                                    <form class="order-inline-form" method="post"
+                                          action="${pageContext.request.contextPath}/staff/change-shipping-status"
+                                          onsubmit="return confirmOrderStatusChange('forward', '${order.orderStatus}', '${nextStatus}');">
+                                        <input type="hidden" name="orderId" value="${order.orderId}" />
+                                        <input type="hidden" name="newStatus" value="${nextStatus}" />
+                                        <button class="order-btn order-btn-primary" type="submit">
+                                            <span class="material-symbols-outlined">arrow_forward</span>
+                                            Move forward to ${nextStatus}
+                                        </button>
+                                    </form>
+                                </c:if>
+
                                 <c:choose>
-                                    <c:when test="${empty payment}">
-                                        <div class="order-warning-box">
-                                            The customer has not pressed <strong>Place order</strong> yet.
-                                            Staff cannot confirm, move backward, move forward or cancel this Pending order.
-                                        </div>
+                                    <c:when test="${not empty previousStatus}">
+                                        <form class="order-inline-form" method="post"
+                                              action="${pageContext.request.contextPath}/staff/change-shipping-status"
+                                              onsubmit="return confirmOrderStatusChange('backward', '${order.orderStatus}', '${previousStatus}');">
+                                            <input type="hidden" name="orderId" value="${order.orderId}" />
+                                            <input type="hidden" name="newStatus" value="${previousStatus}" />
+                                            <button class="order-btn" type="submit">
+                                                <span class="material-symbols-outlined">arrow_back</span>
+                                                Move backward to ${previousStatus}
+                                            </button>
+                                        </form>
+                                    </c:when>
+                                    <c:when test="${order.orderStatus ne 'Cancelled'}">
                                         <button class="order-btn" type="button" disabled
                                                 style="opacity: 0.45; cursor: not-allowed;">
-                                            <span class="material-symbols-outlined">lock</span>
-                                            Waiting for customer
+                                            <span class="material-symbols-outlined">block</span>
+                                            No previous status
                                         </button>
                                     </c:when>
-                                    <c:otherwise>
-                                        <c:if test="${not empty nextStatus}">
-                                            <form class="order-inline-form" method="post"
-                                                  action="${pageContext.request.contextPath}/staff/change-shipping-status"
-                                                  onsubmit="return confirmOrderStatusChange('forward', '${order.orderStatus}', '${nextStatus}');">
-                                                <input type="hidden" name="orderId" value="${order.orderId}" />
-                                                <input type="hidden" name="newStatus" value="${nextStatus}" />
-                                                <button class="order-btn order-btn-primary" type="submit">
-                                                    <span class="material-symbols-outlined">arrow_forward</span>
-                                                    Move forward to ${nextStatus}
-                                                </button>
-                                            </form>
-                                        </c:if>
-
-                                        <c:choose>
-                                            <c:when test="${not empty previousStatus}">
-                                                <form class="order-inline-form" method="post"
-                                                      action="${pageContext.request.contextPath}/staff/change-shipping-status"
-                                                      onsubmit="return confirmOrderStatusChange('backward', '${order.orderStatus}', '${previousStatus}');">
-                                                    <input type="hidden" name="orderId" value="${order.orderId}" />
-                                                    <input type="hidden" name="newStatus" value="${previousStatus}" />
-                                                    <button class="order-btn" type="submit">
-                                                        <span class="material-symbols-outlined">arrow_back</span>
-                                                        Move backward to ${previousStatus}
-                                                    </button>
-                                                </form>
-                                            </c:when>
-                                            <c:when test="${order.orderStatus ne 'Cancelled'}">
-                                                <button class="order-btn" type="button" disabled
-                                                        style="opacity: 0.45; cursor: not-allowed;">
-                                                    <span class="material-symbols-outlined">block</span>
-                                                    No previous status
-                                                </button>
-                                            </c:when>
-                                        </c:choose>
-
-                                        <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">
-                                            <form class="order-inline-form" method="post"
-                                                  action="${pageContext.request.contextPath}/staff/cancel-order"
-                                                  onsubmit="return confirm('Cancel this order? Wallet payments will be refunded automatically if applicable.');">
-                                                <input type="hidden" name="orderId" value="${order.orderId}" />
-                                                <button class="order-btn order-btn-danger" type="submit">
-                                                    <span class="material-symbols-outlined">cancel</span>
-                                                    Cancel order
-                                                </button>
-                                            </form>
-                                        </c:if>
-
-                                        <c:if test="${order.orderStatus eq 'Cancelled'}">
-                                            <div class="order-warning-box">
-                                                This order is already Cancelled. Status movement is not available.
-                                            </div>
-                                        </c:if>
-
-                                        <div class="order-warning-box">
-                                            Forward and backward movement must be one status level each time.
-                                            Wallet/VNPay orders must be Paid before moving forward.
-                                            COD orders can move forward while payment is Pending and become Paid automatically when Delivered.
-                                        </div>
-                                    </c:otherwise>
                                 </c:choose>
+
+                                <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">
+                                    <form class="order-inline-form" method="post"
+                                          action="${pageContext.request.contextPath}/staff/cancel-order"
+                                          onsubmit="return confirm('Cancel this order?');">
+                                        <input type="hidden" name="orderId" value="${order.orderId}" />
+                                        <button class="order-btn order-btn-danger" type="submit">
+                                            <span class="material-symbols-outlined">cancel</span>
+                                            Cancel order
+                                        </button>
+                                    </form>
+                                </c:if>
+
+                                <c:if test="${order.orderStatus eq 'Cancelled'}">
+                                    <div class="order-warning-box">
+                                        This order is already Cancelled. Status movement is not available.
+                                    </div>
+                                </c:if>
+
+                                <div class="order-warning-box">
+                                    Forward and backward movement must be one status level each time.
+                                    COD orders will be marked Paid automatically when Delivered.
+                                </div>
                             </div>
                         </div>
 

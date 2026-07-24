@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
 <html>
     <head>
@@ -27,8 +28,11 @@
             .page-header { margin-bottom: 24px; }
             .page-header h2 { margin: 0 0 6px; font-size: 1.8rem; }
             .page-header p { margin: 0; color: #64748b; font-size: 0.95rem; }
-            .table-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; }
-            .table-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; }
+            .alert { padding: 14px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 20px; }
+            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
+            .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
+            .table-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; margin-bottom: 24px; }
+            .table-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
             .table-header h3 { margin: 0; font-size: 1.1rem; }
             .table-wrapper { overflow-x: auto; }
             table { width: 100%; border-collapse: collapse; }
@@ -38,12 +42,14 @@
             .stock-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 60px; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 0.8rem; }
             .stock-high { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
             .stock-low { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
-            .alert { padding: 14px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 20px; }
-            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
-            .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
             .btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
             .btn-primary { background: #16a34a; color: #ffffff; }
             .btn-primary:hover { background: #15803d; }
+            .import-form { display: flex; gap: 8px; align-items: center; }
+            .import-form input[type="number"] { width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0; }
+            .import-form input[type="number"].price-input { width: 100px; }
+            .history-section { margin-top: 24px; }
+            .empty-state { padding: 32px; text-align: center; color: #64748b; }
             @media (max-width: 1024px) { .warehouse-shell { grid-template-columns: 1fr; } }
             @media (max-width: 768px) { .warehouse-shell { width: min(100% - 20px, 100%); margin: 16px auto; } }
         </style>
@@ -74,7 +80,7 @@
             <main class="content-panel">
                 <div class="page-header">
                     <h2>Stock In</h2>
-                    <p>Add stock quantity for each variant</p>
+                    <p>Add stock quantity for each variant with import price tracking</p>
                 </div>
 
                 <c:if test="${not empty message}">
@@ -92,31 +98,83 @@
                                     <th>SKU</th>
                                     <th>Product</th>
                                     <th>Size / Color</th>
-                                    <th>Current Stock</th>
-                                    <th>Add Quantity</th>
+                                    <th class="text-end">Physical</th>
+                                    <th class="text-end">Reserved</th>
+                                    <th class="text-end">Available</th>
+                                    <th>Add Stock</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <c:forEach var="item" items="${inventory}">
+                                    <c:set var="physical" value="${item[8]}" />
+                                    <c:set var="reserved" value="${item[9]}" />
+                                    <c:set var="available" value="${physical - reserved}" />
                                     <tr>
                                         <td><code>${item[7]}</code></td>
                                         <td><strong>${item[2]}</strong></td>
                                         <td>${item[4]} / ${item[6]}</td>
-                                        <td>
-                                            <span class="stock-badge ${item[8] <= 10 ? 'stock-low' : 'stock-high'}">${item[8]}</span>
+                                        <td class="text-end"><strong>${physical}</strong></td>
+                                        <td class="text-end">${reserved}</td>
+                                        <td class="text-end">
+                                            <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
                                         </td>
                                         <td>
-                                            <form method="post" action="${pageContext.request.contextPath}/staff/warehouse/import">
+                                            <form class="import-form" method="post" action="${pageContext.request.contextPath}/staff/warehouse/import">
                                                 <input type="hidden" name="action" value="import">
                                                 <input type="hidden" name="variantId" value="${item[0]}">
-                                                <div style="display: flex; gap: 8px; align-items: center;">
-                                                    <input type="number" name="quantity" min="1" value="10" required style="width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0;">
-                                                    <button type="submit" class="btn btn-primary">+ Add</button>
-                                                </div>
+                                                <input type="number" name="quantity" min="1" placeholder="Qty" required>
+                                                <input type="number" name="importPrice" min="0" step="1000" placeholder="Price" required>
+                                                <button type="submit" class="btn btn-primary">+ Add</button>
                                             </form>
                                         </td>
                                     </tr>
                                 </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Imports History -->
+                <div class="table-panel history-section">
+                    <div class="table-header">
+                        <h3>Recent Imports</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Import ID</th>
+                                    <th>Product</th>
+                                    <th>Size / Color</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Import Price</th>
+                                    <th>Imported By</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:choose>
+                                    <c:when test="${empty recentImports}">
+                                        <tr>
+                                            <td colspan="7">
+                                                <div class="empty-state">No import records yet</div>
+                                            </td>
+                                        </tr>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <c:forEach var="imp" items="${recentImports}">
+                                            <tr>
+                                                <td><code>${imp[0]}</code></td>
+                                                <td><strong>${imp[7]}</strong></td>
+                                                <td>${imp[8]} / ${imp[9]}</td>
+                                                <td class="text-end"><strong>+${imp[2]}</strong></td>
+                                                <td class="text-end"><fmt:formatNumber value="${imp[3]}" pattern="#,##0"/> VND</td>
+                                                <td>${imp[6]}</td>
+                                                <td><fmt:formatDate value="${imp[5]}" pattern="dd/MM/yyyy HH:mm"/></td>
+                                            </tr>
+                                        </c:forEach>
+                                    </c:otherwise>
+                                </c:choose>
                             </tbody>
                         </table>
                     </div>

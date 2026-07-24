@@ -4,15 +4,12 @@
  */
 package Controllers;
 
-/**
- *
- * @author Admin
- */
 import java.io.IOException;
 
 import DALs.AccountDAO;
 import DALs.StatisticDAO;
 import Models.Account;
+import Utils.EmailUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -46,7 +43,7 @@ public class StatisticController extends HttpServlet {
             return;
         }
 
-        loadDashboard(request);
+        loadDashboard(request, null);
         request.getRequestDispatcher("/Pages/Admin/Admin.jsp").forward(request, response);
     }
 
@@ -66,19 +63,67 @@ public class StatisticController extends HttpServlet {
             String newRole = request.getParameter("role");
             if (accountId != null && !accountId.isEmpty() && newRole != null && !newRole.isEmpty()) {
                 accountDao.updateRole(accountId, newRole);
-                request.setAttribute("toastMsg", "Cập nhật quyền thành công!");
+                request.setAttribute("toastMsg", "Role updated successfully!");
             }
         } else if ("updateStatus".equals(action)) {
             String newStatus = request.getParameter("status");
             if (accountId != null && !accountId.isEmpty() && newStatus != null && !newStatus.isEmpty()) {
                 accountDao.updateStatus(accountId, newStatus);
-                request.setAttribute("toastMsg", "Cập nhật trạng thái thành công!");
+                request.setAttribute("toastMsg", "Status updated successfully!");
+            }
+        } else if ("createStaff".equals(action)) {
+            String email = request.getParameter("email");
+            String fullName = request.getParameter("fullName");
+            String phone = request.getParameter("phone");
+
+            if (email != null && !email.isBlank() && fullName != null && !fullName.isBlank()) {
+                if (accountDao.emailExists(email)) {
+                    request.setAttribute("toastErr", "Email already exists!");
+                } else {
+                    // Generate random password
+                    String generatedPassword = generateRandomPassword();
+                    
+                    Account newAcc = new Account();
+                    newAcc.setAccountId(accountDao.generateNextAccountId());
+                    newAcc.setEmail(email);
+                    newAcc.setFullName(fullName);
+                    newAcc.setRole("Staff");
+                    newAcc.setPhone(phone != null && !phone.isBlank() ? phone : null);
+                    newAcc.setStatus("Active");
+                    newAcc.setUsername(email);
+
+                    boolean success = accountDao.createAccount(newAcc, generatedPassword);
+                    if (success) {
+                        // Send email with credentials
+                        boolean emailSent = EmailUtils.sendStaffCredentials(email, fullName, email, generatedPassword);
+                        if (emailSent) {
+                            request.setAttribute("toastMsg", "Staff account created and credentials sent to email!");
+                        } else {
+                            request.setAttribute("toastMsg", "Staff account created, but failed to send email!");
+                        }
+                    } else {
+                        request.setAttribute("toastErr", "Failed to create staff account. Please try again!");
+                    }
+                }
+            } else {
+                request.setAttribute("toastErr", "Please fill in all required fields!");
+            }
+        } else if ("deleteAccount".equals(action)) {
+            if (accountId != null && !accountId.isEmpty()) {
+                HttpSession session = request.getSession(false);
+                Account currentUser = (Account) session.getAttribute("USER");
+                if (currentUser != null && !currentUser.getAccountId().equals(accountId)) {
+                    accountDao.deleteAccount(accountId);
+                    request.setAttribute("toastMsg", "Account deleted successfully!");
+                } else {
+                    request.setAttribute("toastErr", "You cannot delete your own account!");
+                }
             }
         }
 
-        loadDashboard(request); // load các dữ liệu cơ bản
+        String searchKeyword = request.getParameter("searchAccount");
+        loadDashboard(request, searchKeyword);
 
-        // Lấy tham số minOrders từ form (nếu có)
         String quantityParam = request.getParameter("quantity");
         if (quantityParam != null && !quantityParam.isEmpty()) {
             StatisticDAO dao = new StatisticDAO();
@@ -89,39 +134,93 @@ public class StatisticController extends HttpServlet {
         request.getRequestDispatcher("/Pages/Admin/Admin.jsp").forward(request, response);
     }
 
-    private void loadDashboard(HttpServletRequest request) {
+    private void loadDashboard(HttpServletRequest request, String searchKeyword) {
         StatisticDAO dao = new StatisticDAO();
+        AccountDAO accountDao = new AccountDAO();
 
-        // Lấy tham số lọc thời gian từ request
         String fromDate = request.getParameter("fromDate");
         String toDate = request.getParameter("toDate");
 
-        // Nếu không có tham số thì gọi phương thức không tham số (hoặc có tham số null)
-        // Các phương thức mới đều xử lý null an toàn
+        var topCustomers = dao.getTopCustomers();
+        var topSpenders = dao.getTopSpenders(10, fromDate, toDate);
+
+        System.out.println("[DEBUG] loadDashboard: totalCustomers=" + dao.getTotalCustomers());
+        System.out.println("[DEBUG] loadDashboard: totalOrders=" + dao.getTotalOrders());
+        System.out.println("[DEBUG] loadDashboard: topCustomers size=" + topCustomers.size());
+        System.out.println("[DEBUG] loadDashboard: topSpenders size=" + topSpenders.size());
+
         request.setAttribute("totalCustomers", dao.getTotalCustomers());
         request.setAttribute("totalOrders", dao.getTotalOrders());
-
-        // Gọi các phương thức mới hỗ trợ lọc thời gian
         request.setAttribute("revenue", dao.getRevenue(fromDate, toDate));
-        request.setAttribute("profit", dao.getProfit(fromDate, toDate));
         request.setAttribute("costOfGoodsSold", dao.getCostOfGoodsSold(fromDate, toDate));
+        request.setAttribute("profit", dao.getProfit(fromDate, toDate));
+        request.setAttribute("totalImportCost", dao.getTotalImportCost(fromDate, toDate));
         request.setAttribute("totalProductSold", dao.getTotalProductSold(fromDate, toDate));
-
-        // Top 5 sản phẩm bán chạy nhất
         request.setAttribute("topProducts", dao.getTopProducts(5, fromDate, toDate));
-
-        // Chi tiết tất cả sản phẩm đã bán
         request.setAttribute("productSales", dao.getProductSales(fromDate, toDate));
-
-        // Top 10 khách hàng chi tiêu nhiều nhất
-        request.setAttribute("topSpenders", dao.getTopSpenders(10, fromDate, toDate));
-
-        // Danh sách khách hàng theo số đơn hàng (có thể giữ nguyên không lọc thời gian,
-        // hoặc bạn có thể cải tiến thêm phương thức getTopCustomers có tham số ngày nếu cần)
-        // Ở đây tạm thời giữ nguyên getTopCustomers() không lọc thời gian
-        request.setAttribute("customerStatistics", dao.getTopCustomers());
-
-        // Thống kê trạng thái đơn hàng
+        request.setAttribute("topSpenders", topSpenders);
+        request.setAttribute("customerStatistics", topCustomers);
         request.setAttribute("orderStatistics", dao.getOrderStatistics());
+        request.setAttribute("allAccounts", searchKeyword != null && !searchKeyword.trim().isEmpty()
+                ? accountDao.searchAccounts(searchKeyword.trim())
+                : accountDao.getAllAccounts());
+        
+        // Account pagination
+        String pageParam = request.getParameter("page");
+        int page = 1;
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) page = 1;
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+        int pageSize = 10;
+        String searchAcc = request.getParameter("searchAccount");
+        int totalAccounts = accountDao.getTotalAccounts(searchAcc);
+        int totalPages = (int) Math.ceil((double) totalAccounts / pageSize);
+        if (totalPages < 1) totalPages = 1;
+        if (page > totalPages) page = totalPages;
+        
+        request.setAttribute("accountPage", page);
+        request.setAttribute("accountPageSize", pageSize);
+        request.setAttribute("accountTotalPages", totalPages);
+        request.setAttribute("accountTotalRecords", totalAccounts);
+        request.setAttribute("pagedAccounts", accountDao.getAccountsPaged(page, pageSize, searchAcc));
+    }
+
+    private String generateRandomPassword() {
+        // Format: 1 uppercase + 1 lowercase + 1 number + 1 special + 6 random (total 10 chars)
+        String uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        String lowercase = "abcdefghjkmnpqrstuvwxyz";
+        String numbers = "23456789";
+        String special = "!@#$%&*";
+        String allChars = uppercase + lowercase + numbers + special;
+        
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        // Ensure at least one of each required type
+        password.append(uppercase.charAt(random.nextInt(uppercase.length())));
+        password.append(lowercase.charAt(random.nextInt(lowercase.length())));
+        password.append(numbers.charAt(random.nextInt(numbers.length())));
+        password.append(special.charAt(random.nextInt(special.length())));
+
+        // Fill remaining 6 characters
+        for (int i = 4; i < 10; i++) {
+            password.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+
+        // Shuffle the password characters
+        char[] charsArr = password.toString().toCharArray();
+        for (int i = charsArr.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char tmp = charsArr[i];
+            charsArr[i] = charsArr[j];
+            charsArr[j] = tmp;
+        }
+
+        return new String(charsArr);
     }
 }

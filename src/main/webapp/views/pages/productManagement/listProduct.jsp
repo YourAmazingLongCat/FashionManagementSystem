@@ -147,11 +147,19 @@
                 <div class="sidebar-block">
                     <p class="sidebar-label">Management</p>
                     <div class="sidebar-tabs">
-                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=products"><span>Products</span><span class="tab-badge">${totalProducts}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span><span class="tab-badge">${totalCategories}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span><span class="tab-badge">${totalColors}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span><span class="tab-badge">${totalSizes}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory"><span>Warehouse</span><span class="tab-badge">&#128203;</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=products"><span>Products</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory"><span>Warehouse</span></a>
+                    </div>
+                </div>
+                <div class="sidebar-block">
+                    <p class="sidebar-label">Order Management</p>
+                    <div class="sidebar-tabs">
+                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/orders"><span>Orders</span></a>
+                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/BillServlet?action=list"><span>Bills</span></a>
+                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/payments"><span>Payments</span></a>
                     </div>
                 </div>
                 <!-- Profile & Logout removed per UI requirements -->

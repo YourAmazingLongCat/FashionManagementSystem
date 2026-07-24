@@ -9,4 +9,26 @@
             30
         </session-timeout>
     </session-config>
+
+    <!-- VNPay Configuration -->
+    <context-param>
+        <param-name>vnp_TmnCode</param-name>
+        <param-value>V7JZD4T0</param-value>
+    </context-param>
+    <context-param>
+        <param-name>vnp_HashSecret</param-name>
+        <param-value>SWIIZHJJEFZEXWUEAKVERLANXLOPBTCZ</param-value>
+    </context-param>
+    <context-param>
+        <param-name>vnp_Url</param-name>
+        <param-value>https://sandbox.vnpayment.vn/paymentv2/vpcpay.html</param-value>
+    </context-param>
+    <context-param>
+        <param-name>vnp_ReturnUrl</param-name>
+        <param-value>https://unparted-stevie-unpaternally.ngrok-free.dev/FashionManagementSystem-1.0-SNAPSHOT/vnpay/return</param-value>
+    </context-param>
+    <context-param>
+        <param-name>vnp_IpnUrl</param-name>
+        <param-value>https://unparted-stevie-unpaternally.ngrok-free.dev/FashionManagementSystem-1.0-SNAPSHOT/vnpay/ipn</param-value>
+    </context-param>
 </web-app>

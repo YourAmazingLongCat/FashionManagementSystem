@@ -27,7 +27,7 @@
             .page-header { margin-bottom: 24px; }
             .page-header h2 { margin: 0 0 6px; font-size: 1.8rem; }
             .page-header p { margin: 0; color: #64748b; font-size: 0.95rem; }
-            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
             .stat-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 22px; }
             .stat-card.warning { background: #fffbeb; border-color: #fde68a; }
             .stat-card .label { font-size: 0.82rem; color: #64748b; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -59,6 +59,7 @@
             .stock-medium { background: rgba(245, 158, 11, 0.12); color: #b45309; }
             .stock-low { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
             .stock-zero { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
+            .reserved-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 50px; padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 0.8rem; background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
             .empty-state { padding: 48px 24px; text-align: center; color: #64748b; }
             .empty-state h4 { margin: 0 0 8px; font-size: 1.1rem; color: #334155; }
             .empty-state p { margin: 0; }
@@ -104,13 +105,17 @@
                         <p class="value">${totalItems}</p>
                     </div>
                     <div class="stat-card">
-                        <p class="label">Total Stock</p>
+                        <p class="label">Total Physical Stock</p>
                         <p class="value">${totalStock}</p>
+                    </div>
+                    <div class="stat-card">
+                        <p class="label">Total Available</p>
+                        <p class="value">${totalAvailable}</p>
                     </div>
                     <div class="stat-card warning">
                         <p class="label">Low Stock</p>
                         <p class="value">${lowStockCount}</p>
-                        <p class="sub">Stock <= 10</p>
+                        <p class="sub">Available <= 10</p>
                     </div>
                 </div>
 
@@ -142,15 +147,17 @@
                                     <th>SKU</th>
                                     <th>Product</th>
                                     <th>Size / Color</th>
-                                    <th>Stock</th>
-                                    <th>Status</th>
+                                    <th class="text-end">Physical</th>
+                                    <th class="text-end">Reserved</th>
+                                    <th class="text-end">Available</th>
+                                    <th class="text-end">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <c:choose>
                                     <c:when test="${empty inventory}">
                                         <tr>
-                                            <td colspan="5">
+                                            <td colspan="7">
                                                 <div class="empty-state">
                                                     <h4>No data</h4>
                                                     <p>No products in inventory</p>
@@ -160,20 +167,25 @@
                                     </c:when>
                                     <c:otherwise>
                                         <c:forEach var="item" items="${inventory}">
+                                            <c:set var="physical" value="${item[8]}" />
+                                            <c:set var="reserved" value="${item[9]}" />
+                                            <c:set var="available" value="${physical - reserved}" />
                                             <tr>
                                                 <td><code>${item[7]}</code></td>
                                                 <td><strong>${item[2]}</strong></td>
                                                 <td>${item[4]} / ${item[6]}</td>
-                                                <td><strong>${item[8]}</strong></td>
-                                                <td>
+                                                <td class="text-end"><strong>${physical}</strong></td>
+                                                <td class="text-end"><span class="reserved-badge">${reserved}</span></td>
+                                                <td class="text-end"><strong>${available}</strong></td>
+                                                <td class="text-end">
                                                     <c:choose>
-                                                        <c:when test="${item[8] == 0}">
+                                                        <c:when test="${available == 0}">
                                                             <span class="stock-badge stock-zero">Out of Stock</span>
                                                         </c:when>
-                                                        <c:when test="${item[8] <= 5}">
+                                                        <c:when test="${available <= 5}">
                                                             <span class="stock-badge stock-low">Low</span>
                                                         </c:when>
-                                                        <c:when test="${item[8] <= 20}">
+                                                        <c:when test="${available <= 20}">
                                                             <span class="stock-badge stock-medium">Medium</span>
                                                         </c:when>
                                                         <c:otherwise>

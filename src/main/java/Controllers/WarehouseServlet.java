@@ -93,7 +93,7 @@ public class WarehouseServlet extends HttpServlet {
 
         switch (action) {
             case "import":
-                if (handleImport(request)) {
+                if (handleImport(request, user.getAccountId())) {
                     message = "Stock in successful!";
                     messageType = "success";
                 } else {
@@ -134,10 +134,14 @@ public class WarehouseServlet extends HttpServlet {
 
         int totalItems = inventory.size();
         int totalStock = 0;
+        int totalAvailable = 0;
         int lowStockCount = lowStock.size();
 
         for (Object[] row : inventory) {
-            totalStock += (int) row[8];
+            int stockQty = (int) row[8];
+            int reservedQty = (int) row[9];
+            totalStock += stockQty;
+            totalAvailable += (stockQty - reservedQty);
         }
 
         request.setAttribute("inventory", inventory);
@@ -146,6 +150,7 @@ public class WarehouseServlet extends HttpServlet {
         request.setAttribute("allColors", allColors);
         request.setAttribute("totalItems", totalItems);
         request.setAttribute("totalStock", totalStock);
+        request.setAttribute("totalAvailable", totalAvailable);
         request.setAttribute("lowStockCount", lowStockCount);
         request.setAttribute("activeTab", "inventory");
         request.setAttribute("currentKeyword", keyword);
@@ -166,11 +171,13 @@ public class WarehouseServlet extends HttpServlet {
         List<Product> products = productDAO.getAllProducts();
         List<Object[]> allSizes = warehouseDAO.getAllSizes();
         List<Object[]> allColors = warehouseDAO.getAllColors();
+        List<Object[]> recentImports = warehouseDAO.getRecentImports(20);
 
         request.setAttribute("inventory", inventory);
         request.setAttribute("products", products);
         request.setAttribute("allSizes", allSizes);
         request.setAttribute("allColors", allColors);
+        request.setAttribute("recentImports", recentImports);
         request.setAttribute("activeTab", "import");
 
         if (request.getParameter("message") != null) {
@@ -193,9 +200,10 @@ public class WarehouseServlet extends HttpServlet {
         request.getRequestDispatcher("/views/pages/productManagement/warehouse/warehouseExport.jsp").forward(request, response);
     }
 
-    private boolean handleImport(HttpServletRequest request) {
+    private boolean handleImport(HttpServletRequest request, String importedBy) {
         String variantId = trim(request.getParameter("variantId"));
         String quantityStr = trim(request.getParameter("quantity"));
+        String importPriceStr = trim(request.getParameter("importPrice"));
 
         if (variantId == null || variantId.isBlank()) return false;
         if (quantityStr == null || quantityStr.isBlank()) return false;
@@ -209,7 +217,16 @@ public class WarehouseServlet extends HttpServlet {
 
         if (quantity <= 0) return false;
 
-        return warehouseDAO.addStock(variantId, quantity);
+        double importPrice = 0;
+        if (importPriceStr != null && !importPriceStr.isBlank()) {
+            try {
+                importPrice = Double.parseDouble(importPriceStr);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        return warehouseDAO.importStock(variantId, quantity, importPrice, importedBy);
     }
 
     private boolean handleExport(HttpServletRequest request) {
