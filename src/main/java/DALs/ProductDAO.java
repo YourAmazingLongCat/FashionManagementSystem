@@ -349,7 +349,7 @@ public class ProductDAO extends DBContext {
                     List<String> colorNames = new ArrayList<>();
 
                     for (ProductVariant v : variants) {
-                        totalStock += v.getStockQty();
+                        totalStock += v.getAvailableQty();
                         if (v.getSizeId() != null && !sizeIds.contains(v.getSizeId())) {
                             sizeIds.add(v.getSizeId());
                             sizeNames.add(v.getSizeName());

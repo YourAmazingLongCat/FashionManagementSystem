@@ -116,10 +116,9 @@ public class BillDAO {
     }
 
     /**
-     * Đếm tổng số bills thỏa điều kiện filter.
+     * Đếm tổng số bills thỏa điều kiện filter (không filter theo ngày vì Bills không có ngày).
      */
-    public int countBills(String keyword, String paymentStatus, String orderStatus,
-                          java.sql.Date fromDate, java.sql.Date toDate) {
+    public int countBills(String keyword, String paymentStatus, String orderStatus) {
         StringBuilder sql = new StringBuilder(
                 "SELECT COUNT(*) FROM Bills b "
               + "JOIN Orders o ON b.orderId = o.orderId "
@@ -148,16 +147,6 @@ public class BillDAO {
             params.add(orderStatus.trim());
         }
 
-        if (fromDate != null) {
-            sql.append("AND b.issuedDate >= ? ");
-            params.add(new Timestamp(fromDate.getTime()));
-        }
-
-        if (toDate != null) {
-            sql.append("AND b.issuedDate < DATEADD(day, 1, ?) ");
-            params.add(new Timestamp(toDate.getTime()));
-        }
-
         try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {
 
@@ -178,10 +167,9 @@ public class BillDAO {
     }
 
     /**
-     * Tìm kiếm + lọc hóa đơn có phân trang.
+     * Tìm kiếm + lọc hóa đơn có phân trang (không filter theo ngày vì Bills không có ngày).
      */
     public List<Bill> searchBillsPaginated(String keyword, String paymentStatus, String orderStatus,
-                                            java.sql.Date fromDate, java.sql.Date toDate,
                                             int offset, int limit) {
         List<Bill> list = new ArrayList<>();
 
@@ -214,16 +202,6 @@ public class BillDAO {
         if (orderStatus != null && !orderStatus.trim().isEmpty()) {
             sql.append("AND o.orderStatus = ? ");
             params.add(orderStatus.trim());
-        }
-
-        if (fromDate != null) {
-            sql.append("AND b.issuedDate >= ? ");
-            params.add(new Timestamp(fromDate.getTime()));
-        }
-
-        if (toDate != null) {
-            sql.append("AND b.issuedDate < DATEADD(day, 1, ?) ");
-            params.add(new Timestamp(toDate.getTime()));
         }
 
         sql.append("ORDER BY b.issuedDate DESC ");

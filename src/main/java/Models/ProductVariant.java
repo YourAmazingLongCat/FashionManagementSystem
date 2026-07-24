@@ -105,18 +105,6 @@ public class ProductVariant {
         return Math.max(0, stockQty - reservedQty);
     }
 
-    public int getReservedQty() {
-        return reservedQty;
-    }
-
-    public void setReservedQty(int reservedQty) {
-        this.reservedQty = reservedQty;
-    }
-
-    public int getAvailableQty() {
-        return stockQty - reservedQty;
-    }
-
     public BigDecimal getPriceOverride() {
         return priceOverride;
     }

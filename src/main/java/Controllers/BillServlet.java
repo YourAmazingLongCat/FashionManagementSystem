@@ -78,8 +78,8 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * View bill + Search bill + lọc hóa đơn theo ngày (gộp chung 1 action
-     * vì search/filter chỉ là danh sách bill có thêm điều kiện WHERE).
+     * View bill + Search bill + lọc hóa đơn.
+     * NOTE: Bills do not have date field, so no date filtering for bill list.
      */
     private void handleBillList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -87,8 +87,6 @@ public class BillServlet extends HttpServlet {
         String keyword = trimOrNull(request.getParameter("keyword"));
         String paymentStatus = trimOrNull(request.getParameter("paymentStatus"));
         String orderStatus = trimOrNull(request.getParameter("orderStatus"));
-        Date fromDate = parseDate(request.getParameter("fromDate"));
-        Date toDate = parseDate(request.getParameter("toDate"));
 
         int page = 1;
         int pageSize = 10;
@@ -101,13 +99,13 @@ public class BillServlet extends HttpServlet {
             }
         } catch (NumberFormatException ignored) {}
 
-        int totalBills = billDAO.countBills(keyword, paymentStatus, orderStatus, fromDate, toDate);
+        int totalBills = billDAO.countBills(keyword, paymentStatus, orderStatus);
         int totalPages = (int) Math.ceil((double) totalBills / pageSize);
         if (totalPages == 0) totalPages = 1;
         if (page > totalPages) page = totalPages;
 
         int offset = (page - 1) * pageSize;
-        List<Bill> bills = billDAO.searchBillsPaginated(keyword, paymentStatus, orderStatus, fromDate, toDate, offset, pageSize);
+        List<Bill> bills = billDAO.searchBillsPaginated(keyword, paymentStatus, orderStatus, offset, pageSize);
 
         // Tính tổng doanh thu của kết quả đang hiển thị (tiện cho người dùng xem nhanh)
         BigDecimal totalOfList = BigDecimal.ZERO;
@@ -128,8 +126,6 @@ public class BillServlet extends HttpServlet {
         request.setAttribute("keyword", keyword);
         request.setAttribute("paymentStatus", paymentStatus);
         request.setAttribute("orderStatus", orderStatus);
-        request.setAttribute("fromDate", request.getParameter("fromDate"));
-        request.setAttribute("toDate", request.getParameter("toDate"));
 
         request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
     }

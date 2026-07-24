@@ -76,6 +76,22 @@ public class CartItemDAO extends DBContext {
         }
     }
 
+    public int getQuantityInCart(String cartId, String variantId) {
+        String sql = "SELECT quantity FROM CartItems WHERE cartId = ? AND variantId = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, cartId);
+            ps.setString(2, variantId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("quantity");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     // =========================
     // GET CART ITEMS (FIXED)
     // =========================

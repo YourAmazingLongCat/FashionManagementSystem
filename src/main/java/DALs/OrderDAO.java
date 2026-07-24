@@ -53,13 +53,14 @@ public class OrderDAO extends DBContext {
     public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-            "SELECT * FROM Orders o WHERE 1=1 "
+            "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
 
         if (keyword != null && !keyword.trim().isEmpty()) {
-            sql.append("AND (o.orderId LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) ");
+            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) ");
             String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
             params.add(kw);
             params.add(kw);
             params.add(kw);
@@ -196,13 +197,13 @@ public class OrderDAO extends DBContext {
     public List<Order> searchOrdersPaginated(String keyword, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT * FROM Orders "
-                + "WHERE orderId LIKE ? "
-                + "OR customerId LIKE ? "
-                + "OR orderStatus LIKE ? "
-                + "OR phone LIKE ? "
-                + "OR shippingAddress LIKE ? "
-                + "ORDER BY placedAt DESC "
+        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o "
+                + "WHERE o.orderId LIKE ? "
+                + "OR o.customerId LIKE ? "
+                + "OR o.orderStatus LIKE ? "
+                + "OR o.phone LIKE ? "
+                + "OR o.shippingAddress LIKE ? "
+                + "ORDER BY o.placedAt DESC "
                 + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -448,9 +449,20 @@ public class OrderDAO extends DBContext {
             }
 
             if ("Pending".equals(currentStatus) && "Confirmed".equals(newStatus)) {
-                if (!commitReservedStock(orderId)) {
-                    rollback();
-                    return false;
+                // Check if order has reserved stock (created from cart)
+                boolean hasReservedStock = hasReservedStock(orderId);
+                if (hasReservedStock) {
+                    // Order from cart: commit reserved stock
+                    if (!commitReservedStock(orderId)) {
+                        rollback();
+                        return false;
+                    }
+                } else {
+                    // Order not from cart: deduct directly from stockQty
+                    if (!deductStockForConfirm(orderId)) {
+                        rollback();
+                        return false;
+                    }
                 }
             } else if ("Confirmed".equals(currentStatus) && "Pending".equals(newStatus)) {
                 if (!moveCommittedStockBackToReservation(orderId)) {
@@ -755,6 +767,53 @@ public class OrderDAO extends DBContext {
             }
         }
         return true;
+    }
+
+    /**
+     * Checks if the order has reserved stock (was created from cart).
+     */
+    private boolean hasReservedStock(String orderId) throws SQLException {
+        String sql = "SELECT 1 FROM OrderItems oi "
+                + "INNER JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "WHERE oi.orderId = ? AND pv.reservedQty >= oi.quantity";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                // Check if there's at least one item with sufficient reserved stock
+                if (rs.next()) {
+                    return true;
+                }
+            }
+        }
+        // Also check if any item has ANY reservedQty > 0 for this order
+        String checkSql = "SELECT 1 FROM OrderItems oi "
+                + "INNER JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "WHERE oi.orderId = ? AND pv.reservedQty > 0";
+        try (PreparedStatement ps = connection.prepareStatement(checkSql)) {
+            ps.setString(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * Deducts stock directly without using reservedQty.
+     * Used when order was not created from cart (no reserved stock).
+     */
+    private boolean deductStockForConfirm(String orderId) throws SQLException {
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET stockQty = stockQty - oi.quantity "
+                + "FROM ProductVariants pv "
+                + "INNER JOIN OrderItems oi ON pv.variantId = oi.variantId "
+                + "WHERE oi.orderId = ? AND (pv.stockQty - pv.reservedQty) >= oi.quantity";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, orderId);
+            int updated = ps.executeUpdate();
+            System.out.println("deductStockForConfirm: updated " + updated + " rows for orderId=" + orderId);
+            return updated > 0;
+        }
     }
 
     private enum InventoryOperation {

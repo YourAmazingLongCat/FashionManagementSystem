@@ -40,12 +40,12 @@
                 <form action="${pageContext.request.contextPath}/customer/checkout" method="post">
                     <div class="order-form-group">
                         <label class="order-label" for="shippingAddress">Shipping address</label>
-                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required>${not empty shippingAddress ? shippingAddress : sessionScope.USER.address}</textarea>
+                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required><c:out value="${not empty shippingAddress ? shippingAddress : sessionScope.USER.address}" default="" /></textarea>
                     </div>
 
                     <div class="order-form-group">
                         <label class="order-label" for="phone">Phone number</label>
-                        <input id="phone" name="phone" class="order-input" type="tel" value="${not empty phone ? phone : sessionScope.USER.phone}" placeholder="Example: 0912345678" required />
+                        <input id="phone" name="phone" class="order-input" type="tel" value="<c:out value='${not empty phone ? phone : sessionScope.USER.phone}' default='' />" placeholder="Example: 0912345678" required />
                     </div>
 
                     <div class="wallet-deposit-card wallet-checkout-payment-box" style="box-shadow: none; margin: 18px 0;">
