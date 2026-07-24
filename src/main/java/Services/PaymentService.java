@@ -80,6 +80,14 @@ public class PaymentService {
         return paymentDAO.getAllPayments();
     }
 
+    public int countAllPayments() {
+        return paymentDAO.countAllPayments();
+    }
+
+    public List<Payment> getAllPaymentsPaginated(int offset, int limit) {
+        return paymentDAO.getAllPaymentsPaginated(offset, limit);
+    }
+
     public List<Payment> getPendingDeposits() {
         return paymentDAO.getPendingDeposits();
     }
