@@ -79,6 +79,41 @@ public class OrderService {
         return result ? orderId : null;
     }
 
+    public String createPendingOrderFromCart(String customerId,
+            String initialShippingAddress, String initialPhone,
+            List<CartItem> cart, String cartId, String[] cartItemIds) {
+        if (isEmpty(customerId) || isEmpty(cartId)
+                || cartItemIds == null || cartItemIds.length == 0) {
+            return null;
+        }
+
+        if (cart == null || cart.isEmpty() || !isValidCart(cart)) {
+            return null;
+        }
+
+        String orderId = generateOrderId();
+        BigDecimal totalAmount = calculateTotalAmount(cart);
+        String shippingAddress = initialShippingAddress == null
+                ? "" : initialShippingAddress.trim();
+        String phone = initialPhone == null ? "" : initialPhone.trim();
+
+        Order order = new Order(
+                orderId,
+                customerId.trim(),
+                OrderStatus.PENDING,
+                shippingAddress,
+                phone,
+                LocalDateTime.now(),
+                totalAmount
+        );
+
+        List<OrderItem> orderItems = convertCartToOrderItems(orderId, cart);
+        boolean created = orderDAO.createOrderFromCart(
+                order, orderItems, cartId.trim(), cartItemIds);
+
+        return created ? orderId : null;
+    }
+
     public boolean confirmOrder(String orderId) {
         System.out.println("=== confirmOrder START: orderId=" + orderId);
 
