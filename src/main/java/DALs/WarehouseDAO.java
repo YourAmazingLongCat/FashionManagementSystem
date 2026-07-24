@@ -23,7 +23,8 @@ public class WarehouseDAO extends DBContext {
 
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT pv.variantId, pv.productId, p.name AS productName, "
-                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, pv.stockQty "
+                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, "
+                + "pv.stockQty, pv.reservedQty, pv.priceOverride, pv.createdAt "
                 + "FROM ProductVariants pv "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
@@ -53,7 +54,7 @@ public class WarehouseDAO extends DBContext {
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Object[] row = new Object[9];
+                    Object[] row = new Object[12];
                     row[0] = rs.getString("variantId");
                     row[1] = rs.getString("productId");
                     row[2] = rs.getString("productName");
@@ -63,6 +64,9 @@ public class WarehouseDAO extends DBContext {
                     row[6] = rs.getString("colorName");
                     row[7] = rs.getString("sku");
                     row[8] = rs.getInt("stockQty");
+                    row[9] = rs.getInt("reservedQty");
+                    row[10] = rs.getBigDecimal("priceOverride");
+                    row[11] = rs.getTimestamp("createdAt");
                     summary.add(row);
                 }
             }
@@ -116,19 +120,20 @@ public class WarehouseDAO extends DBContext {
         if (connection == null) return items;
 
         String sql = "SELECT pv.variantId, pv.productId, p.name AS productName, "
-                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.stockQty "
+                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
+                + "pv.stockQty, pv.reservedQty, (pv.stockQty - pv.reservedQty) AS availableStock "
                 + "FROM ProductVariants pv "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "WHERE pv.stockQty <= ? "
-                + "ORDER BY pv.stockQty ASC";
+                + "WHERE (pv.stockQty - pv.reservedQty) <= ? "
+                + "ORDER BY (pv.stockQty - pv.reservedQty) ASC";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, threshold);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Object[] row = new Object[8];
+                    Object[] row = new Object[10];
                     row[0] = rs.getString("variantId");
                     row[1] = rs.getString("productId");
                     row[2] = rs.getString("productName");
@@ -137,6 +142,8 @@ public class WarehouseDAO extends DBContext {
                     row[5] = rs.getString("colorId");
                     row[6] = rs.getString("colorName");
                     row[7] = rs.getInt("stockQty");
+                    row[8] = rs.getInt("reservedQty");
+                    row[9] = rs.getInt("availableStock");
                     items.add(row);
                 }
             }
@@ -161,6 +168,65 @@ public class WarehouseDAO extends DBContext {
         return 0;
     }
 
+    public int getAvailableStock(String variantId) {
+        if (connection == null || isBlank(variantId)) return 0;
+        
+        String sql = "SELECT (stockQty - reservedQty) AS availableStock FROM ProductVariants WHERE variantId = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("availableStock");
+            }
+        } catch (SQLException ex) {
+            System.out.println("getAvailableStock error: " + ex.getMessage());
+        }
+        return 0;
+    }
+
+    public boolean importStock(String variantId, int quantity, double importPrice, String importedBy) {
+        if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(importedBy)) return false;
+        
+        String importId = generateId("IMP");
+        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, importedBy, importDate) VALUES (?, ?, ?, ?, ?, GETDATE())";
+        String updateSql = "UPDATE ProductVariants SET stockQty = stockQty + ? WHERE variantId = ?";
+
+        try {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement psInsert = connection.prepareStatement(insertSql)) {
+                psInsert.setString(1, importId);
+                psInsert.setString(2, variantId);
+                psInsert.setInt(3, quantity);
+                psInsert.setDouble(4, importPrice);
+                psInsert.setString(5, importedBy);
+                psInsert.executeUpdate();
+            }
+
+            try (PreparedStatement psUpdate = connection.prepareStatement(updateSql)) {
+                psUpdate.setInt(1, quantity);
+                psUpdate.setString(2, variantId);
+                psUpdate.executeUpdate();
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException ex) {
+            System.out.println("importStock error: " + ex.getMessage());
+            try {
+                connection.rollback();
+            } catch (SQLException e) {
+                System.out.println("Rollback error: " + e.getMessage());
+            }
+            return false;
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                System.out.println("setAutoCommit error: " + ex.getMessage());
+            }
+        }
+    }
+
     public boolean addStock(String variantId, int quantity) {
         if (connection == null || isBlank(variantId) || quantity <= 0) return false;
         
@@ -181,14 +247,12 @@ public class WarehouseDAO extends DBContext {
     public boolean deductStock(String variantId, int quantity) {
         if (connection == null || isBlank(variantId) || quantity <= 0) return false;
         
-        int currentStock = getCurrentStock(variantId);
-        if (currentStock < quantity) return false;
+        int availableStock = getAvailableStock(variantId);
+        if (availableStock < quantity) return false;
         
-        int newStock = currentStock - quantity;
-
-        String sql = "UPDATE ProductVariants SET stockQty = ? WHERE variantId = ?";
+        String sql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, newStock);
+            ps.setInt(1, quantity);
             ps.setString(2, variantId);
             return ps.executeUpdate() > 0;
         } catch (SQLException ex) {
@@ -200,7 +264,7 @@ public class WarehouseDAO extends DBContext {
     public boolean deductStockForOrder(String orderId) {
         if (connection == null || isBlank(orderId)) return false;
 
-        String selectSql = "SELECT od.variantId, od.quantity FROM OrderDetails od WHERE od.orderId = ?";
+        String selectSql = "SELECT variantId, quantity FROM OrderItems WHERE orderId = ?";
         try (PreparedStatement psSelect = connection.prepareStatement(selectSql)) {
             psSelect.setString(1, orderId);
             try (ResultSet rs = psSelect.executeQuery()) {
@@ -215,6 +279,81 @@ public class WarehouseDAO extends DBContext {
             return false;
         }
         return true;
+    }
+
+    public List<Object[]> getImportHistory(String variantId) {
+        List<Object[]> history = new ArrayList<>();
+        if (connection == null) return history;
+
+        String sql = "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
+                + "wi.importedBy, wi.importDate, a.fullName AS importerName "
+                + "FROM WarehouseImports wi "
+                + "JOIN Accounts a ON wi.importedBy = a.accountId "
+                + "WHERE wi.variantId = ? "
+                + "ORDER BY wi.importDate DESC";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] row = new Object[7];
+                    row[0] = rs.getString("importId");
+                    row[1] = rs.getString("variantId");
+                    row[2] = rs.getInt("quantity");
+                    row[3] = rs.getBigDecimal("importPrice");
+                    row[4] = rs.getString("importedBy");
+                    row[5] = rs.getTimestamp("importDate");
+                    row[6] = rs.getString("importerName");
+                    history.add(row);
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("getImportHistory error: " + ex.getMessage());
+        }
+        return history;
+    }
+
+    public List<Object[]> getRecentImports(int limit) {
+        List<Object[]> imports = new ArrayList<>();
+        if (connection == null) return imports;
+
+        String sql = "SELECT TOP (?) wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
+                + "wi.importedBy, wi.importDate, a.fullName AS importerName, "
+                + "p.name AS productName, s.sizeName, c.colorName "
+                + "FROM WarehouseImports wi "
+                + "JOIN Accounts a ON wi.importedBy = a.accountId "
+                + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+                + "JOIN Products p ON pv.productId = p.productId "
+                + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                + "JOIN Colors c ON pv.colorId = c.colorId "
+                + "ORDER BY wi.importDate DESC";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] row = new Object[10];
+                    row[0] = rs.getString("importId");
+                    row[1] = rs.getString("variantId");
+                    row[2] = rs.getInt("quantity");
+                    row[3] = rs.getBigDecimal("importPrice");
+                    row[4] = rs.getString("importedBy");
+                    row[5] = rs.getTimestamp("importDate");
+                    row[6] = rs.getString("importerName");
+                    row[7] = rs.getString("productName");
+                    row[8] = rs.getString("sizeName");
+                    row[9] = rs.getString("colorName");
+                    imports.add(row);
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("getRecentImports error: " + ex.getMessage());
+        }
+        return imports;
+    }
+
+    private String generateId(String prefix) {
+        return prefix + System.currentTimeMillis();
     }
 
     private boolean isBlank(String value) {

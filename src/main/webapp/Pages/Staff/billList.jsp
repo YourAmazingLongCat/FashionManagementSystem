@@ -7,7 +7,6 @@
     <meta charset="UTF-8">
     <title>Bill Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         body { background:#f6f7fb; }
         .card { border:none; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
@@ -50,7 +49,6 @@
                 <button id="btnLoadChart" class="btn btn-sm btn-primary">View</button>
             </div>
         </div>
-        <canvas id="revenueChart" height="90"></canvas>
     </div>
 
     <!-- ===== By Product Stats ===== -->
@@ -73,7 +71,6 @@
                     <button id="btnLoadProduct" class="btn btn-sm btn-primary">View</button>
                 </div>
             </div>
-            <canvas id="productChart" height="90"></canvas>
         </div>
 
         <!-- ===== Summary Cards ===== -->
@@ -269,54 +266,9 @@
 
 <script>
 let revenueChart = null;
-let productChart = null;
+// NOTE: Chart rendering code removed - canvas removed from HTML
 
 const contextPath = '${pageContext.request.contextPath}';
-
-// ================= Revenue Chart =================
-function loadChart() {
-    const periodType = document.getElementById('periodType').value;
-    const fromDate = document.getElementById('chartFromDate').value;
-    const toDate = document.getElementById('chartToDate').value;
-
-    const params = new URLSearchParams({ action: 'chartData', periodType });
-    if (fromDate) params.append('fromDate', fromDate);
-    if (toDate) params.append('toDate', toDate);
-
-    fetch(contextPath + '/BillServlet?' + params.toString())
-        .then(res => res.json())
-        .then(data => {
-            const labels = data.map(d => d.periodLabel);
-            const values = data.map(d => d.totalRevenue);
-
-            const ctx = document.getElementById('revenueChart').getContext('2d');
-            if (revenueChart) revenueChart.destroy();
-
-            revenueChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Revenue',
-                        data: values,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13,110,253,0.15)',
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('vi-VN') } }
-                    }
-                }
-            });
-        })
-        .catch(err => console.error('Chart load error:', err));
-}
 
 // ================= Product Dropdown =================
 function loadProductOptions() {
@@ -338,58 +290,12 @@ function loadProductOptions() {
         .catch(err => console.error('Product list load error:', err));
 }
 
-// ================= Product Chart + Detail Table =================
+// ================= Product Summary (Table Only) =================
 function loadProductData() {
-    const periodType = document.getElementById('productPeriodType').value;
     const productId = document.getElementById('productFilterSelect').value;
     const fromDate = document.getElementById('productFromDate').value;
     const toDate = document.getElementById('productToDate').value;
 
-    // ---- chart ----
-    const chartParams = new URLSearchParams({ action: 'productChartData', periodType });
-    if (productId) chartParams.append('productId', productId);
-    if (fromDate) chartParams.append('fromDate', fromDate);
-    if (toDate) chartParams.append('toDate', toDate);
-
-    fetch(contextPath + '/BillServlet?' + chartParams.toString())
-        .then(res => res.json())
-        .then(data => {
-            const labels = data.map(d => d.periodLabel);
-            const qty = data.map(d => d.quantitySold);
-            const revenue = data.map(d => d.revenuePaid);
-
-            const ctx = document.getElementById('productChart').getContext('2d');
-            if (productChart) productChart.destroy();
-
-            productChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Quantity Sold',
-                        data: qty,
-                        backgroundColor: 'rgba(25,135,84,0.6)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                afterLabel: (item) => 'Revenue: ' + Number(revenue[item.dataIndex]).toLocaleString('vi-VN') + ' VND'
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } }
-                    }
-                }
-            });
-        })
-        .catch(err => console.error('Product chart load error:', err));
-
-    // ---- summary cards + table ----
     const summaryParams = new URLSearchParams({ action: 'productSummary' });
     if (productId) summaryParams.append('productId', productId);
     if (fromDate) summaryParams.append('fromDate', fromDate);
@@ -467,8 +373,8 @@ function switchMode(mode) {
 
 document.getElementById('btnModeRevenue').addEventListener('click', () => switchMode('revenue'));
 document.getElementById('btnModeProduct').addEventListener('click', () => switchMode('product'));
-document.getElementById('btnLoadChart').addEventListener('click', loadChart);
-document.getElementById('periodType').addEventListener('change', loadChart);
+document.getElementById('btnLoadChart').addEventListener('click', () => {});
+document.getElementById('periodType').addEventListener('change', () => {});
 document.getElementById('btnLoadProduct').addEventListener('click', loadProductData);
 
 document.getElementById('billSearchForm').addEventListener('submit', function () {
@@ -491,7 +397,6 @@ document.getElementById('btnModeRevenue').classList.toggle('active', initialMode
 document.getElementById('btnModeProduct').classList.toggle('active', initialMode === 'product');
 document.getElementById('hf_chartMode').value = initialMode;
 
-loadChart();
 loadProductOptions().then(() => {
     if (initialMode === 'product') {
         loadProductData();

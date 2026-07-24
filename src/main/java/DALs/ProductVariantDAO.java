@@ -23,7 +23,8 @@ public class ProductVariantDAO extends DBContext {
             return variants;
         }
 
-        String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, c.hexCode, pv.sku, pv.stockQty, pv.priceOverride "
+        String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
+                + "c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride "
                 + "FROM ProductVariants pv "
                 + "INNER JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "INNER JOIN Colors c ON pv.colorId = c.colorId "
@@ -45,6 +46,7 @@ public class ProductVariantDAO extends DBContext {
                     variant.setColorHexCode(rs.getString("hexCode"));
                     variant.setSku(rs.getString("sku"));
                     variant.setStockQty(rs.getInt("stockQty"));
+                    variant.setReservedQty(rs.getInt("reservedQty"));
                     variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
                     variants.add(variant);
                 }
@@ -64,7 +66,8 @@ public class ProductVariantDAO extends DBContext {
         String getOldSql = "SELECT variantId FROM ProductVariants WHERE productId = ?";
         String deleteCartSql = "DELETE FROM CartItems WHERE variantId = ?";
         String deleteSql = "DELETE FROM ProductVariants WHERE productId = ?";
-        String insertSql = "INSERT INTO ProductVariants (variantId, productId, sizeId, colorId, sku, stockQty, priceOverride, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
+        String insertSql = "INSERT INTO ProductVariants (variantId, productId, sizeId, colorId, sku, stockQty, reservedQty, priceOverride, createdAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
 
         try (Connection conn = new DBContext().getConnection()) {
             conn.setAutoCommit(false);
@@ -105,11 +108,14 @@ public class ProductVariantDAO extends DBContext {
                             psInsert.setString(3, variant.getSizeId());
                             psInsert.setString(4, variant.getColorId());
                             psInsert.setString(5, variant.getSku());
-                            psInsert.setInt(6, Math.max(0, variant.getStockQty()));
+                            // Always set stockQty and reservedQty to 0 on product creation
+                            // Stock management is done through Warehouse module
+                            psInsert.setInt(6, 0); // stockQty
+                            psInsert.setInt(7, 0); // reservedQty
                             if (variant.getPriceOverride() != null) {
-                                psInsert.setBigDecimal(7, variant.getPriceOverride());
+                                psInsert.setBigDecimal(8, variant.getPriceOverride());
                             } else {
-                                psInsert.setNull(7, java.sql.Types.DECIMAL);
+                                psInsert.setNull(8, java.sql.Types.DECIMAL);
                             }
                             psInsert.executeUpdate();
                         }
@@ -133,6 +139,29 @@ public class ProductVariantDAO extends DBContext {
             return 0;
         }
 
+        // Returns available stock (stockQty - reservedQty)
+        String sql = "SELECT ISNULL(SUM(stockQty - reservedQty), 0) AS availableStock FROM ProductVariants WHERE productId = ?";
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("availableStock");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getTotalStockQty error: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
+    public int getTotalPhysicalStock(String productId) {
+        if (productId == null || productId.isBlank()) {
+            return 0;
+        }
+
+        // Returns physical stock (stockQty only)
         String sql = "SELECT ISNULL(SUM(stockQty), 0) AS totalStockQty FROM ProductVariants WHERE productId = ?";
         try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -143,18 +172,98 @@ public class ProductVariantDAO extends DBContext {
                 }
             }
         } catch (SQLException e) {
-            System.out.println("getTotalStockQty error: " + e.getMessage());
+            System.out.println("getTotalPhysicalStock error: " + e.getMessage());
         }
 
         return 0;
     }
 
-    private String generateVariantId() {
-        return "VAR" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+    public int getAvailableStockByVariantId(String variantId) {
+        if (variantId == null || variantId.isBlank()) {
+            return 0;
+        }
+
+        String sql = "SELECT (stockQty - reservedQty) AS availableStock FROM ProductVariants WHERE variantId = ?";
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("availableStock");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getAvailableStockByVariantId error: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
+    public boolean reserveStock(String variantId, int quantity) {
+        if (variantId == null || variantId.isBlank() || quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE ProductVariants SET reservedQty = reservedQty + ? "
+                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, variantId);
+            ps.setInt(3, quantity);
+            int updated = ps.executeUpdate();
+            return updated > 0;
+        } catch (SQLException e) {
+            System.err.println("reserveStock error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public boolean releaseReservedStock(String variantId, int quantity) {
+        if (variantId == null || variantId.isBlank() || quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE ProductVariants SET reservedQty = reservedQty - ? "
+                + "WHERE variantId = ? AND reservedQty >= ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, variantId);
+            ps.setInt(3, quantity);
+            int updated = ps.executeUpdate();
+            return updated > 0;
+        } catch (SQLException e) {
+            System.err.println("releaseReservedStock error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public boolean addStock(String variantId, int quantity) {
+        if (variantId == null || variantId.isBlank() || quantity <= 0) {
+            return false;
+        }
+
+        String sql = "UPDATE ProductVariants SET stockQty = stockQty + ? WHERE variantId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantity);
+            ps.setString(2, variantId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("addStock error: " + e.getMessage());
+        }
+
+        return false;
     }
 
     /**
-     * Deduct stock for a single variant by a given quantity.
+     * Deduct physical stock for a single variant by a given quantity.
      * Used when staff confirms an order to reduce warehouse inventory.
      *
      * @param variantId the variant to deduct from
@@ -166,7 +275,8 @@ public class ProductVariantDAO extends DBContext {
             return false;
         }
 
-        String sql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ? AND stockQty >= ?";
+        // Deduct from physical stock, must have available stock (stockQty - reservedQty >= quantity)
+        String sql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
 
         try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -182,5 +292,49 @@ public class ProductVariantDAO extends DBContext {
         }
 
         return false;
+    }
+
+    public ProductVariant getVariantById(String variantId) {
+        if (variantId == null || variantId.isBlank()) {
+            return null;
+        }
+
+        String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
+                + "c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride, p.name AS productName "
+                + "FROM ProductVariants pv "
+                + "INNER JOIN Sizes s ON pv.sizeId = s.sizeId "
+                + "INNER JOIN Colors c ON pv.colorId = c.colorId "
+                + "INNER JOIN Products p ON pv.productId = p.productId "
+                + "WHERE pv.variantId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    ProductVariant variant = new ProductVariant();
+                    variant.setVariantId(rs.getString("variantId"));
+                    variant.setProductId(rs.getString("productId"));
+                    variant.setSizeId(rs.getString("sizeId"));
+                    variant.setSizeName(rs.getString("sizeName"));
+                    variant.setColorId(rs.getString("colorId"));
+                    variant.setColorName(rs.getString("colorName"));
+                    variant.setColorHexCode(rs.getString("hexCode"));
+                    variant.setSku(rs.getString("sku"));
+                    variant.setStockQty(rs.getInt("stockQty"));
+                    variant.setReservedQty(rs.getInt("reservedQty"));
+                    variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
+                    return variant;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getVariantById error: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    private String generateVariantId() {
+        return "VAR" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
     }
 }

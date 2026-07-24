@@ -366,7 +366,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
                         <span><i class="fas fa-user-shield me-2"></i> Account Management</span>
                         <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createAccountModal">
-                            <i class="fas fa-plus"></i> Create Account
+                            <i class="fas fa-plus"></i> Create Staff
                         </button>
                     </div>
                     <div class="card-body">
@@ -464,16 +464,16 @@
                         <div class="table-responsive">
                             <table class="table table-hover table-striped">
                                 <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Product Code</th>
-                                        <th>Product Name</th>
-                                        <th class="text-end">Unit Cost</th>
-                                        <th class="text-end">Unit Price</th>
-                                        <th class="text-end">Qty Sold</th>
-                                        <th class="text-end">Revenue</th>
-                                        <th class="text-end">Profit</th>
-                                    </tr>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Product Code</th>
+                                            <th>Product Name</th>
+                                            <th class="text-end">Base Price</th>
+                                            <th class="text-end">Avg Sell Price</th>
+                                            <th class="text-end">Qty Sold</th>
+                                            <th class="text-end">Revenue</th>
+                                            <th class="text-end">Profit</th>
+                                        </tr>
                                 </thead>
                                 <tbody>
                                     <c:choose>
@@ -556,22 +556,28 @@
                     <div class="card-header"><i class="fas fa-chart-line me-2"></i> Profit Details</div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4 text-center mb-3">
+                            <div class="col-md-3 text-center mb-3">
                                 <div class="p-3 bg-light rounded-3">
                                     <h6 class="text-muted">Revenue</h6>
-                                    <div class="h3"><fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫</div>
+                                    <div class="h4"><fmt:formatNumber value="${empty revenue ? 0 : revenue}" pattern="#,##0" /> ₫</div>
                                 </div>
                             </div>
-                            <div class="col-md-4 text-center mb-3">
+                            <div class="col-md-3 text-center mb-3">
+                                <div class="p-3 bg-light rounded-3">
+                                    <h6 class="text-muted">Import Cost</h6>
+                                    <div class="h4"><fmt:formatNumber value="${empty totalImportCost ? 0 : totalImportCost}" pattern="#,##0" /> ₫</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center mb-3">
                                 <div class="p-3 bg-light rounded-3">
                                     <h6 class="text-muted">Cost of Goods Sold</h6>
-                                    <div class="h3"><fmt:formatNumber value="${empty costOfGoodsSold ? 0 : costOfGoodsSold}" pattern="#,##0" /> ₫</div>
+                                    <div class="h4"><fmt:formatNumber value="${empty costOfGoodsSold ? 0 : costOfGoodsSold}" pattern="#,##0" /> ₫</div>
                                 </div>
                             </div>
-                            <div class="col-md-4 text-center mb-3">
+                            <div class="col-md-3 text-center mb-3">
                                 <div class="p-3 bg-success bg-opacity-10 rounded-3 border border-success">
                                     <h6 class="text-success">Net Profit</h6>
-                                    <div class="h1 text-success"><fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫</div>
+                                    <div class="h3 text-success"><fmt:formatNumber value="${empty profit ? 0 : profit}" pattern="#,##0" /> ₫</div>
                                 </div>
                             </div>
                         </div>
@@ -586,13 +592,18 @@
                                 <fmt:formatNumber value="${empty costOfGoodsSold ? 0 : costOfGoodsSold}" pattern="#,##0" /> ₫
                             </div>
                         </div>
+                        <!-- Import History Summary -->
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> Import Cost shows total warehouse import value. Cost of Goods Sold is calculated based on average import price of sold items.
+                        </div>
                         <!-- Profit by product -->
                         <div class="mt-4">
                             <h6 class="fw-bold"><i class="fas fa-list-ul me-2"></i>Profit Contribution by Product</h6>
                             <div class="table-responsive">
                                 <table class="table table-hover table-striped table-sm">
                                     <thead>
-                                        <tr><th>Product</th><th class="text-end">Qty Sold</th><th class="text-end">Unit Cost</th><th class="text-end">Unit Price</th><th class="text-end">Profit / Unit</th><th class="text-end">Total Profit</th></tr>
+                                        <tr><th>Product</th><th class="text-end">Qty Sold</th><th class="text-end">Base Price</th><th class="text-end">Avg Sell Price</th><th class="text-end">Profit / Unit</th><th class="text-end">Total Profit</th></tr>
                                     </thead>
                                     <tbody>
                                         <c:choose>
@@ -600,11 +611,11 @@
                                                 <c:forEach var="p" items="${productSales}">
                                                     <tr>
                                                         <td>${p.productName}</td>
-                                                        <td class="text-end">${p.quantitySold}</td>
-                                                        <td class="text-end"><fmt:formatNumber value="${p.unitCost}" pattern="#,##0" /> ₫</td>
-                                                        <td class="text-end"><fmt:formatNumber value="${p.unitPrice}" pattern="#,##0" /> ₫</td>
-                                                        <td class="text-end text-success"><fmt:formatNumber value="${p.unitPrice - p.unitCost}" pattern="#,##0" /> ₫</td>
-                                                        <td class="text-end fw-bold text-success"><fmt:formatNumber value="${(p.unitPrice - p.unitCost) * p.quantitySold}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end">${p.quantitySold}</td>
+                                                    <td class="text-end"><fmt:formatNumber value="${p.unitCost}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end"><fmt:formatNumber value="${p.unitPrice}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end text-success"><fmt:formatNumber value="${p.quantitySold > 0 ? p.profit / p.quantitySold : 0}" pattern="#,##0" /> ₫</td>
+                                                    <td class="text-end fw-bold text-success"><fmt:formatNumber value="${p.profit}" pattern="#,##0" /> ₫</td>
                                                     </tr>
                                                 </c:forEach>
                                             </c:when>
@@ -653,45 +664,41 @@
 <script>setTimeout(() => { document.querySelector('.toast')?.remove(); }, 3000);</script>
 </c:if>
 
-<!-- Create Account Modal -->
+<!-- Create Staff Modal -->
 <div class="modal fade" id="createAccountModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create New Account</h5>
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Staff Account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="${pageContext.request.contextPath}/Admin" method="post">
+            <form action="${pageContext.request.contextPath}/Admin" method="post" id="createStaffForm">
                 <input type="hidden" name="section" value="accounts"/>
-                <input type="hidden" name="action" value="createAccount"/>
+                <input type="hidden" name="action" value="createStaff"/>
+                <input type="hidden" name="role" value="Staff"/>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Email <span class="text-danger">*</span></label>
-                        <input type="email" name="email" class="form-control" required placeholder="example@email.com"/>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password <span class="text-danger">*</span></label>
-                        <input type="password" name="password" class="form-control" required minlength="6" placeholder="Min 6 characters"/>
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> A random password will be generated and sent to the staff's email address.
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                        <input type="text" name="fullName" class="form-control" required placeholder="Nguyen Van A"/>
+                        <input type="text" name="fullName" class="form-control" required placeholder="Nguyen Van A" minlength="2" maxlength="100"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control" required placeholder="staff@example.com"/>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Phone</label>
-                        <input type="text" name="phone" class="form-control" placeholder="0912 345 678"/>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Role <span class="text-danger">*</span></label>
-                        <select name="role" class="form-select" required>
-                            <option value="Staff">Staff</option>
-                            <option value="Admin">Admin</option>
-                        </select>
+                        <input type="tel" name="phone" class="form-control" placeholder="0912 345 678" pattern="[0-9]{9,11}"/>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Create</button>
+                    <button type="submit" class="btn btn-success" id="createStaffBtn">
+                        <i class="fas fa-paper-plane me-1"></i> Create & Send Email
+                    </button>
                 </div>
             </form>
         </div>

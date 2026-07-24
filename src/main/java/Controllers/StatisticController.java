@@ -9,6 +9,7 @@ import java.io.IOException;
 import DALs.AccountDAO;
 import DALs.StatisticDAO;
 import Models.Account;
+import Utils.EmailUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -70,34 +71,38 @@ public class StatisticController extends HttpServlet {
                 accountDao.updateStatus(accountId, newStatus);
                 request.setAttribute("toastMsg", "Status updated successfully!");
             }
-        } else if ("createAccount".equals(action)) {
+        } else if ("createStaff".equals(action)) {
             String email = request.getParameter("email");
-            String password = request.getParameter("password");
             String fullName = request.getParameter("fullName");
-            String role = request.getParameter("role");
             String phone = request.getParameter("phone");
 
-            if (email != null && !email.isEmpty() && password != null && !password.isEmpty()
-                    && fullName != null && !fullName.isEmpty() && role != null && !role.isEmpty()) {
-                String passwordPattern = "^[A-Z](?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{5,}$";
-                if (!password.matches(passwordPattern)) {
-                    request.setAttribute("toastErr", "Password must start with uppercase, contain at least 1 number, 1 special character, and be at least 6 characters!");
-                } else if (accountDao.emailExists(email)) {
+            if (email != null && !email.isBlank() && fullName != null && !fullName.isBlank()) {
+                if (accountDao.emailExists(email)) {
                     request.setAttribute("toastErr", "Email already exists!");
                 } else {
+                    // Generate random password
+                    String generatedPassword = generateRandomPassword();
+                    
                     Account newAcc = new Account();
                     newAcc.setAccountId(accountDao.generateNextAccountId());
                     newAcc.setEmail(email);
                     newAcc.setFullName(fullName);
-                    newAcc.setRole(role);
-                    newAcc.setPhone(phone != null ? phone : "");
+                    newAcc.setRole("Staff");
+                    newAcc.setPhone(phone != null && !phone.isBlank() ? phone : null);
                     newAcc.setStatus("Active");
-                    
-                    boolean success = accountDao.createAccount(newAcc, password);
+                    newAcc.setUsername(email);
+
+                    boolean success = accountDao.createAccount(newAcc, generatedPassword);
                     if (success) {
-                        request.setAttribute("toastMsg", "Account created successfully!");
+                        // Send email with credentials
+                        boolean emailSent = EmailUtils.sendStaffCredentials(email, fullName, email, generatedPassword);
+                        if (emailSent) {
+                            request.setAttribute("toastMsg", "Staff account created and credentials sent to email!");
+                        } else {
+                            request.setAttribute("toastMsg", "Staff account created, but failed to send email!");
+                        }
                     } else {
-                        request.setAttribute("toastErr", "Failed to create account. Please try again!");
+                        request.setAttribute("toastErr", "Failed to create staff account. Please try again!");
                     }
                 }
             } else {
@@ -147,8 +152,9 @@ public class StatisticController extends HttpServlet {
         request.setAttribute("totalCustomers", dao.getTotalCustomers());
         request.setAttribute("totalOrders", dao.getTotalOrders());
         request.setAttribute("revenue", dao.getRevenue(fromDate, toDate));
-        request.setAttribute("profit", dao.getProfit(fromDate, toDate));
         request.setAttribute("costOfGoodsSold", dao.getCostOfGoodsSold(fromDate, toDate));
+        request.setAttribute("profit", dao.getProfit(fromDate, toDate));
+        request.setAttribute("totalImportCost", dao.getTotalImportCost(fromDate, toDate));
         request.setAttribute("totalProductSold", dao.getTotalProductSold(fromDate, toDate));
         request.setAttribute("topProducts", dao.getTopProducts(5, fromDate, toDate));
         request.setAttribute("productSales", dao.getProductSales(fromDate, toDate));
@@ -182,5 +188,39 @@ public class StatisticController extends HttpServlet {
         request.setAttribute("accountTotalPages", totalPages);
         request.setAttribute("accountTotalRecords", totalAccounts);
         request.setAttribute("pagedAccounts", accountDao.getAccountsPaged(page, pageSize, searchAcc));
+    }
+
+    private String generateRandomPassword() {
+        // Format: 1 uppercase + 1 lowercase + 1 number + 1 special + 6 random (total 10 chars)
+        String uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        String lowercase = "abcdefghjkmnpqrstuvwxyz";
+        String numbers = "23456789";
+        String special = "!@#$%&*";
+        String allChars = uppercase + lowercase + numbers + special;
+        
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        // Ensure at least one of each required type
+        password.append(uppercase.charAt(random.nextInt(uppercase.length())));
+        password.append(lowercase.charAt(random.nextInt(lowercase.length())));
+        password.append(numbers.charAt(random.nextInt(numbers.length())));
+        password.append(special.charAt(random.nextInt(special.length())));
+
+        // Fill remaining 6 characters
+        for (int i = 4; i < 10; i++) {
+            password.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+
+        // Shuffle the password characters
+        char[] charsArr = password.toString().toCharArray();
+        for (int i = charsArr.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char tmp = charsArr[i];
+            charsArr[i] = charsArr[j];
+            charsArr[j] = tmp;
+        }
+
+        return new String(charsArr);
     }
 }

@@ -13,6 +13,7 @@ public class ProductVariant {
     private String colorHexCode;
     private String sku;
     private int stockQty;
+    private int reservedQty;
     private BigDecimal priceOverride;
 
     public ProductVariant() {
@@ -88,6 +89,18 @@ public class ProductVariant {
 
     public void setStockQty(int stockQty) {
         this.stockQty = stockQty;
+    }
+
+    public int getReservedQty() {
+        return reservedQty;
+    }
+
+    public void setReservedQty(int reservedQty) {
+        this.reservedQty = reservedQty;
+    }
+
+    public int getAvailableQty() {
+        return stockQty - reservedQty;
     }
 
     public BigDecimal getPriceOverride() {

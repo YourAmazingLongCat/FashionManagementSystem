@@ -38,6 +38,7 @@
             .stock-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 60px; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 0.8rem; }
             .stock-high { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
             .stock-low { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+            .reserved-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 50px; padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 0.8rem; background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
             .alert { padding: 14px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 20px; }
             .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
             .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
@@ -81,7 +82,7 @@
             <main class="content-panel">
                 <div class="page-header">
                     <h2>Stock Out</h2>
-                    <p>Reduce stock quantity for each variant</p>
+                    <p>Reduce stock quantity for each variant (based on available stock)</p>
                 </div>
 
                 <c:if test="${not empty message}">
@@ -89,7 +90,7 @@
                 </c:if>
 
                 <div class="warning-box">
-                    <p>&#9888; Stock out only works when stock >= quantity. Completed orders auto deduct stock.</p>
+                    <p>&#9888; Stock out only works when available >= quantity. Completed orders auto deduct stock.</p>
                 </div>
 
                 <div class="table-panel">
@@ -103,26 +104,33 @@
                                     <th>SKU</th>
                                     <th>Product</th>
                                     <th>Size / Color</th>
-                                    <th>Current Stock</th>
+                                    <th class="text-end">Physical</th>
+                                    <th class="text-end">Reserved</th>
+                                    <th class="text-end">Available</th>
                                     <th>Reduce Quantity</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <c:forEach var="item" items="${inventory}">
+                                    <c:set var="physical" value="${item[8]}" />
+                                    <c:set var="reserved" value="${item[9]}" />
+                                    <c:set var="available" value="${physical - reserved}" />
                                     <tr>
                                         <td><code>${item[7]}</code></td>
                                         <td><strong>${item[2]}</strong></td>
                                         <td>${item[4]} / ${item[6]}</td>
-                                        <td>
-                                            <span class="stock-badge ${item[8] <= 10 ? 'stock-low' : 'stock-high'}">${item[8]}</span>
+                                        <td class="text-end">${physical}</td>
+                                        <td class="text-end"><span class="reserved-badge">${reserved}</span></td>
+                                        <td class="text-end">
+                                            <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
                                         </td>
                                         <td>
                                             <form method="post" action="${pageContext.request.contextPath}/staff/warehouse/export">
                                                 <input type="hidden" name="action" value="export">
                                                 <input type="hidden" name="variantId" value="${item[0]}">
                                                 <div style="display: flex; gap: 8px; align-items: center;">
-                                                    <input type="number" name="quantity" min="1" max="${item[8]}" value="1" required style="width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0;">
-                                                    <button type="submit" class="btn btn-danger" ${item[8] <= 0 ? 'disabled' : ''}>- Reduce</button>
+                                                    <input type="number" name="quantity" min="1" max="${available}" value="1" required style="width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0;">
+                                                    <button type="submit" class="btn btn-danger" ${available <= 0 ? 'disabled' : ''}>- Reduce</button>
                                                 </div>
                                             </form>
                                         </td>
