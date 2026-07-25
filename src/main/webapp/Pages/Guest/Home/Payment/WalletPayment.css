@@ -439,3 +439,525 @@
         align-items: flex-start;
     }
 }
+
+/* ======================================================================
+   CUSTOMER WALLET UI - SIMPLE CART-ALIGNED DESIGN
+   Scoped to .customer-wallet-page so Staff payment screens are unchanged.
+   ====================================================================== */
+.customer-wallet-page {
+    --cw-bg: #f5f5f5;
+    --cw-card: #ffffff;
+    --cw-text: #222222;
+    --cw-muted: #6b7280;
+    --cw-border: #e5e7eb;
+    --cw-accent: #ee4d2d;
+    --cw-accent-dark: #d73211;
+    --cw-soft-accent: #fff3ef;
+    width: 100%;
+    min-height: 70vh;
+    background: var(--cw-bg);
+    color: var(--cw-text);
+    font-family: 'Inter', sans-serif;
+}
+
+.customer-wallet-page *,
+.customer-wallet-page *::before,
+.customer-wallet-page *::after {
+    box-sizing: border-box;
+}
+
+.cw-container {
+    width: min(1160px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 34px 0 72px;
+}
+
+.cw-page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.cw-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 18px;
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cw-back-link:hover {
+    color: var(--cw-accent);
+}
+
+.cw-back-link .material-symbols-outlined {
+    font-size: 19px;
+}
+
+.cw-eyebrow {
+    margin: 0 0 5px;
+    color: var(--cw-accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.cw-page-title {
+    margin: 0;
+    color: #1f2937;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 750;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+}
+
+.cw-page-subtitle {
+    max-width: 640px;
+    margin: 10px 0 0;
+    color: var(--cw-muted);
+    font-size: 0.95rem;
+    line-height: 1.65;
+}
+
+.cw-primary-btn,
+.cw-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 43px;
+    border-radius: 8px;
+    padding: 10px 17px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.cw-primary-btn {
+    border: 1px solid var(--cw-accent);
+    background: var(--cw-accent);
+    color: #ffffff;
+}
+
+.cw-primary-btn:hover {
+    border-color: var(--cw-accent-dark);
+    background: var(--cw-accent-dark);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.cw-secondary-btn {
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #374151;
+}
+
+.cw-secondary-btn:hover {
+    border-color: var(--cw-accent);
+    color: var(--cw-accent);
+    transform: translateY(-1px);
+}
+
+.cw-primary-btn .material-symbols-outlined,
+.cw-secondary-btn .material-symbols-outlined {
+    font-size: 19px;
+}
+
+.cw-full-btn {
+    width: 100%;
+}
+
+.cw-top-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+    gap: 20px;
+    align-items: stretch;
+    margin-bottom: 20px;
+}
+
+.cw-card,
+.cw-balance-card {
+    border: 1px solid var(--cw-border);
+    border-radius: 10px;
+    background: var(--cw-card);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.cw-balance-card {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ee4d2d 0%, #ff734f 100%);
+    color: #ffffff;
+    padding: 26px;
+    position: relative;
+}
+
+.cw-balance-card::after {
+    content: '';
+    position: absolute;
+    width: 210px;
+    height: 210px;
+    right: -70px;
+    bottom: -90px;
+    border: 32px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.cw-balance-head,
+.cw-balance-footer {
+    position: relative;
+    z-index: 1;
+}
+
+.cw-balance-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.cw-balance-head > div > span {
+    display: block;
+    margin-bottom: 10px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.84rem;
+    font-weight: 650;
+}
+
+.cw-balance-head strong {
+    display: block;
+    font-size: clamp(1.8rem, 4vw, 2.65rem);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.1;
+}
+
+.cw-balance-head > .material-symbols-outlined {
+    display: grid;
+    width: 50px;
+    height: 50px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 28px;
+}
+
+.cw-balance-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.78rem;
+}
+
+.cw-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.cw-status-locked {
+    background: rgba(127, 29, 29, 0.32);
+}
+
+.cw-card {
+    overflow: hidden;
+}
+
+.cw-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    min-height: 76px;
+    border-bottom: 1px solid var(--cw-border);
+    padding: 18px 22px;
+}
+
+.cw-card-head h2 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.05rem;
+    font-weight: 750;
+}
+
+.cw-card-head p {
+    margin: 5px 0 0;
+    color: var(--cw-muted);
+    font-size: 0.84rem;
+}
+
+.cw-card-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--cw-soft-accent);
+    color: var(--cw-accent);
+}
+
+.cw-form {
+    padding: 20px 22px 22px;
+}
+
+.cw-form-group {
+    margin-bottom: 16px;
+}
+
+.cw-form-group label {
+    display: block;
+    margin-bottom: 7px;
+    color: #374151;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.cw-form-group input,
+.cw-form-group select {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    outline: 0;
+    background: #ffffff;
+    color: #1f2937;
+    padding: 11px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cw-form-group input:focus,
+.cw-form-group select:focus {
+    border-color: var(--cw-accent);
+    box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.12);
+}
+
+.cw-amount-field {
+    display: flex;
+    align-items: center;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.cw-amount-field:focus-within {
+    border-color: var(--cw-accent);
+    box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.12);
+}
+
+.cw-amount-field input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    box-shadow: none !important;
+}
+
+.cw-amount-field span {
+    padding: 0 13px;
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.cw-history-card {
+    margin-top: 0;
+}
+
+.cw-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.cw-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+}
+
+.cw-table th,
+.cw-table td {
+    padding: 16px 18px;
+    border-bottom: 1px solid #edf0f3;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.87rem;
+}
+
+.cw-table th {
+    background: #fafafa;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 750;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.cw-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.cw-table tbody tr:hover td {
+    background: #fffdfa;
+}
+
+.cw-transaction-id {
+    color: #1f2937;
+    white-space: nowrap;
+}
+
+.cw-money {
+    color: var(--cw-accent);
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.cw-order-link {
+    color: var(--cw-accent);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.cw-order-link:hover {
+    text-decoration: underline;
+}
+
+.cw-payment-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.cw-payment-pending {
+    background: #fff7ed;
+    color: #b45309;
+}
+
+.cw-payment-paid {
+    background: #ecfdf3;
+    color: #15803d;
+}
+
+.cw-payment-failed,
+.cw-payment-cancelled {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.cw-payment-refunded {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.cw-empty {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+}
+
+.cw-empty > .material-symbols-outlined {
+    display: grid;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--cw-soft-accent);
+    color: var(--cw-accent);
+    font-size: 32px;
+}
+
+.cw-empty h3 {
+    margin: 17px 0 7px;
+    color: #1f2937;
+    font-size: 1.1rem;
+    font-weight: 750;
+}
+
+.cw-empty p {
+    margin: 0;
+    color: var(--cw-muted);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+    .cw-top-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cw-balance-card {
+        min-height: 220px;
+    }
+}
+
+@media (max-width: 700px) {
+    .cw-container {
+        width: min(100% - 22px, 1160px);
+        padding-top: 24px;
+    }
+
+    .cw-page-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .cw-page-head > .cw-secondary-btn {
+        width: 100%;
+    }
+
+    .cw-balance-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 520px) {
+    .cw-page-title {
+        font-size: 2rem;
+    }
+
+    .cw-balance-card {
+        padding: 20px;
+    }
+
+    .cw-balance-head strong {
+        font-size: 1.65rem;
+    }
+
+    .cw-card-head,
+    .cw-form {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}

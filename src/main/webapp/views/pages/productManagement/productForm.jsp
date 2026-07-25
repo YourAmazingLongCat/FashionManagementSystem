@@ -42,7 +42,7 @@
             .variant-row { border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; background: #ffffff; display: grid; gap: 16px; }
             .variant-row-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
             .variant-row-title { font-weight: 800; color: #334155; }
-            .variant-row-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; align-items: end; }
+            .variant-row-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: end; }
             .variant-remove-btn, .variant-add-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
             .variant-add-btn { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 12px 24px rgba(124, 58, 237, 0.2); }
             .variant-remove-btn { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
@@ -55,8 +55,7 @@
             .ghost-btn { background: #ffffff; color: #334155; border: 1px solid #dbe3f0; }
             .primary-btn:hover, .ghost-btn:hover { transform: translateY(-2px); }
             @media (max-width: 1100px) { .variant-row-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-            @media (max-width: 900px) { .form-grid { grid-template-columns: 1fr; } }
-            @media (max-width: 768px) { .form-shell { width: min(100% - 20px, 100%); margin: 10px auto; } .form-actions, .section-heading, .variant-row-header { flex-direction: column; align-items: stretch; } .variant-row-grid { grid-template-columns: 1fr; } .form-body, .form-section, .form-hero { padding: 20px; } }
+            @media (max-width: 768px) { .form-shell { width: min(100% - 20px, 100%); margin: 10px auto; } .form-actions, .section-heading, .variant-row-header { flex-direction: column; align-items: stretch; } .variant-row-grid { grid-template-columns: 1fr 1fr; } .form-body, .form-section, .form-hero { padding: 20px; } }
         </style>
     </head>
     <body>
@@ -127,14 +126,14 @@
                             <div class="section-heading">
                                 <div>
                                     <h3>Product variants</h3>
-                                    <p>Add each size/color option as a separate row.</p>
+                                    <p>Add each size/color option as a separate row. Stock quantity is managed through the Warehouse module.</p>
                                 </div>
                                 <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
                             </div>
 
                             <div id="variantsList" class="variants-list"></div>
                             <div id="variantsEmpty" class="variant-empty">No variants added yet. Click <strong>Add variant</strong> to create one.</div>
-                            <p class="inline-note">Each row represents one exact product option, for example: Size M + Black.</p>
+                            <p class="inline-note">Each row represents one exact product option (Size + Color). Stock quantity will be managed through Warehouse after product creation.</p>
                         </section>
 
                         <section class="form-section">
@@ -191,7 +190,6 @@
                                      data-size-id="${variant.sizeId}"
                                      data-color-id="${variant.colorId}"
                                      data-sku="${variant.sku}"
-                                     data-stock-qty="${variant.stockQty}"
                                      data-price-override="${variant.priceOverride == null ? '' : variant.priceOverride.setScale(0, 0)}"></div>
                             </c:forEach>
                         </div>
@@ -329,7 +327,6 @@
                     sizeId: node.dataset.sizeId || '',
                     colorId: node.dataset.colorId || '',
                     sku: node.dataset.sku || '',
-                    stockQty: node.dataset.stockQty || '0',
                     priceOverride: node.dataset.priceOverride || ''
                 }));
                 let sizeOptions = [];
@@ -404,8 +401,8 @@
                     grid.appendChild(createField('Size', sizeSelect));
                     grid.appendChild(createField('Color', createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --')));
                     grid.appendChild(createField('SKU', createInput({ name: 'variantSku', value: variant.sku || '', placeholder: 'Required SKU' })));
-                    grid.appendChild(createField('Stock', createInput({ type: 'number', name: 'variantStockQty', value: variant.stockQty || '0', placeholder: '0', min: '0' })));
                     grid.appendChild(createField('Price override', createInput({ name: 'variantPriceOverride', value: variant.priceOverride || '', placeholder: 'Optional', inputMode: 'numeric' })));
+                    // Stock is managed through Warehouse module, default to 0 on create
 
                     const enabledInput = document.createElement('input');
                     enabledInput.type = 'hidden';

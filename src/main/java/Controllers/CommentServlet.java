@@ -49,6 +49,10 @@ public class CommentServlet extends HttpServlet {
                 handleAdd(req, resp, account, redirectUrl);
                 break;
 
+            case "addFromOrder":
+                handleAddFromOrder(req, resp, account);
+                break;
+
             case "update":
                 handleUpdate(req, resp, account, redirectUrl);
                 break;
@@ -103,8 +107,57 @@ public class CommentServlet extends HttpServlet {
         resp.sendRedirect(redirectUrl + (success ? "&msg=added" : "&msg=error&detail=db_error"));
     }
 
+    private void handleAddFromOrder(HttpServletRequest req, HttpServletResponse resp, Account account) throws IOException {
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+
+        String orderItemId = req.getParameter("orderItemId");
+        String ratingStr = req.getParameter("rating");
+        String content = req.getParameter("content");
+
+        if (orderItemId == null || ratingStr == null) {
+            resp.getWriter().write("{\"success\":false,\"message\":\"Missing required fields\"}");
+            return;
+        }
+
+        // Check eligibility
+        CommentDAO.EligibilityStatus eligibility = commentDAO.checkOrderItemEligibility(orderItemId, account.getAccountId());
+        if (!eligibility.isEligible()) {
+            resp.getWriter().write("{\"success\":false,\"message\":\"" + (eligibility.getReason() != null ? eligibility.getReason() : "Cannot review this product") + "\"}");
+            return;
+        }
+
+        int rating;
+        try {
+            rating = Integer.parseInt(ratingStr);
+            if (rating < 1 || rating > 5) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            resp.getWriter().write("{\"success\":false,\"message\":\"Invalid rating\"}");
+            return;
+        }
+
+        Comment comment = new Comment();
+        comment.setOrderItemId(orderItemId);
+        comment.setAccountId(account.getAccountId());
+        comment.setRating(rating);
+        comment.setContent(content != null ? content.trim() : "");
+
+        boolean success = commentDAO.addComment(comment);
+        if (success) {
+            resp.getWriter().write("{\"success\":true,\"message\":\"Review submitted successfully!\"}");
+        } else {
+            resp.getWriter().write("{\"success\":false,\"message\":\"Failed to submit review\"}");
+        }
+    }
+
     private void handleUpdate(HttpServletRequest req, HttpServletResponse resp,
                               Account account, String redirectUrl) throws IOException {
+        // Customer reviews from order detail CANNOT be edited
+        if (isCustomer(account)) {
+            resp.sendRedirect(redirectUrl + "&msg=error&detail=cannot_edit");
+            return;
+        }
+
         String commentId = req.getParameter("commentId");
         String ratingStr = req.getParameter("rating");
         String content = req.getParameter("content");
@@ -136,6 +189,12 @@ public class CommentServlet extends HttpServlet {
 
     private void handleDelete(HttpServletRequest req, HttpServletResponse resp,
                               Account account, String redirectUrl) throws IOException {
+        // Customer reviews from order detail CANNOT be deleted
+        if (isCustomer(account)) {
+            resp.sendRedirect(redirectUrl + "&msg=error&detail=cannot_delete");
+            return;
+        }
+
         String commentId = req.getParameter("commentId");
         if (commentId == null) {
             resp.sendRedirect(redirectUrl + "&msg=error&detail=missing_fields");
@@ -175,5 +234,9 @@ public class CommentServlet extends HttpServlet {
         if (account == null) return false;
         String role = account.getRole();
         return "Admin".equalsIgnoreCase(role) || "Staff".equalsIgnoreCase(role);
+    }
+
+    private boolean isCustomer(Account account) {
+        return account != null && "Customer".equalsIgnoreCase(account.getRole());
     }
 }

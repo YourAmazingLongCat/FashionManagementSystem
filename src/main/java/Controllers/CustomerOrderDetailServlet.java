@@ -1,12 +1,11 @@
 package Controllers;
 
+import DALs.BillDAO;
 import Models.Account;
+import Models.Bill;
 import Models.Order;
 import Models.OrderItem;
-import Models.Payment;
-import Models.Wallet;
 import Services.OrderService;
-import Services.PaymentService;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -20,12 +19,12 @@ import jakarta.servlet.http.HttpSession;
 public class CustomerOrderDetailServlet extends HttpServlet {
 
     private OrderService orderService;
-    private PaymentService paymentService;
+    private BillDAO billDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
-        paymentService = new PaymentService();
+        billDAO = new BillDAO();
     }
 
     @Override
@@ -56,13 +55,11 @@ public class CustomerOrderDetailServlet extends HttpServlet {
         }
 
         List<OrderItem> orderItems = orderService.viewOrderItemsForCustomer(customerId, orderId.trim());
-        Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
-        Wallet wallet = paymentService.getOrCreateWallet(customerId);
+        Bill bill = billDAO.getBillByOrderId(orderId.trim());
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
-        request.setAttribute("payment", payment);
-        request.setAttribute("wallet", wallet);
+        request.setAttribute("bill", bill);
         request.setAttribute("contentPage", "/Pages/Customer/orderDetail.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }

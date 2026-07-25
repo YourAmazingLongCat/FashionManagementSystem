@@ -3,10 +3,13 @@ package Controllers;
 import DALs.BillDAO;
 import Models.Bill;
 import Models.BillOrderItem;
+import Models.CategorySales;
+import Models.PaymentMethodStats;
 import Models.ProductOption;
 import Models.ProductSaleStat;
 import Models.ProductSalesRow;
 import Models.RevenueStat;
+import Models.TopProduct;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -70,6 +73,9 @@ public class BillServlet extends HttpServlet {
             case "productSummary":
                 handleProductSummary(request, response);
                 break;
+            case "byProduct":
+                handleByProduct(request, response);
+                break;
             case "list":
             default:
                 handleBillList(request, response);
@@ -78,8 +84,8 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * View bill + Search bill + lọc hóa đơn theo ngày (gộp chung 1 action
-     * vì search/filter chỉ là danh sách bill có thêm điều kiện WHERE).
+     * View bill + Search bill + lọc hóa đơn.
+     * NOTE: Bills do not have date field, so no date filtering for bill list.
      */
     private void handleBillList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -87,10 +93,25 @@ public class BillServlet extends HttpServlet {
         String keyword = trimOrNull(request.getParameter("keyword"));
         String paymentStatus = trimOrNull(request.getParameter("paymentStatus"));
         String orderStatus = trimOrNull(request.getParameter("orderStatus"));
-        Date fromDate = parseDate(request.getParameter("fromDate"));
-        Date toDate = parseDate(request.getParameter("toDate"));
 
-        List<Bill> bills = billDAO.searchBills(keyword, paymentStatus, orderStatus, fromDate, toDate);
+        int page = 1;
+        int pageSize = 10;
+        try {
+            if (request.getParameter("page") != null) {
+                page = Math.max(1, Integer.parseInt(request.getParameter("page")));
+            }
+            if (request.getParameter("pageSize") != null) {
+                pageSize = Math.max(5, Math.min(50, Integer.parseInt(request.getParameter("pageSize"))));
+            }
+        } catch (NumberFormatException ignored) {}
+
+        int totalBills = billDAO.countBills(keyword, paymentStatus, orderStatus);
+        int totalPages = (int) Math.ceil((double) totalBills / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (page > totalPages) page = totalPages;
+
+        int offset = (page - 1) * pageSize;
+        List<Bill> bills = billDAO.searchBillsPaginated(keyword, paymentStatus, orderStatus, offset, pageSize);
 
         // Tính tổng doanh thu của kết quả đang hiển thị (tiện cho người dùng xem nhanh)
         BigDecimal totalOfList = BigDecimal.ZERO;
@@ -102,13 +123,16 @@ public class BillServlet extends HttpServlet {
 
         request.setAttribute("bills", bills);
         request.setAttribute("totalOfList", totalOfList);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalBills", totalBills);
 
         // Trả lại các giá trị filter để giữ nguyên trên form sau khi submit
         request.setAttribute("keyword", keyword);
         request.setAttribute("paymentStatus", paymentStatus);
         request.setAttribute("orderStatus", orderStatus);
-        request.setAttribute("fromDate", request.getParameter("fromDate"));
-        request.setAttribute("toDate", request.getParameter("toDate"));
+        request.setAttribute("activeTab", "byBill");
 
         request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
     }
@@ -339,5 +363,25 @@ public class BillServlet extends HttpServlet {
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private void handleByProduct(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String paidFilter = trimOrNull(request.getParameter("paidFilter"));
+        String productId = trimOrNull(request.getParameter("productId"));
+        String sortBy = request.getParameter("sortBy");
+
+        List<ProductSalesRow> productDetails = billDAO.getProductSalesSummaryByFilter(paidFilter, productId, sortBy);
+        List<ProductOption> productOptions = billDAO.getAllProductOptions();
+
+        request.setAttribute("productDetails", productDetails);
+        request.setAttribute("productOptions", productOptions);
+        request.setAttribute("selectedPaidFilter", paidFilter);
+        request.setAttribute("selectedProductId", productId);
+        request.setAttribute("selectedSortBy", sortBy);
+        request.setAttribute("activeTab", "byProduct");
+
+        request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
     }
 }

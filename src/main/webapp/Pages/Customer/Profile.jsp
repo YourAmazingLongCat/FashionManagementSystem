@@ -174,7 +174,7 @@
                 </div>
                 <div class="detail-row">
                     <label class="detail-label">Phone</label>
-                    <input class="detail-input" type="text" name="phone" value="${sessionScope.USER.phone}">
+                    <input class="detail-input" type="tel" name="phone" value="${sessionScope.USER.phone}" pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)">
                 </div>
                 <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
                     <div class="detail-row">

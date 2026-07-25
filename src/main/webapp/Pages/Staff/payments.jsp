@@ -3,6 +3,16 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
+<style>
+.wallet-pagination { display: flex; justify-content: center; margin-top: 24px; }
+.pagination { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0; }
+.page-item { }
+.page-link { display: flex; align-items: center; justify-content: center; min-width: 38px; height: 38px; padding: 0 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; color: #334155; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: all 0.2s; }
+.page-link:hover { background: #f1f5f9; border-color: #4338ca; color: #4338ca; }
+.page-item.active .page-link { background: #4338ca; border-color: #4338ca; color: #fff; }
+.page-item.disabled .page-link { color: #94a3b8; cursor: not-allowed; pointer-events: none; }
+</style>
+
 <section class="wallet-page">
     <div class="wallet-hero">
         <div>
@@ -12,9 +22,9 @@
                 Review wallet deposits, wallet payments, COD records and refunds.
             </p>
         </div>
-        <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/staff/orders">
-            <span class="material-symbols-outlined">receipt_long</span>
-            Orders
+        <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/staff/products">
+            <span class="material-symbols-outlined">inventory_2</span>
+            Back to Product Management
         </a>
     </div>
 
@@ -127,6 +137,41 @@
                             </c:forEach>
                         </tbody>
                     </table>
+
+                    <c:if test="${totalPages > 1}">
+                        <div class="wallet-pagination">
+                            <nav>
+                                <ul class="pagination">
+                                    <c:if test="${currentPage > 1}">
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=${currentPage - 1}">‹</a>
+                                        </li>
+                                    </c:if>
+                                    <c:forEach var="i" begin="1" end="${totalPages}">
+                                        <c:choose>
+                                            <c:when test="${i == currentPage}">
+                                                <li class="page-item active"><span class="page-link">${i}</span></li>
+                                            </c:when>
+                                            <c:when test="${i <= 3 || i > totalPages - 3 || (i >= currentPage - 1 && i <= currentPage + 1)}">
+                                                <li class="page-item"><a class="page-link" href="?page=${i}">${i}</a></li>
+                                            </c:when>
+                                            <c:when test="${i == 4 && currentPage > 5}">
+                                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                            </c:when>
+                                            <c:when test="${i == totalPages - 3 && currentPage < totalPages - 4}">
+                                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                            </c:when>
+                                        </c:choose>
+                                    </c:forEach>
+                                    <c:if test="${currentPage < totalPages}">
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=${currentPage + 1}">›</a>
+                                        </li>
+                                    </c:if>
+                                </ul>
+                            </nav>
+                        </div>
+                    </c:if>
                 </div>
             </c:otherwise>
         </c:choose>

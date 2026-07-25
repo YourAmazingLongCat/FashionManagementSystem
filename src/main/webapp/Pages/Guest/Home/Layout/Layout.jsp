@@ -50,6 +50,7 @@
             <c:remove var="errorMessage" scope="session" />
         </c:if>
 
+        <c:if test="${hideStaffHeader != 'true'}">
         <header>
             <c:choose>
                 <c:when test="${not empty sessionScope.USER}">                  
@@ -60,6 +61,7 @@
                 </c:otherwise>
             </c:choose>
         </header>
+        </c:if>
 
         <div class="main-container">
             <main>
@@ -95,6 +97,15 @@
                 </p>
             </div>
         </footer>
+
+        <c:if test="${hideStaffHeader == 'true'}">
+            <style>
+                .scrolling-ticker { display: none !important; }
+                footer { display: none !important; }
+                .main-container { padding-top: 0 !important; }
+                body { background: #f6f7fb !important; }
+            </style>
+        </c:if>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         

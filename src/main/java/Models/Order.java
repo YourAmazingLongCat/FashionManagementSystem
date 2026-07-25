@@ -12,6 +12,7 @@ public class Order {
     private String phone;
     private LocalDateTime placedAt;
     private BigDecimal totalAmount;
+    private boolean orderPlaced;
 
     public Order() {
     }
@@ -83,4 +84,25 @@ public class Order {
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
     }
+
+    public boolean isOrderPlaced() {
+        return orderPlaced;
+    }
+
+    public void setOrderPlaced(boolean orderPlaced) {
+        this.orderPlaced = orderPlaced;
+    }
+
+    /**
+     * An order that has not been placed must be completed within 2 days.
+     * Once a Purchase payment record exists, the countdown no longer applies.
+     */
+    public LocalDateTime getConfirmationExpiresAt() {
+        return placedAt == null || orderPlaced ? null : placedAt.plusDays(2);
+    }
+
+    public boolean isAwaitingConfirmation() {
+        return "Pending".equalsIgnoreCase(orderStatus) && !orderPlaced;
+    }
+
 }

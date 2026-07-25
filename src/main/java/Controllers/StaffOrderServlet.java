@@ -27,18 +27,33 @@ public class StaffOrderServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String keyword = trim(request.getParameter("keyword"));
-        List<Order> listOrders = isEmpty(keyword)
-                ? orderService.viewOrdersForStaff()
-                : orderService.searchOrdersForStaff(keyword);
+
+        int page = 1;
+        int pageSize = 10;
+        try {
+            if (request.getParameter("page") != null) {
+                page = Math.max(1, Integer.parseInt(request.getParameter("page")));
+            }
+            if (request.getParameter("pageSize") != null) {
+                pageSize = Math.max(5, Math.min(50, Integer.parseInt(request.getParameter("pageSize"))));
+            }
+        } catch (NumberFormatException ignored) {}
+
+        int totalOrders = orderService.countSearchOrdersForStaff(keyword);
+        int totalPages = (int) Math.ceil((double) totalOrders / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (page > totalPages) page = totalPages;
+
+        List<Order> listOrders = orderService.searchOrdersForStaff(keyword, page, pageSize);
 
         request.setAttribute("listOrders", listOrders);
         request.setAttribute("keyword", keyword);
-        forwardLayout(request, response, STAFF_ORDERS_PAGE);
-    }
-
-    private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
-            throws ServletException, IOException {
-        request.setAttribute("contentPage", contentPage);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalOrders", totalOrders);
+        request.setAttribute("contentPage", STAFF_ORDERS_PAGE);
+        request.setAttribute("hideStaffHeader", "true");
         request.getRequestDispatcher(LAYOUT_PAGE).forward(request, response);
     }
 

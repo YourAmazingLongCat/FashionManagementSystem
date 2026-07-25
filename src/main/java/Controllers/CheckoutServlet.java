@@ -1,19 +1,21 @@
 package Controllers;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import DALs.CartDAO;
 import DALs.CartItemDAO;
 import DALs.CategoryDAO;
+import DALs.OrderDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItem;
-import Models.Order;
-import Models.Wallet;
+import Models.CartItemView;
 import Services.OrderService;
 import Services.PaymentService;
-import Utils.PaymentMethod;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -28,12 +30,10 @@ public class CheckoutServlet extends HttpServlet {
     private static final String CHECKOUT_PAGE = "/Pages/Customer/checkout.jsp";
 
     private OrderService orderService;
-    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
-        paymentService = new PaymentService();
     }
 
     @Override
@@ -48,15 +48,30 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        prepareCheckoutPage(request, session, customerId);
+        // Check if we have checkout cart items in session
+        List<CartItem> checkoutCart = (List<CartItem>) session.getAttribute("checkoutCart");
+        if (checkoutCart == null || checkoutCart.isEmpty()) {
+            session.setAttribute("errorMessage", "No items selected for checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
 
-        List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
-        if (cart != null && !cart.isEmpty()) {
-            Order preview = orderService.reviewOrder(customerId, "Preview", "Preview", cart);
-            if (preview != null) {
-                request.setAttribute("checkoutTotal", preview.getTotalAmount());
+        BigDecimal totalAmount = (BigDecimal) session.getAttribute("checkoutTotal");
+        if (totalAmount == null) {
+            totalAmount = BigDecimal.ZERO;
+            for (CartItem item : checkoutCart) {
+                totalAmount = totalAmount.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
             }
         }
+
+        Account user = (Account) session.getAttribute("USER");
+        String address = user != null ? user.getAddress() : "";
+        String phone = user != null ? user.getPhone() : "";
+
+        request.setAttribute("shippingAddress", address);
+        request.setAttribute("phone", phone);
+        request.setAttribute("checkoutTotal", totalAmount);
+        request.setAttribute("categories", new CategoryDAO().getAllCategories());
 
         forwardLayout(request, response, CHECKOUT_PAGE);
     }
@@ -76,124 +91,79 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
-        if (cart == null || cart.isEmpty()) {
-            request.setAttribute("errorMessage", "Your cart is empty.");
-            prepareCheckoutPage(request, session, customerId);
-            forwardLayout(request, response, CHECKOUT_PAGE);
+        // Check if this is a place order action
+        String action = request.getParameter("action");
+        if ("placeOrder".equals(action)) {
+            doPlaceOrder(request, response, session, customerId);
             return;
         }
 
-        prepareCheckoutPage(request, session, customerId);
-        String shippingAddress = trim(request.getParameter("shippingAddress"));
-        String phone = trim(request.getParameter("phone"));
-        
-        // Bắt dữ liệu thanh toán (từ nhánh của team)
-        String paymentMethod = normalizePaymentMethod(request.getParameter("paymentMethod"));
-        
-        // BẮT DỮ LIỆU VOUCHER TỪ GIAO DIỆN GỬI VỀ (từ nhánh của bạn)
-        String voucherId = trim(request.getParameter("voucherId"));
-
-        Account user = (Account) session.getAttribute("USER");
-        if (user != null) {
-            if (isEmpty(shippingAddress)) {
-                shippingAddress = user.getAddress();
-            }
-            if (isEmpty(phone)) {
-                phone = user.getPhone();
-            }
-        }
-
-        request.setAttribute("shippingAddress", shippingAddress);
-        request.setAttribute("phone", phone);
-        request.setAttribute("paymentMethod", paymentMethod);
-
-        if (isEmpty(shippingAddress) || isEmpty(phone)) {
-            request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
-            forwardLayout(request, response, CHECKOUT_PAGE);
+        // Get selected items from form (Logic nhánh main: Chuẩn bị dữ liệu từ Cart sang Checkout)
+        String selectedItemsStr = request.getParameter("selectedItemsList");
+        if (selectedItemsStr == null || selectedItemsStr.trim().isEmpty()) {
+            session.setAttribute("errorMessage", "Please select at least one product to checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        Order preview = orderService.reviewOrder(customerId, shippingAddress, phone, cart);
-        if (preview == null) {
-            request.setAttribute("errorMessage", "Cannot create order. Please check your cart again.");
-            request.setAttribute("wallet", paymentService.getOrCreateWallet(customerId));
-            forwardLayout(request, response, CHECKOUT_PAGE);
+        List<String> selectedItemIds = Arrays.asList(selectedItemsStr.split(","));
+        if (selectedItemIds.isEmpty()) {
+            session.setAttribute("errorMessage", "Please select at least one product to checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        if (PaymentMethod.WALLET.equals(paymentMethod)
-                && !paymentService.canPayAmountByWallet(customerId, preview.getTotalAmount())) {
-            request.setAttribute("errorMessage", "Your wallet balance is not enough. Please deposit more money or choose COD.");
-            request.setAttribute("checkoutTotal", preview.getTotalAmount());
-            forwardLayout(request, response, CHECKOUT_PAGE);
-            return;
-        }
-
-        // Tạo đơn hàng gốc vào Database
-        String orderId = orderService.checkout(customerId, shippingAddress, phone, cart);
-
-        if (orderId == null) {
-            request.setAttribute("errorMessage", "Checkout failed. Please check your information.");
-            request.setAttribute("checkoutTotal", preview.getTotalAmount());
-            forwardLayout(request, response, CHECKOUT_PAGE);
-            return;
-        }
-
-        // =========================================================
-        // XỬ LÝ LƯU VOUCHER VÀO DATABASE NẾU KHÁCH CÓ NHẬP MÃ
-        // =========================================================
-        if (voucherId != null && !voucherId.isEmpty()) {
-            System.out.println(">>> Đã bắt được Voucher ID: " + voucherId + " cho đơn hàng: " + orderId);
-            // Gợi ý: Nếu bạn đã viết hàm bên DAO, hãy gọi nó ở đây. Ví dụ:
-            // new DALs.OrderDAO().applyVoucherToOrder(orderId, voucherId);
-        }
-
-        // =========================================================
-        // XỬ LÝ PAYMENT (Gộp code từ nhánh khác)
-        // =========================================================
-        boolean paymentHandled;
-        if (PaymentMethod.WALLET.equals(paymentMethod)) {
-            paymentHandled = paymentService.payOrderByWallet(customerId, orderId);
-            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
-                    paymentHandled
-                            ? "Order created and paid successfully by Wallet."
-                            : "Order was created, but Wallet payment failed. Please pay again from order detail.");
-        } else if (PaymentMethod.VNPAY.equals(paymentMethod)) {
-            paymentHandled = paymentService.createVNPayPaymentForOrder(customerId, orderId);
-            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
-                    paymentHandled
-                            ? "Order created. VNPay payment record has been created and is waiting for payment confirmation."
-                            : "Order created, but VNPay payment record could not be created.");
-        } else {
-            paymentHandled = paymentService.createCODPaymentForOrder(customerId, orderId);
-            session.setAttribute(paymentHandled ? "successMessage" : "errorMessage",
-                    paymentHandled
-                            ? "Order created. COD payment record has been created and will become Paid when delivered."
-                            : "Order created, but COD payment record could not be created.");
-        }
-
-        removeCheckedOutItemsFromDatabaseCart(session, customerId);
-        session.removeAttribute("cart");
-        session.removeAttribute("checkoutCartItemIds");
-        session.setAttribute("cartCount", 0);
-
-        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
-    }
-
-    private void removeCheckedOutItemsFromDatabaseCart(HttpSession session, String customerId) {
-        Object selectedIdsObject = session.getAttribute("checkoutCartItemIds");
-        if (!(selectedIdsObject instanceof String[])) {
-            return;
-        }
-
-        String[] selectedIds = (String[]) selectedIdsObject;
-        Cart cart = new CartDAO().getActiveCart(customerId);
+        // Load cart items from database
+        CartDAO cartDAO = new CartDAO();
+        Cart cart = cartDAO.getActiveCart(customerId);
         if (cart == null) {
+            session.setAttribute("errorMessage", "Your cart is empty.");
+            response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        new CartItemDAO().deleteItemsByIds(cart.getCartId(), selectedIds);
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        String[] itemIds = selectedItemIds.toArray(new String[0]);
+        List<CartItemView> selectedCartItems = cartItemDAO.getCartItemsByIds(cart.getCartId(), itemIds);
+
+        if (selectedCartItems == null || selectedCartItems.isEmpty()) {
+            session.setAttribute("errorMessage", "Selected items are no longer available.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Convert to CartItem list
+        List<CartItem> checkoutCart = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (CartItemView viewItem : selectedCartItems) {
+            CartItem item = new CartItem();
+            item.setVariantId(viewItem.getVariantId());
+            item.setProductName(viewItem.getProductName());
+            item.setProductImageUrl(viewItem.getImageUrl());
+            item.setSizeName(viewItem.getSizeName());
+            item.setColorName(viewItem.getColorName());
+            item.setQuantity(viewItem.getQuantity());
+            item.setUnitPrice(BigDecimal.valueOf(viewItem.getPrice()));
+            checkoutCart.add(item);
+            totalAmount = totalAmount.add(BigDecimal.valueOf(viewItem.getSubtotal()));
+        }
+
+        // Store in session
+        session.setAttribute("checkoutCart", checkoutCart);
+        session.setAttribute("checkoutCartIds", itemIds);
+        session.setAttribute("checkoutTotal", totalAmount);
+
+        // Get user info for pre-fill
+        Account user = (Account) session.getAttribute("USER");
+        String address = user != null && user.getAddress() != null ? user.getAddress() : "";
+        String phone = user != null && user.getPhone() != null ? user.getPhone() : "";
+
+        request.setAttribute("shippingAddress", address);
+        request.setAttribute("phone", phone);
+        request.setAttribute("checkoutTotal", totalAmount);
+        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+
+        forwardLayout(request, response, CHECKOUT_PAGE);
     }
 
     private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
@@ -216,28 +186,145 @@ public class CheckoutServlet extends HttpServlet {
         return null;
     }
 
-    private String normalizePaymentMethod(String value) {
-        if (PaymentMethod.WALLET.equals(value)) {
-            return PaymentMethod.WALLET;
+    @SuppressWarnings("unchecked")
+    protected void doPlaceOrder(HttpServletRequest request, HttpServletResponse response, HttpSession session, String customerId)
+            throws ServletException, IOException {
+
+        String[] selectedItemIds = (String[]) session.getAttribute("checkoutCartIds");
+        if (selectedItemIds == null || selectedItemIds.length == 0) {
+            session.setAttribute("errorMessage", "Your checkout session has expired. Please try again.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
         }
 
-        if (PaymentMethod.VNPAY.equals(value)) {
-            return PaymentMethod.VNPAY;
-        }
-
-        return PaymentMethod.COD;
-    }
-
-    private void prepareCheckoutPage(HttpServletRequest request, HttpSession session, String customerId) {
-        Wallet wallet = paymentService.getOrCreateWallet(customerId);
-        request.setAttribute("wallet", wallet);
-        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+        String shippingAddress = trim(request.getParameter("shippingAddress"));
+        String phone = trim(request.getParameter("phone"));
+        
+        // =========================================================
+        // BẮT DỮ LIỆU VOUCHER TỪ GIAO DIỆN (Từ nhánh Nhan-Voucher)
+        // =========================================================
+        String voucherId = trim(request.getParameter("voucherId"));
 
         Account user = (Account) session.getAttribute("USER");
         if (user != null) {
-            request.setAttribute("shippingAddress", user.getAddress());
-            request.setAttribute("phone", user.getPhone());
-            request.setAttribute("paymentMethod", PaymentMethod.COD);
+            if (isEmpty(shippingAddress)) {
+                shippingAddress = user.getAddress();
+            }
+            if (isEmpty(phone)) {
+                phone = user.getPhone();
+            }
+        }
+
+        if (isEmpty(shippingAddress) || isEmpty(phone)) {
+            request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
+            request.setAttribute("categories", new CategoryDAO().getAllCategories());
+            forwardLayout(request, response, CHECKOUT_PAGE);
+            return;
+        }
+
+        // Get cart and cart items from database
+        CartDAO cartDAO = new CartDAO();
+        Cart cart = cartDAO.getActiveCart(customerId);
+        if (cart == null) {
+            session.setAttribute("errorMessage", "Your cart is empty.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Get payment method
+        String paymentMethod = trim(request.getParameter("paymentMethod"));
+        if (isEmpty(paymentMethod)) {
+            paymentMethod = "COD";
+        }
+
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        List<CartItemView> selectedCartItems = cartItemDAO.getCartItemsByIds(cart.getCartId(), selectedItemIds);
+
+        if (selectedCartItems == null || selectedCartItems.isEmpty()) {
+            session.setAttribute("errorMessage", "Selected items are no longer available.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Convert to CartItem list
+        List<CartItem> checkoutCart = new ArrayList<>();
+        for (CartItemView viewItem : selectedCartItems) {
+            CartItem item = new CartItem();
+            item.setVariantId(viewItem.getVariantId());
+            item.setProductName(viewItem.getProductName());
+            item.setProductImageUrl(viewItem.getImageUrl());
+            item.setSizeName(viewItem.getSizeName());
+            item.setColorName(viewItem.getColorName());
+            item.setQuantity(viewItem.getQuantity());
+            item.setUnitPrice(BigDecimal.valueOf(viewItem.getPrice()));
+            checkoutCart.add(item);
+        }
+
+        // Create order with stock reservation (using createPendingOrderFromCart)
+        String orderId = orderService.createPendingOrderFromCart(
+                customerId, shippingAddress, phone, checkoutCart,
+                cart.getCartId(), selectedItemIds);
+
+        if (orderId == null) {
+            request.setAttribute("errorMessage", "Checkout failed. Please check your cart again.");
+            request.setAttribute("categories", new CategoryDAO().getAllCategories());
+            forwardLayout(request, response, CHECKOUT_PAGE);
+            return;
+        }
+
+        // =========================================================
+        // ÁP DỤNG VOUCHER VÀO DATABASE NẾU CÓ (Từ nhánh Nhan-Voucher)
+        // =========================================================
+        if (voucherId != null && !voucherId.isEmpty()) {
+            System.out.println(">>> Đã bắt được Voucher ID: " + voucherId + " cho đơn hàng: " + orderId);
+            new OrderDAO().applyVoucherToOrder(orderId, voucherId);
+        }
+
+        // Create payment record based on selected payment method
+        boolean paymentCreated = createPaymentRecord(customerId, orderId, paymentMethod, checkoutCart);
+
+        // Clean up session
+        session.removeAttribute("checkoutCart");
+        session.removeAttribute("checkoutCartIds");
+        session.removeAttribute("checkoutItems");
+
+        // Update cart count
+        List<CartItemView> remainingItems = cartItemDAO.getCartItems(cart.getCartId());
+        int cartCount = remainingItems.stream().mapToInt(CartItemView::getQuantity).sum();
+        session.setAttribute("cartCount", cartCount);
+
+        // For VNPay, redirect to VNPay payment page
+        if ("VNPay".equalsIgnoreCase(paymentMethod) && paymentCreated) {
+            session.setAttribute("successMessage", "Order created! Redirecting to VNPay payment...");
+            response.sendRedirect(request.getContextPath() + "/customer/vnpay/start?orderId=" + orderId);
+            return;
+        }
+
+        // For Wallet, check and process
+        if ("Wallet".equalsIgnoreCase(paymentMethod)) {
+            PaymentService paymentService = new PaymentService();
+            if (paymentService.canPayOrderByWallet(customerId, orderId)) {
+                paymentService.payOrderByWallet(customerId, orderId);
+                session.setAttribute("successMessage", "Order created and paid with wallet!");
+            } else {
+                session.setAttribute("errorMessage", "Insufficient wallet balance. Order created with pending payment.");
+            }
+        }
+
+        session.setAttribute("successMessage", "Order created successfully! Order ID: " + orderId);
+        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
+    }
+
+    private boolean createPaymentRecord(String accountId, String orderId, String paymentMethod, List<CartItem> checkoutCart) {
+        PaymentService paymentService = new PaymentService();
+
+        if ("VNPay".equalsIgnoreCase(paymentMethod)) {
+            return paymentService.createVNPayPaymentForOrder(accountId, orderId);
+        } else if ("Wallet".equalsIgnoreCase(paymentMethod)) {
+            return paymentService.createCODPaymentForOrder(accountId, orderId);
+        } else {
+            // COD
+            return paymentService.createCODPaymentForOrder(accountId, orderId);
         }
     }
 

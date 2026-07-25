@@ -133,10 +133,8 @@
                     }
 
                     let actionsHtml = '';
-                    if (isOwner && c.canEdit) {
+                    if (isStaffOrAdmin) {
                         actionsHtml += '<button type="button" class="comment-action-btn" data-action="edit" data-comment-id="' + c.commentId + '">Edit</button>';
-                    }
-                    if (isOwner) {
                         actionsHtml += '<button type="button" class="comment-action-btn comment-danger-btn" data-action="delete" data-comment-id="' + c.commentId + '">Delete</button>';
                     }
                     if (isStaffOrAdmin) {

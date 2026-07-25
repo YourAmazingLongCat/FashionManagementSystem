@@ -51,13 +51,13 @@ public class AddToCartServlet extends HttpServlet {
         // Check stock availability
         ProductDAO productDAO = new ProductDAO();
         ProductVariant variant = productDAO.getVariantById(variantId);
-        if (variant == null || variant.getStockQty() <= 0) {
+        if (variant == null || variant.getAvailableQty() <= 0) {
             response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
             return;
         }
 
         // Limit quantity to available stock
-        quantity = Math.min(quantity, variant.getStockQty());
+        quantity = Math.min(quantity, variant.getAvailableQty());
 
         CartDAO cartDAO = new CartDAO();
         Cart cart = cartDAO.getActiveCart(acc.getAccountId());

@@ -1,6 +1,7 @@
 package DALs;
 
 import Models.OrderItem;
+import Models.CartItem;
 import Utils.DBContext;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
@@ -42,6 +43,57 @@ public class OrderItemDAO extends DBContext {
         }
 
         return listItems;
+    }
+
+    /**
+     * Rebuilds the checkout summary from persisted OrderItems. This lets a
+     * customer leave the page and continue the same Pending order later,
+     * without relying on the HTTP session cart.
+     */
+    public List<CartItem> getCheckoutItemsByOrderId(String orderId) {
+        List<CartItem> items = new ArrayList<>();
+        if (orderId == null || orderId.trim().isEmpty()) {
+            return items;
+        }
+
+        String query = "SELECT oi.variantId, oi.quantity, oi.unitPrice, "
+                + "pv.productId, pv.sizeId, pv.colorId, "
+                + "p.name AS productName, s.sizeName, c.colorName, "
+                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi "
+                + " WHERE pi.productId = p.productId "
+                + " ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS imageUrl "
+                + "FROM OrderItems oi "
+                + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "JOIN Products p ON pv.productId = p.productId "
+                + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                + "JOIN Colors c ON pv.colorId = c.colorId "
+                + "WHERE oi.orderId = ? "
+                + "ORDER BY oi.orderItemId";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, orderId.trim());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    CartItem item = new CartItem();
+                    item.setVariantId(rs.getString("variantId"));
+                    item.setProductId(rs.getString("productId"));
+                    item.setProductName(rs.getString("productName"));
+                    item.setProductImageUrl(rs.getString("imageUrl"));
+                    item.setSizeId(rs.getString("sizeId"));
+                    item.setSizeName(rs.getString("sizeName"));
+                    item.setColorId(rs.getString("colorId"));
+                    item.setColorName(rs.getString("colorName"));
+                    item.setQuantity(rs.getInt("quantity"));
+                    item.setUnitPrice(rs.getBigDecimal("unitPrice"));
+                    items.add(item);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getCheckoutItemsByOrderId error: " + e.getMessage());
+        }
+
+        return items;
     }
 
     public boolean addOrderItem(OrderItem item) {
@@ -109,6 +161,22 @@ public class OrderItemDAO extends DBContext {
 
         } catch (SQLException e) {
             System.out.println("deleteOrderItemsByOrderId error: " + e);
+        }
+
+        return false;
+    }
+
+    public boolean variantExistsInOrder(String orderId, String variantId) {
+        String query = "SELECT 1 FROM OrderItems WHERE orderId = ? AND variantId = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, orderId);
+            ps.setString(2, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.out.println("variantExistsInOrder error: " + e);
         }
 
         return false;

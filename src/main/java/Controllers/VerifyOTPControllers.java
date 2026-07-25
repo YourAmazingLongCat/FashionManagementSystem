@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 
 import Utils.DBContext;
 import Utils.passwordUtil;
+import DALs.AccountDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -61,20 +62,19 @@ public class VerifyOTPControllers extends HttpServlet {
             try {
                 conn = new DBContext().getConnection();
                 
-                // Tạo accountId
-                String newAccountId = "ACC" + System.currentTimeMillis();
-                if (newAccountId.length() > 20) newAccountId = newAccountId.substring(0, 20);
+                // Tạo accountId dùng AccountDAO pattern
+                String newAccountId = new AccountDAO().generateNextAccountId();
 
-                // Lưu vào bảng Accounts y như cũ
-                String insertSQL = "INSERT INTO Accounts (accountId, username, fullName, email, phone, passwordHash, role, status, createdAt) VALUES (?, ?, ?, ?, ?, ?, 'Customer', 'Active', GETDATE())";
+                // Lưu vào bảng Accounts - dùng username = email như AccountDAO
+                String insertSQL = "INSERT INTO Accounts (accountId, username, email, passwordHash, fullName, role, status, phone) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?)";
                 
                 psInsert = conn.prepareStatement(insertSQL);
                 psInsert.setString(1, newAccountId);
-                psInsert.setString(2, email);
-                psInsert.setString(3, fullName);
-                psInsert.setString(4, email);
-                psInsert.setString(5, phone);
-                psInsert.setString(6, passwordUtil.hashPassword(password));
+                psInsert.setString(2, email); // username = email
+                psInsert.setString(3, email);
+                psInsert.setString(4, passwordUtil.hashPassword(password));
+                psInsert.setString(5, fullName);
+                psInsert.setString(6, phone);
 
                 int row = psInsert.executeUpdate();
                 

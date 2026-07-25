@@ -1,5 +1,8 @@
 package Models;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 /**
  * Account Model for Fashion Management System
  * @author ADMIN
@@ -7,6 +10,7 @@ package Models;
 public class Account {
 
     private String accountId;
+    private String username;
     private String email;
     private String password;
     private String fullName;
@@ -15,17 +19,27 @@ public class Account {
     private String phone;
     private String address;
     private String avatar;
+    private BigDecimal salary;
+    private LocalDateTime createdAt;
 
     public Account() {
     }
 
-    public Account(String accountId, String email, String password, String fullName, String role, String status) {
+    public Account(String accountId, String username, String email, String password, String fullName,
+                   String role, String status, String phone, String address, String avatar,
+                   BigDecimal salary, LocalDateTime createdAt) {
         this.accountId = accountId;
+        this.username = username;
         this.email = email;
         this.password = password;
         this.fullName = fullName;
         this.role = role;
         this.status = status;
+        this.phone = phone;
+        this.address = address;
+        this.avatar = avatar;
+        this.salary = salary;
+        this.createdAt = createdAt;
     }
 
     public String getAccountId() {
@@ -34,6 +48,14 @@ public class Account {
 
     public void setAccountId(String accountId) {
         this.accountId = accountId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {
@@ -98,6 +120,22 @@ public class Account {
 
     public void setAvatar(String avatar) {
         this.avatar = avatar;
+    }
+
+    public BigDecimal getSalary() {
+        return salary;
+    }
+
+    public void setSalary(BigDecimal salary) {
+        this.salary = salary;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     @Override

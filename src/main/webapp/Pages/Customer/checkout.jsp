@@ -24,11 +24,7 @@
             </div>
         </section>
 
-        <c:set var="checkoutTotal" value="${0}" />
-        <c:forEach var="item" items="${sessionScope.cart}">
-            <c:set var="lineTotal" value="${item.unitPrice * item.quantity}" />
-            <c:set var="checkoutTotal" value="${checkoutTotal + lineTotal}" />
-        </c:forEach>
+        <c:set var="checkoutTotal" value="${not empty sessionScope.checkoutTotal ? sessionScope.checkoutTotal : 0}" />
 
         <div class="order-grid order-grid-2">
             <section class="order-panel order-panel-padding">
@@ -38,14 +34,15 @@
                 </div>
 
                 <form action="${pageContext.request.contextPath}/customer/checkout" method="post">
+                    <input type="hidden" name="action" value="placeOrder">
                     <div class="order-form-group">
                         <label class="order-label" for="shippingAddress">Shipping address</label>
-                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required>${not empty shippingAddress ? shippingAddress : sessionScope.USER.address}</textarea>
+                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required><c:out value="${not empty shippingAddress ? shippingAddress : sessionScope.USER.address}" default="" /></textarea>
                     </div>
 
                     <div class="order-form-group">
                         <label class="order-label" for="phone">Phone number</label>
-                        <input id="phone" name="phone" class="order-input" type="tel" value="${not empty phone ? phone : sessionScope.USER.phone}" placeholder="Example: 0912345678" required />
+                        <input id="phone" name="phone" class="order-input" type="tel" value="<c:out value='${not empty phone ? phone : sessionScope.USER.phone}' default='' />" placeholder="0912345678" pattern="0[0-9]{9}" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)" required />
                     </div>
 
                     <div class="wallet-deposit-card wallet-checkout-payment-box" style="box-shadow: none; margin: 18px 0;">
@@ -83,7 +80,7 @@
                         </div>
                     </div>
 
-                    <button class="order-btn order-btn-primary" type="submit" style="width: 100%;" <c:if test="${empty sessionScope.cart}">disabled</c:if>>
+                    <button class="order-btn order-btn-primary" type="submit" style="width: 100%;" <c:if test="${empty sessionScope.checkoutCart}">disabled</c:if>>
                         <span class="material-symbols-outlined">lock</span>
                         Place order
                     </button>
@@ -93,21 +90,21 @@
             <aside class="order-panel order-panel-padding">
                 <div class="order-panel-header">
                     <h2 class="order-section-title">Order Summary</h2>
-                    <span class="order-muted">${empty sessionScope.cart ? 0 : sessionScope.cart.size()} items</span>
+                    <span class="order-muted">${empty sessionScope.checkoutCart ? 0 : sessionScope.checkoutCart.size()} items</span>
                 </div>
 
                 <c:choose>
-                    <c:when test="${empty sessionScope.cart}">
+                    <c:when test="${empty sessionScope.checkoutCart}">
                         <div class="order-empty" style="padding: 40px 10px;">
                             <span class="material-symbols-outlined">remove_shopping_cart</span>
-                            <h3>Your cart is empty</h3>
-                            <p>Add products before checkout.</p>
-                            <a class="order-btn order-btn-primary" href="${pageContext.request.contextPath}/home">Continue shopping</a>
+                            <h3>No items selected</h3>
+                            <p>Go back to cart and select products.</p>
+                            <a class="order-btn order-btn-primary" href="${pageContext.request.contextPath}/cart">Back to Cart</a>
                         </div>
                     </c:when>
                     <c:otherwise>
                         <div class="order-summary-list">
-                            <c:forEach var="item" items="${sessionScope.cart}">
+                            <c:forEach var="item" items="${sessionScope.checkoutCart}">
                                 <c:set var="lineTotal" value="${item.unitPrice * item.quantity}" />
 
                                 <div class="order-summary-item">

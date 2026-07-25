@@ -71,6 +71,27 @@ public class PaymentDAO extends DBContext {
         return null;
     }
 
+    public Payment getPaymentByIdAndAccountId(String paymentId, String accountId) {
+        String query = "SELECT p.* FROM Payments p "
+                + "INNER JOIN Wallets w ON p.walletId = w.walletId "
+                + "WHERE p.paymentId = ? AND w.accountId = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, paymentId);
+            ps.setString(2, accountId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return getPaymentFromResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getPaymentByIdAndAccountId error: " + e);
+        }
+
+        return null;
+    }
+
     public Payment getLatestPaymentByOrderId(String orderId) {
         String query = "SELECT TOP 1 * FROM Payments "
                 + "WHERE orderId = ? AND paymentType <> ? "
@@ -149,6 +170,38 @@ public class PaymentDAO extends DBContext {
         return payments;
     }
 
+    public int countAllPayments() {
+        String query = "SELECT COUNT(*) FROM Payments";
+        try (PreparedStatement ps = connection.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.out.println("countAllPayments error: " + e);
+        }
+        return 0;
+    }
+
+    public List<Payment> getAllPaymentsPaginated(int offset, int limit) {
+        List<Payment> payments = new ArrayList<>();
+        String query = "SELECT * FROM Payments ORDER BY createdAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, offset);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    payments.add(getPaymentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getAllPaymentsPaginated error: " + e);
+        }
+
+        return payments;
+    }
+
     public List<Payment> getPendingDeposits() {
         List<Payment> payments = new ArrayList<>();
         String query = "SELECT * FROM Payments "
@@ -172,14 +225,26 @@ public class PaymentDAO extends DBContext {
     }
 
     public boolean completeDeposit(String paymentId) {
+        return completeDeposit(paymentId, null);
+    }
+
+    public boolean completeDeposit(String paymentId, String description) {
         String paymentQuery = "SELECT * FROM Payments WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE paymentId = ? AND paymentType = ? AND paymentStatus = ?";
-        String updatePaymentQuery = "UPDATE Payments "
-                + "SET paymentStatus = ?, paidAt = GETDATE() "
-                + "WHERE paymentId = ?";
+        String updatePaymentQuery;
         String updateWalletQuery = "UPDATE Wallets "
                 + "SET balance = balance + ?, updatedAt = GETDATE() "
                 + "WHERE walletId = ? AND walletStatus = ?";
+
+        if (description != null) {
+            updatePaymentQuery = "UPDATE Payments "
+                    + "SET paymentStatus = ?, paidAt = GETDATE(), description = ? "
+                    + "WHERE paymentId = ?";
+        } else {
+            updatePaymentQuery = "UPDATE Payments "
+                    + "SET paymentStatus = ?, paidAt = GETDATE() "
+                    + "WHERE paymentId = ?";
+        }
 
         try {
             connection.setAutoCommit(false);
@@ -215,7 +280,12 @@ public class PaymentDAO extends DBContext {
 
             try (PreparedStatement ps = connection.prepareStatement(updatePaymentQuery)) {
                 ps.setString(1, PaymentStatus.PAID);
-                ps.setString(2, paymentId);
+                if (description != null) {
+                    ps.setString(2, description);
+                    ps.setString(3, paymentId);
+                } else {
+                    ps.setString(2, paymentId);
+                }
 
                 if (ps.executeUpdate() <= 0) {
                     connection.rollback();
@@ -324,6 +394,47 @@ public class PaymentDAO extends DBContext {
             return ps.executeUpdate() >= 0;
         } catch (SQLException e) {
             System.out.println("completeCashPayment error: " + e);
+        }
+
+        return false;
+    }
+
+    public boolean completeVNPayPurchase(String paymentId, BigDecimal amount, String description) {
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ?, paidAt = GETDATE(), description = ? "
+                + "WHERE paymentId = ? AND paymentMethod = ? AND paymentStatus = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.PAID);
+            ps.setString(2, description);
+            ps.setString(3, paymentId);
+            ps.setString(4, PaymentMethod.VNPAY);
+            ps.setString(5, PaymentStatus.PENDING);
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("completeVNPayPurchase error: " + e);
+        }
+
+        return false;
+    }
+
+    public boolean markVNPayPaymentUnsuccessful(String paymentId, BigDecimal amount,
+            String status, String description) {
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ?, description = ? "
+                + "WHERE paymentId = ? AND paymentMethod = ? AND paymentStatus = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, status);
+            ps.setString(2, description);
+            ps.setString(3, paymentId);
+            ps.setString(4, PaymentMethod.VNPAY);
+            ps.setString(5, PaymentStatus.PENDING);
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("markVNPayPaymentUnsuccessful error: " + e);
         }
 
         return false;

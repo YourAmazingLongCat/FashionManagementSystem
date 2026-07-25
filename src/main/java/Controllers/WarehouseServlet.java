@@ -2,6 +2,7 @@ package Controllers;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import DALs.ProductDAO;
 import DALs.WarehouseDAO;
@@ -93,7 +94,7 @@ public class WarehouseServlet extends HttpServlet {
 
         switch (action) {
             case "import":
-                if (handleImport(request)) {
+                if (handleImport(request, user.getAccountId())) {
                     message = "Stock in successful!";
                     messageType = "success";
                 } else {
@@ -124,31 +125,40 @@ public class WarehouseServlet extends HttpServlet {
     private void showInventory(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String keyword = trim(request.getParameter("keyword"));
+        String productFilter = trim(request.getParameter("productFilter"));
         String sizeFilter = trim(request.getParameter("sizeFilter"));
         String colorFilter = trim(request.getParameter("colorFilter"));
 
-        List<Object[]> inventory = warehouseDAO.getInventorySummary(keyword, sizeFilter, colorFilter);
+        List<Object[]> inventory = warehouseDAO.getInventorySummary(keyword, sizeFilter, colorFilter, productFilter);
+        List<Product> products = productDAO.getAllProducts();
         List<Object[]> lowStock = warehouseDAO.getLowStockItems(10);
         List<Object[]> allSizes = warehouseDAO.getAllSizes();
         List<Object[]> allColors = warehouseDAO.getAllColors();
 
         int totalItems = inventory.size();
         int totalStock = 0;
+        int totalAvailable = 0;
         int lowStockCount = lowStock.size();
 
         for (Object[] row : inventory) {
-            totalStock += (int) row[8];
+            int stockQty = (int) row[8];
+            int reservedQty = (int) row[9];
+            totalStock += stockQty;
+            totalAvailable += (stockQty - reservedQty);
         }
 
         request.setAttribute("inventory", inventory);
+        request.setAttribute("products", products);
         request.setAttribute("lowStock", lowStock);
         request.setAttribute("allSizes", allSizes);
         request.setAttribute("allColors", allColors);
         request.setAttribute("totalItems", totalItems);
         request.setAttribute("totalStock", totalStock);
+        request.setAttribute("totalAvailable", totalAvailable);
         request.setAttribute("lowStockCount", lowStockCount);
         request.setAttribute("activeTab", "inventory");
         request.setAttribute("currentKeyword", keyword);
+        request.setAttribute("currentProductFilter", productFilter);
         request.setAttribute("currentSizeFilter", sizeFilter);
         request.setAttribute("currentColorFilter", colorFilter);
 
@@ -162,16 +172,65 @@ public class WarehouseServlet extends HttpServlet {
 
     private void showImport(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        List<Object[]> inventory = warehouseDAO.getInventorySummary();
+        String keyword = trim(request.getParameter("keyword"));
+        String productFilter = trim(request.getParameter("productFilter"));
+        String colorFilter = trim(request.getParameter("colorFilter"));
+        int invPage = 1;
+        try {
+            if (request.getParameter("invPage") != null && !request.getParameter("invPage").isBlank()) {
+                invPage = Math.max(1, Integer.parseInt(request.getParameter("invPage")));
+            }
+        } catch (NumberFormatException ignored) {}
+        int invPageSize = 10;
+
+        String importProductFilter = trim(request.getParameter("importProductFilter"));
+        String importImporterFilter = trim(request.getParameter("importImporterFilter"));
+        String importDateFrom = trim(request.getParameter("importDateFrom"));
+        String importDateTo = trim(request.getParameter("importDateTo"));
+        String importSearch = trim(request.getParameter("importSearch"));
+        int importPage = 1;
+        try {
+            if (request.getParameter("importPage") != null && !request.getParameter("importPage").isBlank()) {
+                importPage = Math.max(1, Integer.parseInt(request.getParameter("importPage")));
+            }
+        } catch (NumberFormatException ignored) {}
+        int importPageSize = 10;
+
+        Map<String, Object> invResult = warehouseDAO.getInventorySummaryPaginated(keyword, null, colorFilter, productFilter, invPage, invPageSize);
+        @SuppressWarnings("unchecked")
+        List<Object[]> inventory = (List<Object[]>) invResult.get("data");
+        int invTotalRecords = (int) invResult.get("totalRecords");
+        int invTotalPages = (int) invResult.get("totalPages");
         List<Product> products = productDAO.getAllProducts();
-        List<Object[]> allSizes = warehouseDAO.getAllSizes();
         List<Object[]> allColors = warehouseDAO.getAllColors();
+        Map<String, Object> importResult = warehouseDAO.getRecentImportsPaginated(
+                importProductFilter, importImporterFilter, importDateFrom, importDateTo, importSearch, importPage, importPageSize);
+        @SuppressWarnings("unchecked")
+        List<Object[]> recentImports = (List<Object[]>) importResult.get("data");
+        int importTotalRecords = (int) importResult.get("totalRecords");
+        int importTotalPages = (int) importResult.get("totalPages");
+        List<Object[]> importers = warehouseDAO.getAllImporters();
 
         request.setAttribute("inventory", inventory);
         request.setAttribute("products", products);
-        request.setAttribute("allSizes", allSizes);
         request.setAttribute("allColors", allColors);
+        request.setAttribute("recentImports", recentImports);
+        request.setAttribute("importers", importers);
         request.setAttribute("activeTab", "import");
+        request.setAttribute("currentKeyword", keyword);
+        request.setAttribute("currentProductFilter", productFilter);
+        request.setAttribute("currentColorFilter", colorFilter);
+        request.setAttribute("invPage", invPage);
+        request.setAttribute("invTotalPages", invTotalPages);
+        request.setAttribute("invTotalRecords", invTotalRecords);
+        request.setAttribute("importProductFilter", importProductFilter);
+        request.setAttribute("importImporterFilter", importImporterFilter);
+        request.setAttribute("importDateFrom", importDateFrom);
+        request.setAttribute("importDateTo", importDateTo);
+        request.setAttribute("importSearch", importSearch);
+        request.setAttribute("importPage", importPage);
+        request.setAttribute("importTotalPages", importTotalPages);
+        request.setAttribute("importTotalRecords", importTotalRecords);
 
         if (request.getParameter("message") != null) {
             request.setAttribute("message", request.getParameter("message"));
@@ -193,9 +252,10 @@ public class WarehouseServlet extends HttpServlet {
         request.getRequestDispatcher("/views/pages/productManagement/warehouse/warehouseExport.jsp").forward(request, response);
     }
 
-    private boolean handleImport(HttpServletRequest request) {
+    private boolean handleImport(HttpServletRequest request, String importedBy) {
         String variantId = trim(request.getParameter("variantId"));
         String quantityStr = trim(request.getParameter("quantity"));
+        String importPriceStr = trim(request.getParameter("importPrice"));
 
         if (variantId == null || variantId.isBlank()) return false;
         if (quantityStr == null || quantityStr.isBlank()) return false;
@@ -209,7 +269,16 @@ public class WarehouseServlet extends HttpServlet {
 
         if (quantity <= 0) return false;
 
-        return warehouseDAO.addStock(variantId, quantity);
+        double importPrice = 0;
+        if (importPriceStr != null && !importPriceStr.isBlank()) {
+            try {
+                importPrice = Double.parseDouble(importPriceStr);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        return warehouseDAO.importStock(variantId, quantity, importPrice, importedBy);
     }
 
     private boolean handleExport(HttpServletRequest request) {

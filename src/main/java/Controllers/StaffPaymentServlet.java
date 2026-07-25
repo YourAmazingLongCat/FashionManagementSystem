@@ -33,12 +33,34 @@ public class StaffPaymentServlet extends HttpServlet {
             return;
         }
 
-        List<Payment> payments = paymentService.getAllPayments();
+        int page = 1;
+        int pageSize = 10;
+        try {
+            if (request.getParameter("page") != null) {
+                page = Math.max(1, Integer.parseInt(request.getParameter("page")));
+            }
+            if (request.getParameter("pageSize") != null) {
+                pageSize = Math.max(5, Math.min(50, Integer.parseInt(request.getParameter("pageSize"))));
+            }
+        } catch (NumberFormatException ignored) {}
+
+        int totalPayments = paymentService.countAllPayments();
+        int totalPages = (int) Math.ceil((double) totalPayments / pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (page > totalPages) page = totalPages;
+
+        int offset = (page - 1) * pageSize;
+        List<Payment> payments = paymentService.getAllPaymentsPaginated(offset, pageSize);
         List<Payment> pendingDeposits = paymentService.getPendingDeposits();
 
         request.setAttribute("payments", payments);
         request.setAttribute("pendingDeposits", pendingDeposits);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPayments", totalPayments);
         request.setAttribute("contentPage", "/Pages/Staff/payments.jsp");
+        request.setAttribute("hideStaffHeader", "true");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 
