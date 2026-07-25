@@ -119,6 +119,15 @@
                         <i class="fas fa-chart-line"></i> Profit
                     </a>
                 </li>
+                
+                <!-- ==================== BỔ SUNG NÚT VOUCHER ==================== -->
+                <li class="nav-item">
+                    <a class="nav-link" href="${pageContext.request.contextPath}/manage-voucher">
+                        <i class="fas fa-ticket-alt"></i> Vouchers
+                    </a>
+                </li>
+                <!-- ============================================================= -->
+
                 <li class="nav-item mt-auto">
                     <a class="nav-link ${param.section == 'profile' ? 'active' : ''}" 
                        href="${pageContext.request.contextPath}/profile">
@@ -500,8 +509,13 @@
                                                         <td class="text-end">${p.quantitySold}</td>
                                                         <td class="text-end"><fmt:formatNumber value="${p.unitCost}" pattern="#,##0" /> ₫</td>
                                                         <td class="text-end"><fmt:formatNumber value="${p.unitPrice}" pattern="#,##0" /> ₫</td>
+<<<<<<< Updated upstream
                                                         <td class="text-end text-success"><fmt:formatNumber value="${p.unitPrice - p.unitCost}" pattern="#,##0" /> ₫</td>
                                                         <td class="text-end fw-bold text-success"><fmt:formatNumber value="${(p.unitPrice - p.unitCost) * p.quantitySold}" pattern="#,##0" /> ₫</td>
+=======
+                                                        <td class="text-end text-success"><fmt:formatNumber value="${p.quantitySold > 0 ? p.profit / p.quantitySold : 0}" pattern="#,##0" /> ₫</td>
+                                                        <td class="text-end fw-bold text-success"><fmt:formatNumber value="${p.profit}" pattern="#,##0" /> ₫</td>
+>>>>>>> Stashed changes
                                                     </tr>
                                                 </c:forEach>
                                             </c:when>

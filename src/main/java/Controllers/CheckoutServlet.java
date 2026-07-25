@@ -87,7 +87,13 @@ public class CheckoutServlet extends HttpServlet {
         prepareCheckoutPage(request, session, customerId);
         String shippingAddress = trim(request.getParameter("shippingAddress"));
         String phone = trim(request.getParameter("phone"));
+<<<<<<< Updated upstream
         String paymentMethod = normalizePaymentMethod(request.getParameter("paymentMethod"));
+=======
+        
+        // BẮT DỮ LIỆU VOUCHER TỪ GIAO DIỆN GỬI VỀ
+        String voucherId = trim(request.getParameter("voucherId"));
+>>>>>>> Stashed changes
 
         Account user = (Account) session.getAttribute("USER");
         if (user != null) {
@@ -125,6 +131,10 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
+<<<<<<< Updated upstream
+=======
+        // Tạo đơn hàng gốc vào Database
+>>>>>>> Stashed changes
         String orderId = orderService.checkout(customerId, shippingAddress, phone, cart);
 
         if (orderId == null) {
@@ -134,6 +144,7 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
+<<<<<<< Updated upstream
         boolean paymentHandled;
         if (PaymentMethod.WALLET.equals(paymentMethod)) {
             paymentHandled = paymentService.payOrderByWallet(customerId, orderId);
@@ -154,6 +165,17 @@ public class CheckoutServlet extends HttpServlet {
                             ? "Order created. COD payment record has been created and will become Paid when delivered."
                             : "Order created, but COD payment record could not be created.");
         }
+=======
+        // =========================================================
+        // XỬ LÝ LƯU VOUCHER VÀO DATABASE NẾU KHÁCH CÓ NHẬP MÃ
+        // =========================================================
+        if (voucherId != null && !voucherId.isEmpty()) {
+            System.out.println(">>> Đã bắt được Voucher ID: " + voucherId + " cho đơn hàng: " + orderId);
+            // Sắp tới chúng ta sẽ gọi hàm DAO ở đây để cập nhật trừ tiền cho đơn hàng này!
+        }
+
+        session.setAttribute("successMessage", "Order created successfully! Order ID: " + orderId);
+>>>>>>> Stashed changes
 
         removeCheckedOutItemsFromDatabaseCart(session, customerId);
         session.removeAttribute("cart");
