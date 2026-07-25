@@ -464,6 +464,8 @@ public class OrderDAO extends DBContext {
                         return false;
                     }
                 }
+                // Create Bill when order is confirmed
+                createBillForOrder(orderId);
             } else if ("Confirmed".equals(currentStatus) && "Pending".equals(newStatus)) {
                 if (!moveCommittedStockBackToReservation(orderId)) {
                     rollback();
@@ -813,6 +815,38 @@ public class OrderDAO extends DBContext {
             int updated = ps.executeUpdate();
             System.out.println("deductStockForConfirm: updated " + updated + " rows for orderId=" + orderId);
             return updated > 0;
+        }
+    }
+
+    private void createBillForOrder(String orderId) {
+        // Get order total amount
+        String orderSql = "SELECT totalAmount FROM Orders WHERE orderId = ?";
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        try (PreparedStatement ps = connection.prepareStatement(orderSql)) {
+            ps.setString(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    totalAmount = rs.getBigDecimal("totalAmount");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("createBillForOrder: failed to get order total: " + e.getMessage());
+            return;
+        }
+
+        // Insert Bill
+        String billId = "BILL" + System.currentTimeMillis() + (int) (Math.random() * 900 + 100);
+        String insertSql = "INSERT INTO Bills (billId, orderId, paymentMethod, paymentStatus, totalAmount) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(insertSql)) {
+            ps.setString(1, billId);
+            ps.setString(2, orderId);
+            ps.setString(3, "COD");
+            ps.setString(4, "Pending");
+            ps.setBigDecimal(5, totalAmount != null ? totalAmount : BigDecimal.ZERO);
+            ps.executeUpdate();
+            System.out.println("createBillForOrder: Bill created with billId=" + billId + " for orderId=" + orderId);
+        } catch (SQLException e) {
+            System.err.println("createBillForOrder: failed to insert bill: " + e.getMessage());
         }
     }
 

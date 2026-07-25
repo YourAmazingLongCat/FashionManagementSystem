@@ -121,9 +121,15 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link ${param.section == 'profit' ? 'active' : ''}" 
+                    <a class="nav-link ${param.section == 'profit' ? 'active' : ''}"
                        href="?section=profit">
                         <i class="fas fa-chart-line"></i> Profit
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link ${param.section == 'comments' ? 'active' : ''}"
+                       href="?section=comments">
+                        <i class="fas fa-comments"></i> Comments
                     </a>
                 </li>
                 <li class="nav-item mt-auto">
@@ -143,14 +149,15 @@
         <!-- Main Content -->
         <div class="col-md-9 col-lg-10 main-content">
 
-            <!-- Time Filter Bar -->
+            <!-- Time Filter Bar (Comments section only) -->
+            <c:if test="${currentSection == 'comments'}">
             <div class="time-filter-bar">
                 <span class="label"><i class="far fa-calendar-alt me-2"></i>Time period:</span>
                 <form action="${pageContext.request.contextPath}/Admin" method="get" class="d-flex flex-wrap align-items-center gap-2">
                     <input type="date" name="fromDate" class="form-control" value="${param.fromDate}" placeholder="From">
                     <span class="text-muted">→</span>
                     <input type="date" name="toDate" class="form-control" value="${param.toDate}" placeholder="To">
-                    <input type="hidden" name="section" value="${param.section != null ? param.section : 'overview'}">
+                    <input type="hidden" name="section" value="comments">
                     <button type="submit" class="btn btn-filter"><i class="fas fa-filter me-1"></i> Filter</button>
                 </form>
                 <c:if test="${not empty param.fromDate or not empty param.toDate}">
@@ -164,6 +171,7 @@
                     </span>
                 </c:if>
             </div>
+            </c:if>
 
             <!-- Top summary cards -->
             <div class="row mb-4">
@@ -634,11 +642,159 @@
                 </div>
             </div>
 
+            <!-- ==================== COMMENTS ==================== -->
+            <div id="comments" class="section-card ${currentSection != 'comments' ? 'hidden-section' : ''}">
+                <!-- Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-label"><i class="fas fa-comments"></i> Total Comments</div>
+                            <div class="stat-number">${empty totalComments ? 0 : totalComments}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card" style="border-left-color: #27ae60;">
+                            <div class="stat-label"><i class="fas fa-check-circle"></i> Active</div>
+                            <div class="stat-number text-success">${empty activeComments ? 0 : activeComments}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card" style="border-left-color: #e74c3c;">
+                            <div class="stat-label"><i class="fas fa-eye-slash"></i> Hidden</div>
+                            <div class="stat-number text-danger">${empty hiddenComments ? 0 : hiddenComments}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card" style="border-left-color: #f39c12;">
+                            <div class="stat-label"><i class="fas fa-star"></i> Avg Rating</div>
+                            <div class="stat-number" id="avgRatingDisplay">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search & Filter Bar -->
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                        <span><i class="fas fa-list-ul me-2"></i> Comment List</span>
+                        <form method="get" action="${pageContext.request.contextPath}/Admin" class="d-flex gap-2 align-items-center">
+                            <input type="hidden" name="section" value="comments"/>
+                            <input type="text" name="searchComment" class="form-control form-control-sm"
+                                   placeholder="Search product or customer..."
+                                   value="${fn:escapeXml(param.searchComment)}" style="min-width:220px;"/>
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+                            <a href="?section=comments" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Clear</a>
+                        </form>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Customer</th>
+                                        <th>Product</th>
+                                        <th>Variant</th>
+                                        <th class="text-center">Rating</th>
+                                        <th>Comment</th>
+                                        <th>Date</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:choose>
+                                        <c:when test="${not empty allComments}">
+                                            <c:forEach var="c" items="${allComments}" varStatus="loop">
+                                                <tr>
+                                                    <td>${loop.index + 1}</td>
+                                                    <td>
+                                                        <div class="fw-semibold">${c.accountFullName}</div>
+                                                        <small class="text-muted">@${c.accountUsername}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div style="max-width:180px;">
+                                                            <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${c.productId}" target="_blank"
+                                                               class="text-decoration-none text-truncate d-block">${c.productName}</a>
+                                                        </div>
+                                                    </td>
+                                                    <td><small class="text-muted">${c.variantInfo}</small></td>
+                                                    <td class="text-center">
+                                                        <span class="star-display" data-rating="${c.rating}">
+                                                            <c:forEach begin="1" end="5" var="i">
+                                                                <i class="fas fa-star ${i <= c.rating ? 'text-warning' : 'text-secondary'}"></i>
+                                                            </c:forEach>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div style="max-width:260px; max-height:80px; overflow-y:auto;">
+                                                            <small>${fn:escapeXml(c.content)}</small>
+                                                        </div>
+                                                    </td>
+                                                    <td><small><fmt:formatDate value="${c.createdAt}" pattern="dd/MM/yyyy HH:mm"/></small></td>
+                                                    <td class="text-center">
+                                                        <c:if test="${c.status != 'Active'}">
+                                                            <span class="badge bg-danger">Hidden</span>
+                                                        </c:if>
+                                                        <c:if test="${c.status == 'Active'}">
+                                                            <form action="${pageContext.request.contextPath}/Admin" method="post" class="d-inline">
+                                                                <input type="hidden" name="section" value="comments"/>
+                                                                <input type="hidden" name="action" value="toggleComment"/>
+                                                                <input type="hidden" name="commentId" value="${c.commentId}"/>
+                                                                <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                                        title="Hide comment">
+                                                                    <i class="fas fa-eye-slash"></i>
+                                                                </button>
+                                                            </form>
+                                                        </c:if>
+                                                        <c:if test="${c.status != 'Active'}">
+                                                            <form action="${pageContext.request.contextPath}/Admin" method="post" class="d-inline">
+                                                                <input type="hidden" name="section" value="comments"/>
+                                                                <input type="hidden" name="action" value="toggleComment"/>
+                                                                <input type="hidden" name="commentId" value="${c.commentId}"/>
+                                                                <button type="submit" class="btn btn-outline-success btn-sm"
+                                                                        title="Show comment">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </button>
+                                                            </form>
+                                                        </c:if>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <tr><td colspan="8" class="text-center text-muted py-4">
+                                                <i class="fas fa-comment-slash fa-2x mb-2 d-block"></i>
+                                                No comments found.
+                                            </td></tr>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- end main-content -->
     </div><!-- end row -->
 </div><!-- end container-fluid -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate average rating from visible star displays in comments section
+    var stars = document.querySelectorAll('#comments .star-display[data-rating]');
+    if (stars.length > 0) {
+        var total = 0;
+        stars.forEach(function(el) { total += parseInt(el.getAttribute('data-rating'), 10); });
+        var avg = (total / stars.length).toFixed(1);
+        var display = document.getElementById('avgRatingDisplay');
+        if (display) {
+            display.textContent = avg + ' / 5.0';
+        }
+    }
+});
+</script>
 
 <!-- Toast Notifications -->
 <c:if test="${not empty toastMsg}">
@@ -691,7 +847,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Phone</label>
-                        <input type="tel" name="phone" class="form-control" placeholder="0912 345 678" pattern="[0-9]{9,11}"/>
+                        <input type="tel" name="phone" class="form-control" placeholder="0912345678" pattern="0[0-9]{9}" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)"/>
                     </div>
                 </div>
                 <div class="modal-footer">

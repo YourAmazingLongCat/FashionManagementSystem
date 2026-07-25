@@ -27,13 +27,22 @@ public class CommentDataServlet extends HttpServlet {
         resp.setHeader("Cache-Control", "no-cache");
 
         String productId = req.getParameter("productId");
+        String orderItemId = req.getParameter("orderItemId");
+        String action = req.getParameter("action");
+
+        HttpSession session = req.getSession(false);
+        Account account = (session != null) ? (Account) session.getAttribute("USER") : null;
+
+        // Check eligibility for specific order item (from order detail page)
+        if ("checkOrderItem".equals(action) && orderItemId != null && !orderItemId.isEmpty()) {
+            handleCheckOrderItemEligibility(resp, account, orderItemId);
+            return;
+        }
+
         if (productId == null || productId.trim().isEmpty()) {
             resp.getWriter().write("{\"error\":\"Missing productId\",\"comments\":[],\"eligibleOrderItemId\":null}");
             return;
         }
-
-        HttpSession session = req.getSession(false);
-        Account account = (session != null) ? (Account) session.getAttribute("USER") : null;
 
         // Admin/Staff thấy tất cả kể cả ẩn, người khác chỉ thấy Active
         List<Comment> comments;
@@ -45,8 +54,10 @@ public class CommentDataServlet extends HttpServlet {
 
         // Customer: kiểm tra có đơn hàng đủ điều kiện comment không
         String eligibleOrderItemId = null;
+        int remainingDaysToComment = -1;
         if (isCustomer(account)) {
             eligibleOrderItemId = commentDAO.getEligibleOrderItemId(account.getAccountId(), productId);
+            remainingDaysToComment = commentDAO.getRemainingDaysToComment(account.getAccountId(), productId);
         }
 
         long editLimitMs = CommentDAO.EDIT_LIMIT_MS;
@@ -60,6 +71,7 @@ public class CommentDataServlet extends HttpServlet {
         } else {
             sb.append("null");
         }
+        sb.append(",\"remainingDaysToComment\":").append(remainingDaysToComment);
 
         sb.append(",\"comments\":[");
         for (int i = 0; i < comments.size(); i++) {
@@ -77,7 +89,8 @@ public class CommentDataServlet extends HttpServlet {
             long daysLeft = 0;
             if (canEdit && c.getCreatedAt() != null) {
                 long diff = now - c.getCreatedAt().getTime();
-                daysLeft = 1 - (diff / (1000 * 60));
+                long totalDaysPassed = diff / (1000 * 60 * 60 * 24);
+                daysLeft = 7 - totalDaysPassed;
             }
 
             sb.append("{");
@@ -101,15 +114,6 @@ public class CommentDataServlet extends HttpServlet {
         out.flush();
     }
 
-    private String jsonEscape(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
-
     private boolean isStaffOrAdmin(Account account) {
         if (account == null) return false;
         String role = account.getRole();
@@ -118,5 +122,35 @@ public class CommentDataServlet extends HttpServlet {
 
     private boolean isCustomer(Account account) {
         return account != null && "Customer".equalsIgnoreCase(account.getRole());
+    }
+
+    private void handleCheckOrderItemEligibility(HttpServletResponse resp,
+            Account account, String orderItemId) throws IOException {
+        if (account == null) {
+            resp.getWriter().write("{\"error\":\"Please login\",\"eligible\":false,\"reason\":\"Please login to review\"}");
+            return;
+        }
+
+        CommentDAO.EligibilityStatus status = commentDAO.checkOrderItemEligibility(orderItemId, account.getAccountId());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"eligible\":").append(status.isEligible());
+        sb.append(",\"alreadyReviewed\":").append(status.isAlreadyReviewed());
+        sb.append(",\"windowExpired\":").append(status.isWindowExpired());
+        sb.append(",\"remainingDays\":").append(status.getRemainingDays());
+        sb.append(",\"reason\":\"").append(jsonEscape(status.getReason() != null ? status.getReason() : "")).append("\"");
+        sb.append("}");
+
+        resp.getWriter().write(sb.toString());
+    }
+
+    private String jsonEscape(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }

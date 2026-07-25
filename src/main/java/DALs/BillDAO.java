@@ -2,10 +2,13 @@ package DALs;
 
 import Models.Bill;
 import Models.BillOrderItem;
+import Models.CategorySales;
+import Models.PaymentMethodStats;
 import Models.ProductOption;
 import Models.ProductSaleStat;
 import Models.ProductSalesRow;
 import Models.RevenueStat;
+import Models.TopProduct;
 import Utils.DBContext;
 
 import java.math.BigDecimal;
@@ -847,7 +850,235 @@ public class BillDAO {
         return null;
     }
 
+    /**
+     * Danh sách chi tiết theo từng sản phẩm với filter Paid/Unpaid và sort.
+     */
+    public List<ProductSalesRow> getProductSalesSummaryByFilter(String paidFilter, String productId, String sortBy) {
+        List<ProductSalesRow> list = new ArrayList<>();
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT p.productId, p.name AS productName, "
+              + "       SUM(oi.quantity) AS totalQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN oi.quantity ELSE 0 END) AS paidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN "
+              + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalRevenuePaid, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN "
+              + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalUnpaidAmount "
+              + "FROM OrderItems oi "
+              + "JOIN Bills b ON b.orderId = oi.orderId "
+              + "JOIN ProductVariants pv ON pv.variantId = oi.variantId "
+              + "JOIN Products p ON p.productId = pv.productId "
+              + "WHERE 1 = 1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if ("Paid".equals(paidFilter)) {
+            sql.append("AND b.paymentStatus = 'Paid' ");
+        } else if ("Unpaid".equals(paidFilter)) {
+            sql.append("AND b.paymentStatus <> 'Paid' ");
+        }
+
+        if (productId != null && !productId.trim().isEmpty()) {
+            sql.append("AND p.productId = ? ");
+            params.add(productId.trim());
+        }
+
+        sql.append("GROUP BY p.productId, p.name ");
+
+        if ("asc".equals(sortBy)) {
+            sql.append("ORDER BY totalUnpaidAmount ASC");
+        } else if ("desc".equals(sortBy)) {
+            sql.append("ORDER BY totalUnpaidAmount DESC");
+        } else {
+            sql.append("ORDER BY totalQuantity DESC");
+        }
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    BigDecimal paid = rs.getBigDecimal("totalRevenuePaid");
+                    BigDecimal unpaid = rs.getBigDecimal("totalUnpaidAmount");
+                    list.add(new ProductSalesRow(
+                            rs.getString("productId"),
+                            rs.getString("productName"),
+                            rs.getInt("totalQuantity"),
+                            rs.getInt("paidQuantity"),
+                            rs.getInt("unpaidQuantity"),
+                            paid == null ? BigDecimal.ZERO : paid,
+                            unpaid == null ? BigDecimal.ZERO : unpaid
+                    ));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
     private boolean isEmpty(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    // ================= TOP SELLING PRODUCTS =================
+
+    /**
+     * Get top selling products by quantity sold.
+     */
+    public List<TopProduct> getTopSellingProducts(int limit) {
+        List<TopProduct> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) p.productId, p.name AS productName,
+                   (SELECT TOP 1 pi.imageUrl FROM ProductImages pi
+                    WHERE pi.productId = p.productId AND pi.isPrimary = 1) AS imageUrl,
+                   SUM(oi.quantity) AS totalSold
+            FROM OrderItems oi
+            JOIN Bills b ON b.orderId = oi.orderId
+            JOIN ProductVariants pv ON pv.variantId = oi.variantId
+            JOIN Products p ON p.productId = pv.productId
+            WHERE b.paymentStatus = 'Paid'
+            GROUP BY p.productId, p.name
+            ORDER BY totalSold DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new TopProduct(
+                            rs.getString("productId"),
+                            rs.getString("productName"),
+                            rs.getString("imageUrl"),
+                            rs.getInt("totalSold"),
+                            0
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /**
+     * Get top revenue products.
+     */
+    public List<TopProduct> getTopRevenueProducts(int limit) {
+        List<TopProduct> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) p.productId, p.name AS productName,
+                   (SELECT TOP 1 pi.imageUrl FROM ProductImages pi
+                    WHERE pi.productId = p.productId AND pi.isPrimary = 1) AS imageUrl,
+                   SUM(oi.quantity) AS totalSold,
+                   SUM(oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) AS totalRevenue
+            FROM OrderItems oi
+            JOIN Bills b ON b.orderId = oi.orderId
+            JOIN ProductVariants pv ON pv.variantId = oi.variantId
+            JOIN Products p ON p.productId = pv.productId
+            WHERE b.paymentStatus = 'Paid'
+            GROUP BY p.productId, p.name
+            ORDER BY totalRevenue DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new TopProduct(
+                            rs.getString("productId"),
+                            rs.getString("productName"),
+                            rs.getString("imageUrl"),
+                            rs.getInt("totalSold"),
+                            rs.getInt("totalRevenue")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // ================= SALES BY CATEGORY =================
+
+    /**
+     * Get sales statistics grouped by category.
+     */
+    public List<CategorySales> getSalesByCategory() {
+        List<CategorySales> list = new ArrayList<>();
+        String sql = """
+            SELECT c.categoryId, c.name AS categoryName,
+                   SUM(oi.quantity) AS totalSold,
+                   SUM(CASE WHEN b.paymentStatus = 'Paid'
+                        THEN oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)
+                        ELSE 0 END) AS totalRevenue
+            FROM OrderItems oi
+            JOIN Bills b ON b.orderId = oi.orderId
+            JOIN ProductVariants pv ON pv.variantId = oi.variantId
+            JOIN Products p ON p.productId = pv.productId
+            JOIN Categories c ON c.categoryId = p.categoryId
+            GROUP BY c.categoryId, c.name
+            ORDER BY totalRevenue DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new CategorySales(
+                        rs.getString("categoryId"),
+                        rs.getString("categoryName"),
+                        rs.getInt("totalSold"),
+                        rs.getBigDecimal("totalRevenue")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // ================= SALES BY PAYMENT METHOD =================
+
+    /**
+     * Get sales statistics grouped by payment method.
+     */
+    public List<PaymentMethodStats> getSalesByPaymentMethod() {
+        List<PaymentMethodStats> list = new ArrayList<>();
+        String sql = """
+            SELECT b.paymentMethod,
+                   COUNT(*) AS totalBills,
+                   SUM(b.totalAmount) AS totalRevenue
+            FROM Bills b
+            WHERE b.paymentStatus = 'Paid'
+            GROUP BY b.paymentMethod
+            ORDER BY totalRevenue DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new PaymentMethodStats(
+                        rs.getString("paymentMethod"),
+                        rs.getInt("totalBills"),
+                        rs.getBigDecimal("totalRevenue")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 }

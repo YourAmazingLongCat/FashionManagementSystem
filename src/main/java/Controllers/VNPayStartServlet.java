@@ -97,7 +97,7 @@ public class VNPayStartServlet extends HttpServlet {
         }
 
         String returnUrl = isEmpty(config.getReturnUrl())
-                ? buildApplicationUrl(request, "/customer/vnpay-return")
+                ? buildApplicationUrl(request, "/vnpay/return")
                 : config.getReturnUrl();
         String paymentUrl;
 

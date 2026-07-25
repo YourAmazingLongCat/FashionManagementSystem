@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-@WebServlet(name = "VNPayReturnServlet", urlPatterns = {"/customer/vnpay-return"})
+@WebServlet(name = "VNPayReturnServlet", urlPatterns = {"/vnpay/return"})
 public class VNPayReturnServlet extends HttpServlet {
 
     private PaymentService paymentService;

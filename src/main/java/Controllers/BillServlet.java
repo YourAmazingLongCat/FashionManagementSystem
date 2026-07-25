@@ -3,10 +3,13 @@ package Controllers;
 import DALs.BillDAO;
 import Models.Bill;
 import Models.BillOrderItem;
+import Models.CategorySales;
+import Models.PaymentMethodStats;
 import Models.ProductOption;
 import Models.ProductSaleStat;
 import Models.ProductSalesRow;
 import Models.RevenueStat;
+import Models.TopProduct;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -70,6 +73,9 @@ public class BillServlet extends HttpServlet {
             case "productSummary":
                 handleProductSummary(request, response);
                 break;
+            case "byProduct":
+                handleByProduct(request, response);
+                break;
             case "list":
             default:
                 handleBillList(request, response);
@@ -126,6 +132,7 @@ public class BillServlet extends HttpServlet {
         request.setAttribute("keyword", keyword);
         request.setAttribute("paymentStatus", paymentStatus);
         request.setAttribute("orderStatus", orderStatus);
+        request.setAttribute("activeTab", "byBill");
 
         request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
     }
@@ -356,5 +363,25 @@ public class BillServlet extends HttpServlet {
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private void handleByProduct(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String paidFilter = trimOrNull(request.getParameter("paidFilter"));
+        String productId = trimOrNull(request.getParameter("productId"));
+        String sortBy = request.getParameter("sortBy");
+
+        List<ProductSalesRow> productDetails = billDAO.getProductSalesSummaryByFilter(paidFilter, productId, sortBy);
+        List<ProductOption> productOptions = billDAO.getAllProductOptions();
+
+        request.setAttribute("productDetails", productDetails);
+        request.setAttribute("productOptions", productOptions);
+        request.setAttribute("selectedPaidFilter", paidFilter);
+        request.setAttribute("selectedProductId", productId);
+        request.setAttribute("selectedSortBy", sortBy);
+        request.setAttribute("activeTab", "byProduct");
+
+        request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
     }
 }

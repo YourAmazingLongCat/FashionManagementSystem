@@ -124,10 +124,10 @@
                         <h3>Stock List</h3>
                         <form class="search-toolbar" method="get" action="${pageContext.request.contextPath}/staff/warehouse/inventory">
                             <input class="search-input" type="text" name="keyword" value="${currentKeyword}" placeholder="Search by product name or SKU..." />
-                            <select class="filter-select" name="sizeFilter">
-                                <option value="">All Sizes</option>
-                                <c:forEach var="size" items="${allSizes}">
-                                    <option value="${size[0]}" ${currentSizeFilter eq size[0] ? 'selected' : ''}>${size[1]}</option>
+                            <select class="filter-select" name="productFilter">
+                                <option value="">All Products</option>
+                                <c:forEach var="p" items="${products}">
+                                    <option value="${p.productId}" ${currentProductFilter eq p.productId ? 'selected' : ''}>${p.productName}</option>
                                 </c:forEach>
                             </select>
                             <select class="filter-select" name="colorFilter">
