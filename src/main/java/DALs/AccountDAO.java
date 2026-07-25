@@ -90,6 +90,27 @@ public class AccountDAO {
         return null;
     }
 
+    public Account getAccountByEmail(String email) {
+        String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
+                     + "address, avatar, salary, createdAt FROM Accounts WHERE email = ?";
+
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
+
+            ps.setString(1, email);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapAccount(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.getAccountByEmail: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public boolean updateProfile(Account account) {
         String query = "UPDATE Accounts SET fullName = ?, phone = ?, address = ? WHERE accountId = ?";
 

@@ -5,7 +5,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Forgot Password - Fashion Store</title>
+        <title>Reset Password - Fashion Store</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -13,6 +13,31 @@
         
         <style>
             <%@ include file="/Pages/Authentication/Login/Login.css" %>
+            
+            .input-wrapper {
+                position: relative;
+            }
+            .input-wrapper input {
+                padding-right: 45px;
+            }
+            .password-toggle {
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                cursor: pointer;
+                color: #666;
+                transition: color 0.2s;
+                user-select: none;
+            }
+            .password-toggle:hover {
+                color: #333;
+            }
+            .password-requirements {
+                font-size: 12px;
+                color: #888;
+                margin-top: 5px;
+            }
         </style>
     </head>
     <body>
@@ -32,43 +57,45 @@
             </div>
         </c:if>
 
-        <c:if test="${not empty successMessage}">
-            <div id="toast" class="toast-notification toast-success">
-                <div class="toast-icon">
-                    <span class="material-icons">check_circle</span>
-                </div>
-                <div class="toast-content">
-                    <h4 class="toast-title">SUCCESS</h4>
-                    <p class="toast-message">${successMessage}</p>
-                </div>
-                <button class="toast-close" onclick="closeToast()">
-                    <span class="material-icons" style="font-size:18px;">close</span>
-                </button>
-            </div>
-        </c:if>
-
         <div class="login-bg-marquee">
             <div class="bg-marquee-track">
-                <span>FASHION STORE 2026 • RESET PASSWORD • </span>
-                <span>FASHION STORE 2026 • RESET PASSWORD • </span>
-                <span>FASHION STORE 2026 • RESET PASSWORD • </span>
-                <span>FASHION STORE 2026 • RESET PASSWORD • </span>
+                <span>FASHION STORE 2026 • NEW PASSWORD • </span>
+                <span>FASHION STORE 2026 • NEW PASSWORD • </span>
+                <span>FASHION STORE 2026 • NEW PASSWORD • </span>
+                <span>FASHION STORE 2026 • NEW PASSWORD • </span>
             </div>
         </div>
 
         <div class="login-page-wrapper">
             <div class="login-container">
-                <h1 class="page-title">FORGOT PASSWORD</h1>
+                <h1 class="page-title">RESET PASSWORD</h1>
                 
-                <form method="post" action="<%= request.getContextPath() %>/auth/forgot-password">
+                <form method="post" action="<%= request.getContextPath() %>/auth/reset-password">
                     
                     <div class="form-group">
-                        <label for="email">Email<span class="required">*</span></label>
-                        <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" value="${email}" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newPassword">New Password<span class="required">*</span></label>
+                        <div class="input-wrapper">
+                            <input type="password" id="newPassword" name="newPassword" placeholder="At least 8 characters" required minlength="8">
+                            <span class="material-icons password-toggle" onclick="togglePassword('newPassword')">visibility</span>
+                        </div>
+                        <p class="password-requirements">Must be at least 8 characters</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password<span class="required">*</span></label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter your password" required>
+                            <span class="material-icons password-toggle" onclick="togglePassword('confirmPassword')">visibility</span>
+                        </div>
                     </div>
 
                     <div class="action-row">
-                        <button type="submit" class="btn-submit">SEND OTP</button>
+                        <button type="submit" class="btn-submit">UPDATE PASSWORD</button>
                         
                         <div class="form-links">
                             <a href="<%= request.getContextPath() %>/auth/login" class="register-link">Back to Login</a>
@@ -110,6 +137,18 @@
                     setTimeout(() => closeToast(), 5000);
                 }
             });
+            
+            function togglePassword(inputId) {
+                const input = document.getElementById(inputId);
+                const icon = input.nextElementSibling;
+                if (input.type === "password") {
+                    input.type = "text";
+                    icon.textContent = "visibility_off";
+                } else {
+                    input.type = "password";
+                    icon.textContent = "visibility";
+                }
+            }
         </script>
     </body>
 </html>
