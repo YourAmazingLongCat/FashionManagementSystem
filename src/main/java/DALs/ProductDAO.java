@@ -147,16 +147,13 @@ public class ProductDAO extends DBContext {
 
         boolean hasVariantFilter = (skuFilter != null && !skuFilter.isBlank())
                                 || (sizeFilter != null && !sizeFilter.isBlank())
-                                || (colorFilter != null && !colorFilter.isBlank());
+                                || (colorFilter != null && !colorFilter.isBlank())
+                                || (keyword != null && !keyword.isBlank());
 
         if (hasVariantFilter) {
-            sql.append("INNER JOIN ProductVariants pv ON p.productId = pv.productId ");
-            if (sizeFilter != null && !sizeFilter.isBlank()) {
-                sql.append("INNER JOIN Sizes s ON pv.sizeId = s.sizeId ");
-            }
-            if (colorFilter != null && !colorFilter.isBlank()) {
-                sql.append("INNER JOIN Colors cl ON pv.colorId = cl.colorId ");
-            }
+            sql.append("LEFT JOIN ProductVariants pv ON p.productId = pv.productId ");
+            sql.append("LEFT JOIN Sizes s ON pv.sizeId = s.sizeId ");
+            sql.append("LEFT JOIN Colors cl ON pv.colorId = cl.colorId ");
         }
 
         sql.append("WHERE 1=1 ");
@@ -203,16 +200,13 @@ public class ProductDAO extends DBContext {
 
         boolean hasVariantFilter = (skuFilter != null && !skuFilter.isBlank())
                                 || (sizeFilter != null && !sizeFilter.isBlank())
-                                || (colorFilter != null && !colorFilter.isBlank());
+                                || (colorFilter != null && !colorFilter.isBlank())
+                                || (keyword != null && !keyword.isBlank());
 
         if (hasVariantFilter) {
-            sql.append("INNER JOIN ProductVariants pv ON p.productId = pv.productId ");
-            if (sizeFilter != null && !sizeFilter.isBlank()) {
-                sql.append("INNER JOIN Sizes s ON pv.sizeId = s.sizeId ");
-            }
-            if (colorFilter != null && !colorFilter.isBlank()) {
-                sql.append("INNER JOIN Colors cl ON pv.colorId = cl.colorId ");
-            }
+            sql.append("LEFT JOIN ProductVariants pv ON p.productId = pv.productId ");
+            sql.append("LEFT JOIN Sizes s ON pv.sizeId = s.sizeId ");
+            sql.append("LEFT JOIN Colors cl ON pv.colorId = cl.colorId ");
         }
 
         sql.append("WHERE 1=1 ");

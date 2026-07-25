@@ -193,7 +193,6 @@
                                 <select class="filter-select" name="statusFilter" onchange="submitProductFilterForm()">
                                     <option value="">All status</option>
                                     <option value="Available" ${param.statusFilter eq 'Available' ? 'selected' : ''}>Available</option>
-                                    <option value="OutOfStock" ${param.statusFilter eq 'OutOfStock' ? 'selected' : ''}>Out of stock</option>
                                     <option value="Inactive" ${param.statusFilter eq 'Inactive' ? 'selected' : ''}>Inactive</option>
                                 </select>
                                 <select class="filter-select" name="categoryFilter" onchange="submitProductFilterForm()">

@@ -48,7 +48,7 @@
         </div>
         <div class="login-page-wrapper">
             <div class="login-container">
-                <h1 class="page-title">ĐĂNG NHẬP</h1>
+                <h1 class="page-title">LOGIN</h1>
                 
                 <form method="post" action="<%= request.getContextPath() %>/auth/login">
                     
@@ -58,17 +58,17 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="password">Mật khẩu<span class="required">*</span></label>
+                        <label for="password">Password<span class="required">*</span></label>
                         <input type="password" id="password" name="password" required>
                     </div>
 
                     <div class="action-row">
-                        <button type="submit" class="btn-submit">ĐĂNG NHẬP</button>
+                        <button type="submit" class="btn-submit">LOGIN</button>
                         
                         <div class="form-links">
-                            <a href="<%= request.getContextPath() %>/auth/forgot-password" class="forgot-link">Quên mật khẩu?</a>
-                            <span class="separator">hoặc</span>
-                            <a href="<%= request.getContextPath() %>/auth/register" class="register-link">Đăng ký</a>
+                            <a href="<%= request.getContextPath() %>/auth/forgot-password" class="forgot-link">Forgot password?</a>
+                            <span class="separator">or</span>
+                            <a href="<%= request.getContextPath() %>/auth/register" class="register-link">Register</a>
                         </div>
                     </div>
                     
@@ -78,15 +78,15 @@
 
         <div class="scrolling-ticker">
             <div class="ticker-content">
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
                 
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
             </div>
         </div>
 

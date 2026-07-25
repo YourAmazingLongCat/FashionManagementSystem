@@ -70,7 +70,7 @@
                 </c:catch>
                 <c:if test="${not empty contentError}">
                     <h3 style="color:red; text-align:center; padding: 50px;">
-                        Đường dẫn trang nội dung (${contentPage}) không tồn tại! <br> Lỗi: ${contentError.message}
+                        The requested page (${contentPage}) does not exist! <br> Error: ${contentError.message}
                     </h3>
                 </c:if>
             </main>
@@ -78,15 +78,15 @@
 
         <div class="scrolling-ticker">
             <div class="ticker-content">
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
                 
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
             </div>
         </div>
 

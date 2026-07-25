@@ -320,29 +320,10 @@
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.import-form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
                 var btn = form.querySelector('button[type="submit"]');
-                var originalText = btn.textContent;
                 btn.textContent = 'Adding...';
                 btn.disabled = true;
-
-                var formData = new FormData(form);
-                fetch(form.action, { method: 'POST', body: formData })
-                    .then(function(resp) {
-                        if (resp.redirected) {
-                            window.location.href = resp.url;
-                        }
-                    })
-                    .then(function() {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
-                        form.querySelector('input[name="quantity"]').value = '';
-                        form.querySelector('input[name="importPrice"]').value = '';
-                    })
-                    .catch(function() {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
-                    });
+                // Allow normal form submission - it will handle redirect properly
             });
         });
     });

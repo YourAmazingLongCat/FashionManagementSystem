@@ -399,6 +399,29 @@ public class PaymentDAO extends DBContext {
         return false;
     }
 
+    public boolean cancelCashPayment(String orderId) {
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ? "
+                + "WHERE orderId = ? "
+                + "AND paymentType = ? "
+                + "AND paymentStatus = ? "
+                + "AND paymentMethod = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.CANCELLED);
+            ps.setString(2, orderId);
+            ps.setString(3, PaymentType.PURCHASE);
+            ps.setString(4, PaymentStatus.PENDING);
+            ps.setString(5, PaymentMethod.COD);
+
+            return ps.executeUpdate() >= 0;
+        } catch (SQLException e) {
+            System.out.println("cancelCashPayment error: " + e);
+        }
+
+        return false;
+    }
+
     public boolean completeVNPayPurchase(String paymentId, BigDecimal amount, String description) {
         String query = "UPDATE Payments "
                 + "SET paymentStatus = ?, paidAt = GETDATE(), description = ? "
@@ -469,18 +492,33 @@ public class PaymentDAO extends DBContext {
             }
 
             if (paidWalletPayment == null) {
+                System.out.println("refundWalletPaymentIfNeeded: No PAID wallet payment found for orderId: " + orderId);
                 connection.rollback();
                 return true;
             }
+
+            if (paidWalletPayment.getWalletId() == null) {
+                System.out.println("refundWalletPaymentIfNeeded: WalletId is NULL for payment: " + paidWalletPayment.getPaymentId());
+                connection.rollback();
+                return false;
+            }
+
+            System.out.println("refundWalletPaymentIfNeeded: Found payment - paymentId=" + paidWalletPayment.getPaymentId() 
+                + ", walletId=" + paidWalletPayment.getWalletId() + ", amount=" + paidWalletPayment.getAmount());
 
             try (PreparedStatement ps = connection.prepareStatement(updateWalletQuery)) {
                 ps.setBigDecimal(1, paidWalletPayment.getAmount());
                 ps.setString(2, paidWalletPayment.getWalletId());
 
+                System.out.println("refundWalletPaymentIfNeeded: walletId=" + paidWalletPayment.getWalletId() 
+                    + ", amount=" + paidWalletPayment.getAmount());
+
                 if (ps.executeUpdate() <= 0) {
+                    System.out.println("refundWalletPaymentIfNeeded: WALLET UPDATE FAILED - no rows affected for walletId: " + paidWalletPayment.getWalletId());
                     connection.rollback();
                     return false;
                 }
+                System.out.println("refundWalletPaymentIfNeeded: WALLET UPDATED successfully");
             }
 
             try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {

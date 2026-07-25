@@ -33,10 +33,10 @@
                             </c:forEach>
                         </span>
                         <span class="detail-rating-value"><fmt:formatNumber value="${ratingSummary[0]}" maxFractionDigits="1"/></span>
-                        <span class="detail-review-count">(${ratingSummary[1]} đánh giá)</span>
+                        <span class="detail-review-count">(${ratingSummary[1]} reviews)</span>
                     </c:when>
                     <c:otherwise>
-                        <span class="detail-no-rating">Chưa có đánh giá</span>
+                        <span class="detail-no-rating">No reviews yet</span>
                     </c:otherwise>
                 </c:choose>
             </div>
@@ -154,7 +154,7 @@
                                                         <span class="product-review-count">(${rs[1]})</span>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <span class="product-no-rating">Chưa có đánh giá</span>
+                                                    <span class="product-no-rating">No reviews yet</span>
                                                 </c:otherwise>
                                             </c:choose>
                                         </div>

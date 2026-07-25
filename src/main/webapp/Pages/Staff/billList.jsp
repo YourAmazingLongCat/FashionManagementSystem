@@ -156,7 +156,7 @@
                             <label class="form-label">Payment Status</label>
                             <select name="paymentStatus" class="form-select">
                                 <option value="">-- All --</option>
-                                <c:forEach var="s" items="${['Pending','Paid','Failed','Refunded']}">
+                                <c:forEach var="s" items="${['Pending','Paid','Failed','Refunded','Cancelled']}">
                                     <option value="${s}" ${paymentStatus == s ? 'selected' : ''}>${s}</option>
                                 </c:forEach>
                             </select>

@@ -34,7 +34,7 @@ import jakarta.servlet.http.Part;
 @MultipartConfig
 public class ProductManagementServlet extends HttpServlet {
 
-    private static final List<String> VALID_STATUSES = Arrays.asList("Available", "OutOfStock", "Inactive");
+    private static final List<String> VALID_STATUSES = Arrays.asList("Available", "Inactive");
     private static final int DEFAULT_PAGE_SIZE = 8;
 
     private ProductService productService;

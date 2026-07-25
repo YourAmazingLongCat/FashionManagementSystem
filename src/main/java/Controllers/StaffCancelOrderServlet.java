@@ -1,7 +1,10 @@
 package Controllers;
 
+import Services.BillIntegrationService;
 import Services.OrderService;
 import Services.PaymentService;
+import Utils.PaymentMethod;
+import Utils.PaymentStatus;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -15,11 +18,13 @@ public class StaffCancelOrderServlet extends HttpServlet {
 
     private OrderService orderService;
     private PaymentService paymentService;
+    private BillIntegrationService billService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
         paymentService = new PaymentService();
+        billService = new BillIntegrationService();
     }
 
     @Override

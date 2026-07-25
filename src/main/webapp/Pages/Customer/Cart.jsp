@@ -24,6 +24,17 @@
             margin: auto;
         }
 
+        .cart-header {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
         .cart-item {
             background: white;
             border-radius: 8px;
@@ -77,6 +88,26 @@
             background: #d73211;
             color: white;
         }
+
+        .select-all-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .select-all-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .item-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -106,13 +137,22 @@
                     <!-- LEFT CART -->
                     <div class="col-md-8">
 
+                        <!-- Select All Header -->
+                        <div class="cart-header">
+                            <label class="select-all-checkbox">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                <span>Select All (${cartItems.size()} items)</span>
+                            </label>
+                        </div>
+
                         <c:forEach items="${cartItems}" var="item">
 
                             <div class="cart-item">
 
                                 <input type="checkbox"
+                                       class="item-checkbox"
                                        name="selectedItems"
-                                       value="${item.cartItemId}" data-subtotal="${item.subtotal}" onchange="calculateTotal()">
+                                       value="${item.cartItemId}" data-subtotal="${item.subtotal}" onchange="updateSelectAllState(); calculateTotal()">
 
                                 <div class="img-box">
                                     <img src="${pageContext.request.contextPath}${item.imageUrl}">
@@ -157,24 +197,24 @@
 
                             <hr>
 
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Selected items:</span>
+                                    <span id="selectedCount">0</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Total:</span>
+                                </div>
+                            </div>
+
                             <h4 class="text-danger">
                                 <span id="totalPrice">0 VND</span>
                             </h4>
 
-                            <div class="mb-3">
-                                <label class="form-label">Payment Method</label>
-                                <select class="form-select" name="paymentMethod" id="paymentMethod">
-                                    <option value="VNPay">VNPay</option>
-                                    <option value="Wallet">Wallet</option>
-                                    <option value="COD" selected>Cash On Delivery (COD)</option>
-                                </select>
-                            </div>
-
-                            <div id="walletBalance" class="mb-3" style="display: none;">
-                                <small class="text-muted">Wallet Balance: <strong id="balanceAmount">0 VND</strong></small>
-                            </div>
-
-                            <button type="button" class="btn btn-shopee w-100 mt-2" onclick="proceedToCheckout()">
+                            <button type="button" class="btn btn-shopee w-100 mt-3" onclick="proceedToCheckout()">
                                 Checkout
                             </button>
 
@@ -217,6 +257,34 @@ function updateQty(id, qty) {
     });
 }
 
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const itemCheckboxes = document.querySelectorAll("input[name='selectedItems']");
+    
+    itemCheckboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+    });
+    
+    calculateTotal();
+    updateSelectedCount();
+}
+
+function updateSelectAllState() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const itemCheckboxes = document.querySelectorAll("input[name='selectedItems']");
+    const checkedCount = document.querySelectorAll("input[name='selectedItems']:checked").length;
+    
+    selectAllCheckbox.checked = itemCheckboxes.length > 0 && checkedCount === itemCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < itemCheckboxes.length;
+    
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const count = document.querySelectorAll("input[name='selectedItems']:checked").length;
+    document.getElementById('selectedCount').textContent = count;
+}
+
 window.onload = function () {
     let checked = JSON.parse(localStorage.getItem("checkedItems") || "[]");
 
@@ -226,32 +294,17 @@ window.onload = function () {
         }
     });
 
+    updateSelectAllState();
     calculateTotal();
-    handlePaymentMethodChange();
 
-    // Listen for payment method changes
-    document.getElementById('paymentMethod').addEventListener('change', handlePaymentMethodChange);
+    // Listen for individual checkbox changes
+    document.querySelectorAll("input[name='selectedItems']").forEach(cb => {
+        cb.addEventListener('change', function() {
+            updateSelectAllState();
+            calculateTotal();
+        });
+    });
 };
-
-function handlePaymentMethodChange() {
-    const paymentMethod = document.getElementById('paymentMethod').value;
-    const walletBalanceDiv = document.getElementById('walletBalance');
-
-    if (paymentMethod === 'Wallet') {
-        walletBalanceDiv.style.display = 'block';
-        // Fetch wallet balance
-        fetch('${pageContext.request.contextPath}/customer/wallet/balance')
-            .then(response => response.json())
-            .then(data => {
-                if (data.balance !== undefined) {
-                    document.getElementById('balanceAmount').textContent = formatCurrency(data.balance) + ' VND';
-                }
-            })
-            .catch(err => console.error('Error fetching wallet balance:', err));
-    } else {
-        walletBalanceDiv.style.display = 'none';
-    }
-}
 
 function formatCurrency(amount) {
     return new Intl.NumberFormat('vi-VN').format(amount);
@@ -267,6 +320,8 @@ function calculateTotal() {
 
     document.getElementById("totalPrice").innerHTML =
         formatCurrency(total) + " VND";
+    
+    updateSelectedCount();
 }
 
 function proceedToCheckout() {
@@ -278,8 +333,6 @@ function proceedToCheckout() {
         alert('Please select at least one product to checkout.');
         return;
     }
-
-    const paymentMethod = document.getElementById('paymentMethod').value;
 
     // Set hidden field with comma-separated IDs
     document.getElementById("selectedItemsList").value = selected.join(",");
