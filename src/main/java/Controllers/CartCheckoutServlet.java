@@ -7,6 +7,9 @@ import Models.Cart;
 import Models.CartItem;
 import Models.CartItemView;
 import Services.OrderService;
+import Services.PaymentService;
+import Utils.PaymentMethod;
+import Utils.PaymentStatus;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -22,10 +25,12 @@ import jakarta.servlet.http.HttpSession;
 public class CartCheckoutServlet extends HttpServlet {
 
     private OrderService orderService;
+    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
     }
 
     @Override
@@ -51,6 +56,19 @@ public class CartCheckoutServlet extends HttpServlet {
         if (selectedItems == null || selectedItems.length == 0) {
             session.setAttribute("errorMessage",
                     "Please select at least one product before checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Get payment method from form
+        String paymentMethod = trimOrNull(request.getParameter("paymentMethod"));
+        if (isEmpty(paymentMethod)) {
+            paymentMethod = PaymentMethod.COD;
+        }
+
+        // Validate payment method
+        if (!isValidPaymentMethod(paymentMethod)) {
+            session.setAttribute("errorMessage", "Invalid payment method selected.");
             response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
@@ -129,6 +147,21 @@ public class CartCheckoutServlet extends HttpServlet {
             return;
         }
 
+        // Create payment record based on selected payment method
+        String paymentResult = createPaymentRecord(account.getAccountId(), orderId, paymentMethod, checkoutCart);
+
+        // For VNPay, redirect to VNPay payment page
+        if (PaymentMethod.VNPAY.equalsIgnoreCase(paymentMethod)) {
+            session.setAttribute("pendingCheckoutOrderId", orderId);
+            session.removeAttribute("cart");
+            session.removeAttribute("checkoutCartItemIds");
+            session.removeAttribute("successMessage");
+            session.removeAttribute("errorMessage");
+            // Redirect to VNPay start servlet
+            response.sendRedirect(request.getContextPath() + "/customer/vnpay/start?orderId=" + orderId);
+            return;
+        }
+
         // Refresh the header badge using only the products still in the cart.
         List<CartItemView> remainingItems = cartItemDAO.getCartItems(cart.getCartId());
         int remainingCount = remainingItems.stream()
@@ -139,14 +172,49 @@ public class CartCheckoutServlet extends HttpServlet {
         session.setAttribute("pendingCheckoutOrderId", orderId);
         session.removeAttribute("cart");
         session.removeAttribute("checkoutCartItemIds");
-
-        // A successful Cart Checkout must not display a toast/notification.
-        // The customer is taken directly to the single Order page instead.
         session.removeAttribute("successMessage");
         session.removeAttribute("errorMessage");
 
         response.sendRedirect(request.getContextPath()
                 + "/customer/order-detail?orderId=" + orderId);
+    }
+
+    private String createPaymentRecord(String accountId, String orderId, String paymentMethod, List<CartItem> checkoutCart) {
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (CartItem item : checkoutCart) {
+            totalAmount = totalAmount.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+        }
+
+        // Create payment record based on method
+        if (PaymentMethod.VNPAY.equalsIgnoreCase(paymentMethod)) {
+            return paymentService.createVNPayPaymentForOrder(accountId, orderId) ? orderId : null;
+        } else if (PaymentMethod.WALLET.equalsIgnoreCase(paymentMethod)) {
+            // For wallet, check if user has sufficient balance
+            if (!paymentService.canPayAmountByWallet(accountId, totalAmount)) {
+                return "INSUFFICIENT_WALLET_BALANCE";
+            }
+            // Create payment record
+            paymentService.createCODPaymentForOrder(accountId, orderId);
+            // Process wallet payment immediately
+            if (!paymentService.payOrderByWallet(accountId, orderId)) {
+                return null;
+            }
+            return orderId;
+        } else {
+            // COD - create payment record
+            paymentService.createCODPaymentForOrder(accountId, orderId);
+            return orderId;
+        }
+    }
+
+    private boolean isValidPaymentMethod(String paymentMethod) {
+        if (isEmpty(paymentMethod)) {
+            return false;
+        }
+        String method = paymentMethod.trim();
+        return PaymentMethod.VNPAY.equalsIgnoreCase(method)
+                || PaymentMethod.WALLET.equalsIgnoreCase(method)
+                || PaymentMethod.COD.equalsIgnoreCase(method);
     }
 
     private boolean isEmpty(String value) {

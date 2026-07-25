@@ -309,23 +309,42 @@
                         <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
                     </div>
 
-                    <c:if test="${not empty bill && bill.paymentStatus eq 'Pending' && bill.paymentMethod eq 'COD'}">
-                        <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                            COD selected. Please pay when the order is delivered.
-                        </div>
-                    </c:if>
-
-                    <c:if test="${order.orderStatus eq 'Cancelled'}">
-                        <div class="wallet-alert wallet-alert-error" style="margin-top: 12px;">
-                            This order has been cancelled.
-                        </div>
-                    </c:if>
-
-                    <c:if test="${order.orderStatus eq 'Delivered'}">
-                        <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                            Order has been delivered successfully!
-                        </div>
-                    </c:if>
+                    <c:choose>
+                        <c:when test="${order.orderStatus eq 'Pending' && (empty bill || bill.paymentStatus eq 'Pending')}">
+                            <c:choose>
+                                <c:when test="${not empty bill && bill.paymentMethod eq 'VNPay' && bill.paymentStatus eq 'Pending'}">
+                                    <div class="wallet-alert wallet-alert-info" style="margin-top: 12px;">
+                                        Please complete VNPay payment to confirm your order.
+                                    </div>
+                                    <a href="${pageContext.request.contextPath}/customer/vnpay/start?orderId=${order.orderId}"
+                                       class="wallet-btn wallet-btn-primary" style="margin-top: 12px; text-align: center; display: block; text-decoration: none;">
+                                        <span class="material-symbols-outlined">payment</span>
+                                        Pay with VNPay
+                                    </a>
+                                </c:when>
+                                <c:when test="${not empty bill && bill.paymentMethod eq 'COD' && bill.paymentStatus eq 'Pending'}">
+                                    <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
+                                        COD selected. Please pay when the order is delivered.
+                                    </div>
+                                </c:when>
+                                <c:when test="${not empty bill && bill.paymentMethod eq 'Wallet' && bill.paymentStatus eq 'Pending'}">
+                                    <div class="wallet-alert wallet-alert-info" style="margin-top: 12px;">
+                                        Order paid with wallet.
+                                    </div>
+                                </c:when>
+                            </c:choose>
+                        </c:when>
+                        <c:when test="${order.orderStatus eq 'Cancelled'}">
+                            <div class="wallet-alert wallet-alert-error" style="margin-top: 12px;">
+                                This order has been cancelled.
+                            </div>
+                        </c:when>
+                        <c:when test="${order.orderStatus eq 'Delivered'}">
+                            <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
+                                Order has been delivered successfully!
+                            </div>
+                        </c:when>
+                    </c:choose>
                 </aside>
             </div>
         </c:otherwise>

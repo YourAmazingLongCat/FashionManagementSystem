@@ -161,7 +161,20 @@
                                 <span id="totalPrice">0 VND</span>
                             </h4>
 
-                            <button type="button" class="btn btn-shopee w-100 mt-3" onclick="proceedToCheckout()">
+                            <div class="mb-3">
+                                <label class="form-label">Payment Method</label>
+                                <select class="form-select" name="paymentMethod" id="paymentMethod">
+                                    <option value="VNPay">VNPay</option>
+                                    <option value="Wallet">Wallet</option>
+                                    <option value="COD" selected>Cash On Delivery (COD)</option>
+                                </select>
+                            </div>
+
+                            <div id="walletBalance" class="mb-3" style="display: none;">
+                                <small class="text-muted">Wallet Balance: <strong id="balanceAmount">0 VND</strong></small>
+                            </div>
+
+                            <button type="button" class="btn btn-shopee w-100 mt-2" onclick="proceedToCheckout()">
                                 Checkout
                             </button>
 
@@ -214,7 +227,35 @@ window.onload = function () {
     });
 
     calculateTotal();
+    handlePaymentMethodChange();
+
+    // Listen for payment method changes
+    document.getElementById('paymentMethod').addEventListener('change', handlePaymentMethodChange);
 };
+
+function handlePaymentMethodChange() {
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const walletBalanceDiv = document.getElementById('walletBalance');
+
+    if (paymentMethod === 'Wallet') {
+        walletBalanceDiv.style.display = 'block';
+        // Fetch wallet balance
+        fetch('${pageContext.request.contextPath}/customer/wallet/balance')
+            .then(response => response.json())
+            .then(data => {
+                if (data.balance !== undefined) {
+                    document.getElementById('balanceAmount').textContent = formatCurrency(data.balance) + ' VND';
+                }
+            })
+            .catch(err => console.error('Error fetching wallet balance:', err));
+    } else {
+        walletBalanceDiv.style.display = 'none';
+    }
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+}
 
 function calculateTotal() {
     let total = 0;
@@ -225,7 +266,7 @@ function calculateTotal() {
         });
 
     document.getElementById("totalPrice").innerHTML =
-        total.toLocaleString('vi-VN') + " VND";
+        formatCurrency(total) + " VND";
 }
 
 function proceedToCheckout() {
@@ -237,6 +278,8 @@ function proceedToCheckout() {
         alert('Please select at least one product to checkout.');
         return;
     }
+
+    const paymentMethod = document.getElementById('paymentMethod').value;
 
     // Set hidden field with comma-separated IDs
     document.getElementById("selectedItemsList").value = selected.join(",");
