@@ -58,7 +58,16 @@ public class CommentManagementServlet extends HttpServlet {
 
         } else {
             // Default: list all comments
-            List<Comment> comments = commentDAO.getAllComments();
+            String searchKeyword = req.getParameter("search");
+            List<Comment> comments;
+            
+            if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+                comments = commentDAO.searchComments(searchKeyword.trim());
+                req.setAttribute("search", searchKeyword.trim());
+            } else {
+                comments = commentDAO.getAllComments();
+            }
+            
             req.setAttribute("comments", comments);
             req.getRequestDispatcher("/view/page/commentManagement/listComment.jsp").forward(req, resp);
         }
