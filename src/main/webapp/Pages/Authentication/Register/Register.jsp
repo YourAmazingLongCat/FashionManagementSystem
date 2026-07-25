@@ -65,7 +65,7 @@
 
                     <div class="form-group">
                         <label for="phoneNumber">Số điện thoại<span class="required">*</span></label>
-                        <input type="text" id="phoneNumber" name="phoneNumber" required>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" required pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)">
                     </div>
 
                     <div class="form-group">

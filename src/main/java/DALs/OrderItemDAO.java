@@ -165,4 +165,20 @@ public class OrderItemDAO extends DBContext {
 
         return false;
     }
+
+    public boolean variantExistsInOrder(String orderId, String variantId) {
+        String query = "SELECT 1 FROM OrderItems WHERE orderId = ? AND variantId = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, orderId);
+            ps.setString(2, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.out.println("variantExistsInOrder error: " + e);
+        }
+
+        return false;
+    }
 }

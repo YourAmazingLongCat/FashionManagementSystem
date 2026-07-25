@@ -97,7 +97,9 @@
 
         <c:otherwise>
 
-            <form action="${pageContext.request.contextPath}/cart/checkout" method="post">
+            <form id="checkoutForm" action="${pageContext.request.contextPath}/customer/checkout" method="post">
+                <!-- Hidden fields for selected items -->
+                <input type="hidden" name="selectedItemsList" id="selectedItemsList" value="">
 
                 <div class="row">
 
@@ -159,7 +161,7 @@
                                 <span id="totalPrice">0 VND</span>
                             </h4>
 
-                            <button type="submit" class="btn btn-shopee w-100 mt-3">
+                            <button type="button" class="btn btn-shopee w-100 mt-3" onclick="proceedToCheckout()">
                                 Checkout
                             </button>
 
@@ -185,9 +187,10 @@ function saveCheckedItems() {
         .forEach(cb => checked.push(cb.value));
 
     localStorage.setItem("checkedItems", JSON.stringify(checked));
+    return checked;
 }
-function updateQty(id, qty) {
 
+function updateQty(id, qty) {
     saveCheckedItems();
 
     fetch('${pageContext.request.contextPath}/cart/update', {
@@ -199,23 +202,20 @@ function updateQty(id, qty) {
     }).then(() => {
         location.reload();
     });
-
 }
-window.onload = function () {
 
+window.onload = function () {
     let checked = JSON.parse(localStorage.getItem("checkedItems") || "[]");
 
     document.querySelectorAll("input[name='selectedItems']").forEach(cb => {
-
         if (checked.includes(cb.value)) {
             cb.checked = true;
         }
-
     });
 
     calculateTotal();
-
 };
+
 function calculateTotal() {
     let total = 0;
 
@@ -226,6 +226,21 @@ function calculateTotal() {
 
     document.getElementById("totalPrice").innerHTML =
         total.toLocaleString('vi-VN') + " VND";
+}
+
+function proceedToCheckout() {
+    let selected = [];
+    document.querySelectorAll("input[name='selectedItems']:checked")
+        .forEach(cb => selected.push(cb.value));
+
+    if (selected.length === 0) {
+        alert('Please select at least one product to checkout.');
+        return;
+    }
+
+    // Set hidden field with comma-separated IDs
+    document.getElementById("selectedItemsList").value = selected.join(",");
+    document.getElementById("checkoutForm").submit();
 }
 </script>
 

@@ -4,7 +4,7 @@ import DALs.BillDAO;
 import DALs.OrderDAO;
 import DALs.OrderItemDAO;
 import DALs.ProductVariantDAO;
-import Models.Bill;
+import Models.Account;
 import Models.CartItem;
 import Models.Order;
 import Models.OrderItem;
@@ -136,49 +136,16 @@ public class OrderService {
             return false;
         }
 
-        System.out.println("confirmOrder: updating status to CONFIRMED...");
-        boolean confirmed = orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CONFIRMED);
-        System.out.println("confirmOrder: updateOrderStatus result = " + confirmed);
+        System.out.println("confirmOrder: updating status to CONFIRMED with inventory management...");
+        boolean confirmed = orderDAO.changeOrderStatusWithInventory(
+                orderId.trim(), OrderStatus.PENDING, OrderStatus.CONFIRMED);
+        System.out.println("confirmOrder: changeOrderStatusWithInventory result = " + confirmed);
         if (!confirmed) {
-            System.err.println("confirmOrder: updateOrderStatus failed");
+            System.err.println("confirmOrder: changeOrderStatusWithInventory failed");
             return false;
         }
 
-        // Create Bill and deduct stock
-        try {
-            String billId = "BILL" + System.currentTimeMillis() + (new Random().nextInt(900) + 100);
-            String paymentMethod = "COD";
-            String paymentStatus = "Pending";
-
-            Bill bill = new Bill();
-            bill.setBillId(billId);
-            bill.setOrderId(orderId.trim());
-            bill.setPaymentMethod(paymentMethod);
-            bill.setPaymentStatus(paymentStatus);
-            bill.setTotalAmount(order.getTotalAmount());
-
-            System.out.println("confirmOrder: creating Bill with billId=" + billId + ", orderId=" + orderId.trim() + ", totalAmount=" + order.getTotalAmount());
-
-            boolean billInserted = billDAO.insertBill(bill);
-            System.out.println("confirmOrder: billDAO.insertBill result = " + billInserted);
-        } catch (Exception e) {
-            System.err.println("confirmOrder: Failed to create Bill for order " + orderId + ": " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        try {
-            List<OrderItem> orderItems = orderItemDAO.getOrderItemsByOrderId(orderId.trim());
-            System.out.println("confirmOrder: found " + orderItems.size() + " order items");
-
-            for (OrderItem item : orderItems) {
-                System.out.println("confirmOrder: deducting stock for variantId=" + item.getVariantId() + ", qty=" + item.getQuantity());
-                productVariantDAO.deductStock(item.getVariantId(), item.getQuantity());
-            }
-        } catch (Exception e) {
-            System.err.println("confirmOrder: Failed to deduct stock for order " + orderId + ": " + e.getMessage());
-            e.printStackTrace();
-        }
-
+        // Bill is created inside changeOrderStatusWithInventory
         System.out.println("=== confirmOrder END: returning true");
         return true;
     }
@@ -199,7 +166,7 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        return orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
     }
 
     public boolean cancelOrder(String orderId, String customerId) {
@@ -213,7 +180,7 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.updateOrderStatus(orderId.trim(), OrderStatus.CANCELLED);
+        return orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
     }
 
     public boolean changeShipStatus(String orderId, String newStatus) {
@@ -261,34 +228,8 @@ public class OrderService {
             return false;
         }
 
-        boolean updated = orderDAO.updateOrderStatus(orderId.trim(), normalizedStatus);
-
-        // When order status becomes CONFIRMED: create Bill and deduct stock
-        if (updated && OrderStatus.CONFIRMED.equals(normalizedStatus)) {
-            try {
-                String billId = "BILL" + System.currentTimeMillis() + (new Random().nextInt(900) + 100);
-                Bill bill = new Bill();
-                bill.setBillId(billId);
-                bill.setOrderId(orderId.trim());
-                bill.setPaymentMethod("COD");
-                bill.setPaymentStatus("Pending");
-                bill.setTotalAmount(order.getTotalAmount());
-                billDAO.insertBill(bill);
-                System.out.println("changeShipStatus: Bill created with billId=" + billId);
-            } catch (Exception e) {
-                System.err.println("changeShipStatus: Failed to create Bill: " + e.getMessage());
-            }
-
-            try {
-                List<OrderItem> orderItems = orderItemDAO.getOrderItemsByOrderId(orderId.trim());
-                for (OrderItem item : orderItems) {
-                    productVariantDAO.deductStock(item.getVariantId(), item.getQuantity());
-                }
-                System.out.println("changeShipStatus: Stock deducted for " + orderItems.size() + " items");
-            } catch (Exception e) {
-                System.err.println("changeShipStatus: Failed to deduct stock: " + e.getMessage());
-            }
-        }
+        boolean updated = orderDAO.changeOrderStatusWithInventory(
+                orderId.trim(), currentStatus, normalizedStatus);
 
         // Update Bill payment status when order is Delivered
         if (updated && OrderStatus.DELIVERED.equals(normalizedStatus)) {

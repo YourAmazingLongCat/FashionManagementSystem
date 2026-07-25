@@ -228,6 +228,43 @@ public class AccountDAO {
         }
     }
 
+    public boolean phoneExists(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return false;
+        }
+        String query = "SELECT 1 FROM Accounts WHERE phone = ?";
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, phone);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.phoneExists: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean phoneExistsForOtherAccount(String phone, String excludeAccountId) {
+        if (phone == null || phone.isBlank()) {
+            return false;
+        }
+        String query = "SELECT 1 FROM Accounts WHERE phone = ? AND accountId != ?";
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, phone);
+            ps.setString(2, excludeAccountId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.phoneExistsForOtherAccount: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public String generateNextAccountId() {
         String query = "SELECT TOP 1 accountId FROM Accounts ORDER BY accountId DESC";
         try (Connection connection = new DBContext().getConnection();

@@ -5,10 +5,13 @@
 package Controllers;
 
 import java.io.IOException;
+import java.util.List;
 
 import DALs.AccountDAO;
+import DALs.CommentDAO;
 import DALs.StatisticDAO;
 import Models.Account;
+import Models.Comment;
 import Utils.EmailUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -71,7 +74,7 @@ public class StatisticController extends HttpServlet {
                 accountDao.updateStatus(accountId, newStatus);
                 request.setAttribute("toastMsg", "Status updated successfully!");
             }
-        } else if ("createStaff".equals(action)) {
+        } else         if ("createStaff".equals(action)) {
             String email = request.getParameter("email");
             String fullName = request.getParameter("fullName");
             String phone = request.getParameter("phone");
@@ -79,6 +82,8 @@ public class StatisticController extends HttpServlet {
             if (email != null && !email.isBlank() && fullName != null && !fullName.isBlank()) {
                 if (accountDao.emailExists(email)) {
                     request.setAttribute("toastErr", "Email already exists!");
+                } else if (phone != null && !phone.isBlank() && accountDao.phoneExists(phone)) {
+                    request.setAttribute("toastErr", "Phone number already exists!");
                 } else {
                     // Generate random password
                     String generatedPassword = generateRandomPassword();
@@ -119,6 +124,20 @@ public class StatisticController extends HttpServlet {
                     request.setAttribute("toastErr", "You cannot delete your own account!");
                 }
             }
+        } else if ("toggleComment".equals(action)) {
+            String commentId = request.getParameter("commentId");
+            if (commentId != null && !commentId.isEmpty()) {
+                CommentDAO commentDao = new CommentDAO();
+                boolean success = commentDao.toggleCommentStatus(commentId);
+                request.setAttribute("toastMsg", success ? "Comment visibility toggled!" : "Failed to toggle comment.");
+            }
+        } else if ("deleteComment".equals(action)) {
+            String commentId = request.getParameter("commentId");
+            if (commentId != null && !commentId.isEmpty()) {
+                CommentDAO commentDao = new CommentDAO();
+                boolean success = commentDao.deleteComment(commentId);
+                request.setAttribute("toastMsg", success ? "Comment deleted!" : "Failed to delete comment.");
+            }
         }
 
         String searchKeyword = request.getParameter("searchAccount");
@@ -137,9 +156,58 @@ public class StatisticController extends HttpServlet {
     private void loadDashboard(HttpServletRequest request, String searchKeyword) {
         StatisticDAO dao = new StatisticDAO();
         AccountDAO accountDao = new AccountDAO();
+        CommentDAO commentDao = new CommentDAO();
 
         String fromDate = request.getParameter("fromDate");
         String toDate = request.getParameter("toDate");
+        String currentSection = request.getParameter("section");
+        String searchComment = request.getParameter("searchComment");
+
+        // Load comment data if comments section is active
+        if ("comments".equals(currentSection)) {
+            List<Comment> allComments = commentDao.getAllComments();
+
+            // Filter by date range
+            if ((fromDate != null && !fromDate.isEmpty()) || (toDate != null && !toDate.isEmpty())) {
+                final String fFrom = fromDate;
+                final String fTo = toDate;
+                allComments = allComments.stream()
+                    .filter(c -> {
+                        if (c.getCreatedAt() == null) return false;
+                        java.sql.Timestamp ts = c.getCreatedAt() instanceof java.sql.Timestamp
+                            ? (java.sql.Timestamp) c.getCreatedAt()
+                            : new java.sql.Timestamp(c.getCreatedAt().getTime());
+                        if (fFrom != null && !fFrom.isEmpty()) {
+                            java.sql.Date from = java.sql.Date.valueOf(fFrom);
+                            if (ts.compareTo(from) < 0) return false;
+                        }
+                        if (fTo != null && !fTo.isEmpty()) {
+                            java.sql.Date to = java.sql.Date.valueOf(fTo);
+                            java.sql.Date nextDay = new java.sql.Date(to.getTime() + 86400000L);
+                            if (ts.compareTo(nextDay) >= 0) return false;
+                        }
+                        return true;
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+            }
+
+            // Filter by search keyword (product name or customer name)
+            List<Comment> filteredComments = allComments;
+            if (searchComment != null && !searchComment.trim().isEmpty()) {
+                String kw = searchComment.trim().toLowerCase();
+                filteredComments = allComments.stream()
+                    .filter(c -> (c.getProductName() != null && c.getProductName().toLowerCase().contains(kw))
+                              || (c.getAccountFullName() != null && c.getAccountFullName().toLowerCase().contains(kw))
+                              || (c.getAccountUsername() != null && c.getAccountUsername().toLowerCase().contains(kw)))
+                    .collect(java.util.stream.Collectors.toList());
+            }
+            request.setAttribute("allComments", filteredComments);
+            request.setAttribute("totalComments", allComments.size());
+            long activeCount = allComments.stream().filter(c -> "Active".equalsIgnoreCase(c.getStatus())).count();
+            long hiddenCount = allComments.stream().filter(c -> "Hidden".equalsIgnoreCase(c.getStatus())).count();
+            request.setAttribute("activeComments", activeCount);
+            request.setAttribute("hiddenComments", hiddenCount);
+        }
 
         var topCustomers = dao.getTopCustomers();
         var topSpenders = dao.getTopSpenders(10, fromDate, toDate);

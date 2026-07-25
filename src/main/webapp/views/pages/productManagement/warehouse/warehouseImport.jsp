@@ -1,6 +1,8 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isErrorPage="false" %>
+<%@ page import="java.util.List" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html>
     <head>
@@ -45,11 +47,28 @@
             .btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
             .btn-primary { background: #16a34a; color: #ffffff; }
             .btn-primary:hover { background: #15803d; }
+            .reset-btn { padding: 9px 16px; background: #fff; color: #64748b; border: 1px solid #dbe3f0; border-radius: 10px; font-size: 0.88rem; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; }
+            .reset-btn:hover { background: #f1f5f9; }
             .import-form { display: flex; gap: 8px; align-items: center; }
             .import-form input[type="number"] { width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0; }
             .import-form input[type="number"].price-input { width: 100px; }
             .history-section { margin-top: 24px; }
             .empty-state { padding: 32px; text-align: center; color: #64748b; }
+            .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+            .filter-bar .filter-group { display: flex; align-items: center; gap: 6px; }
+            .filter-bar .filter-group label { font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap; }
+            .filter-bar select, .filter-bar input[type="text"] {
+                padding: 6px 10px; border: 1px solid #dbe3f0; border-radius: 8px;
+                font-size: 0.85rem; outline: none; background: #ffffff; min-width: 130px;
+            }
+            .filter-bar select:focus, .filter-bar input[type="text"]:focus { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.1); }
+            .filter-bar .btn-filter { padding: 6px 14px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+            .filter-bar .btn-filter:hover { background: #15803d; }
+            .filter-bar .btn-clear { padding: 6px 12px; background: #fff; color: #64748b; border: 1px solid #dbe3f0; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+            .filter-bar .btn-clear:hover { background: #f1f5f9; }
+            .page-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid #dbe3f0; background: #fff; color: #334155; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; }
+            .page-btn:hover { background: #f1f5f9; border-color: #16a34a; color: #16a34a; }
+            .page-btn.active { background: #16a34a; border-color: #16a34a; color: #fff; }
             @media (max-width: 1024px) { .warehouse-shell { grid-template-columns: 1fr; } }
             @media (max-width: 768px) { .warehouse-shell { width: min(100% - 20px, 100%); margin: 16px auto; } }
         </style>
@@ -87,6 +106,34 @@
                     <div class="alert ${messageType eq 'error' ? 'alert-error' : 'alert-success'}">${message}</div>
                 </c:if>
 
+                <!-- Filter & Search Bar -->
+                <form method="get" action="${pageContext.request.contextPath}/staff/warehouse/import" class="filter-bar" id="inventoryFilterForm">
+                    <div class="filter-group">
+                        <label><i class="fas fa-search"></i></label>
+                        <input type="text" name="keyword" placeholder="Search SKU / product..." value="${fn:escapeXml(currentKeyword)}"/>
+                    </div>
+                    <div class="filter-group">
+                        <label>Product:</label>
+                        <select name="productFilter">
+                            <option value="">All Products</option>
+                            <c:forEach var="p" items="${products}">
+                                <option value="${p.productId}" ${currentProductFilter eq p.productId ? 'selected' : ''}>${p.productName}</option>
+                            </c:forEach>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Color:</label>
+                        <select name="colorFilter">
+                            <option value="">All Colors</option>
+                            <c:forEach var="c" items="${allColors}">
+                                <option value="${c[0]}" ${currentColorFilter eq c[0] ? 'selected' : ''}>${c[1]}</option>
+                            </c:forEach>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-filter"><i class="fas fa-filter"></i> Filter</button>
+                    <a href="${pageContext.request.contextPath}/staff/warehouse/import" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
+                </form>
+
                 <div class="table-panel">
                     <div class="table-header">
                         <h3>Variant List</h3>
@@ -104,40 +151,104 @@
                                     <th>Add Stock</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <c:forEach var="item" items="${inventory}">
-                                    <c:set var="physical" value="${item[8]}" />
-                                    <c:set var="reserved" value="${item[9]}" />
-                                    <c:set var="available" value="${physical - reserved}" />
-                                    <tr>
-                                        <td><code>${item[7]}</code></td>
-                                        <td><strong>${item[2]}</strong></td>
-                                        <td>${item[4]} / ${item[6]}</td>
-                                        <td class="text-end"><strong>${physical}</strong></td>
-                                        <td class="text-end">${reserved}</td>
-                                        <td class="text-end">
-                                            <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
-                                        </td>
-                                        <td>
-                                            <form class="import-form" method="post" action="${pageContext.request.contextPath}/staff/warehouse/import">
-                                                <input type="hidden" name="action" value="import">
-                                                <input type="hidden" name="variantId" value="${item[0]}">
-                                                <input type="number" name="quantity" min="1" placeholder="Qty" required>
-                                                <input type="number" name="importPrice" min="0" step="1000" placeholder="Price" required>
-                                                <button type="submit" class="btn btn-primary">+ Add</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
+                            <tbody id="inventoryTableBody">
+                                <c:choose>
+                                    <c:when test="${empty inventory}">
+                                        <tr>
+                                            <td colspan="7">
+                                                <div class="empty-state">No product variants found. Check that Products and ProductVariants tables have data.</div>
+                                            </td>
+                                        </tr>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <c:forEach var="item" items="${inventory}">
+                                            <c:set var="physical" value="${item[8]}" />
+                                            <c:set var="reserved" value="${item[9]}" />
+                                            <c:set var="available" value="${physical - reserved}" />
+                                            <tr>
+                                                <td><code>${item[7]}</code></td>
+                                                <td><strong>${item[2]}</strong></td>
+                                                <td>${item[4]} / ${item[6]}</td>
+                                                <td class="text-end"><strong>${physical}</strong></td>
+                                                <td class="text-end">${reserved}</td>
+                                                <td class="text-end">
+                                                    <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
+                                                </td>
+                                                <td>
+                                                    <form class="import-form" method="post" action="${pageContext.request.contextPath}/staff/warehouse/import">
+                                                        <input type="hidden" name="action" value="import">
+                                                        <input type="hidden" name="variantId" value="${item[0]}">
+                                                        <input type="number" name="quantity" min="1" placeholder="Qty" required>
+                                                        <input type="number" name="importPrice" min="0" step="1000" placeholder="Price" required>
+                                                        <button type="submit" class="btn btn-primary">+ Add</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </c:otherwise>
+                                </c:choose>
                             </tbody>
                         </table>
                     </div>
+                    <c:if test="${invTotalPages > 1}">
+                        <div class="pagination-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding: 0 4px;">
+                            <span style="font-size: 0.85rem; color: #64748b;">
+                                Showing ${inventory.size()} of ${invTotalRecords} variants
+                            </span>
+                            <div class="pagination" style="display: flex; gap: 4px;">
+                                <c:if test="${invPage > 1}">
+                                    <a href="?tab=import&invPage=${invPage - 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${fn:escapeXml(importSearch)}&importPage=${importPage}"
+                                       class="page-btn">&laquo; Prev</a>
+                                </c:if>
+                                <c:forEach begin="1" end="${invTotalPages > 5 ? 5 : invTotalPages}" var="i">
+                                    <c:set var="invStart" value="${invTotalPages > 5 ? (invPage > 3 ? invPage - 2 : 1) : 1}"/>
+                                    <a href="?tab=import&invPage=${invStart + i - 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${fn:escapeXml(importSearch)}&importPage=${importPage}"
+                                       class="page-btn ${(invStart + i - 1) == invPage ? 'active' : ''}">${invStart + i - 1}</a>
+                                </c:forEach>
+                                <c:if test="${invPage < invTotalPages}">
+                                    <a href="?tab=import&invPage=${invPage + 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${fn:escapeXml(importSearch)}&importPage=${importPage}"
+                                       class="page-btn">Next &raquo;</a>
+                                </c:if>
+                            </div>
+                        </div>
+                    </c:if>
                 </div>
 
                 <!-- Recent Imports History -->
                 <div class="table-panel history-section">
                     <div class="table-header">
                         <h3>Recent Imports</h3>
+                    </div>
+                    <div class="filter-bar" style="margin-bottom: 16px;">
+                        <form method="get" action="${pageContext.request.contextPath}/staff/warehouse/import" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <input type="hidden" name="tab" value="import">
+                            <input type="hidden" name="keyword" value="${currentKeyword}">
+                            <input type="hidden" name="productFilter" value="${currentProductFilter}">
+                            <input type="hidden" name="colorFilter" value="${currentColorFilter}">
+
+                            <input type="text" name="importSearch" value="${importSearch}" placeholder="Search product, importer..." style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem; min-width: 200px; outline: none;"/>
+
+                            <select name="importProductFilter" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem; min-width: 160px;">
+                                <option value="">All Products</option>
+                                <c:forEach var="p" items="${products}">
+                                    <option value="${p.productId}" ${importProductFilter eq p.productId ? 'selected' : ''}>${p.name}</option>
+                                </c:forEach>
+                            </select>
+
+                            <select name="importImporterFilter" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem; min-width: 150px;">
+                                <option value="">All Importers</option>
+                                <c:forEach var="imp" items="${importers}">
+                                    <option value="${imp[0]}" ${importImporterFilter eq imp[0] ? 'selected' : ''}>${imp[1]}</option>
+                                </c:forEach>
+                            </select>
+
+                            <input type="date" name="importDateFrom" value="${importDateFrom}" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem;"/>
+                            <span style="color: #94a3b8;">—</span>
+                            <input type="date" name="importDateTo" value="${importDateTo}" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem;"/>
+
+                            <button type="submit" class="btn btn-primary" style="padding: 9px 18px; font-size: 0.88rem;">Filter</button>
+                            <a href="?tab=import&importProductFilter=&importImporterFilter=&importDateFrom=&importDateTo=&importSearch=&keyword=${currentKeyword}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}" class="reset-btn" style="padding: 9px 16px; font-size: 0.88rem; text-decoration: none;">Reset</a>
+                        </form>
                     </div>
                     <div class="table-wrapper">
                         <table>
@@ -157,7 +268,7 @@
                                     <c:when test="${empty recentImports}">
                                         <tr>
                                             <td colspan="7">
-                                                <div class="empty-state">No import records yet</div>
+                                                <div class="empty-state">No import records found</div>
                                             </td>
                                         </tr>
                                     </c:when>
@@ -177,9 +288,63 @@
                                 </c:choose>
                             </tbody>
                         </table>
+
+                        <c:if test="${importTotalPages > 1}">
+                            <div class="pagination-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding: 0 4px;">
+                                <span style="font-size: 0.85rem; color: #64748b;">
+                                    Showing ${recentImports.size()} of ${importTotalRecords} records
+                                </span>
+                                <div class="pagination" style="display: flex; gap: 4px;">
+                                    <c:if test="${importPage > 1}">
+                                        <a href="?tab=import&invPage=${invPage}&importPage=${importPage - 1}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${importSearch}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}"
+                                           class="page-btn">&laquo; Prev</a>
+                                    </c:if>
+                                    <c:forEach begin="1" end="${importTotalPages > 5 ? 5 : importTotalPages}" var="i">
+                                        <c:set var="startPage" value="${importTotalPages > 5 ? (importPage > 3 ? importPage - 2 : 1) : 1}"/>
+                                        <a href="?tab=import&invPage=${invPage}&importPage=${startPage + i - 1}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${importSearch}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}"
+                                           class="page-btn ${(startPage + i - 1) == importPage ? 'active' : ''}">${startPage + i - 1}</a>
+                                    </c:forEach>
+                                    <c:if test="${importPage < importTotalPages}">
+                                        <a href="?tab=import&invPage=${invPage}&importPage=${importPage + 1}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${importSearch}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}"
+                                           class="page-btn">Next &raquo;</a>
+                                    </c:if>
+                                </div>
+                            </div>
+                        </c:if>
                     </div>
                 </div>
             </main>
         </div>
     </body>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.import-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('button[type="submit"]');
+                var originalText = btn.textContent;
+                btn.textContent = 'Adding...';
+                btn.disabled = true;
+
+                var formData = new FormData(form);
+                fetch(form.action, { method: 'POST', body: formData })
+                    .then(function(resp) {
+                        if (resp.redirected) {
+                            window.location.href = resp.url;
+                        }
+                    })
+                    .then(function() {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                        form.querySelector('input[name="quantity"]').value = '';
+                        form.querySelector('input[name="importPrice"]').value = '';
+                    })
+                    .catch(function() {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    });
+            });
+        });
+    });
+    </script>
 </html>

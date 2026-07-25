@@ -5,7 +5,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.time.LocalDateTime;
 
 public class WarehouseDAO extends DBContext {
 
@@ -14,15 +17,35 @@ public class WarehouseDAO extends DBContext {
     }
 
     public List<Object[]> getInventorySummary() {
-        return getInventorySummary(null, null, null);
+        return getInventorySummary(null, null, null, null);
     }
 
     public List<Object[]> getInventorySummary(String keyword, String sizeFilter, String colorFilter) {
-        List<Object[]> summary = new ArrayList<>();
-        if (connection == null) return summary;
+        return getInventorySummary(keyword, sizeFilter, colorFilter, null);
+    }
 
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT pv.variantId, pv.productId, p.name AS productName, "
+    public List<Object[]> getInventorySummary(String keyword, String sizeFilter, String colorFilter, String productFilter) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> result = (List<Object[]>) getInventorySummaryPaginated(keyword, sizeFilter, colorFilter, productFilter, 1, 10).get("data");
+        return result;
+    }
+
+    public Map<String, Object> getInventorySummaryPaginated(String keyword, String sizeFilter, String colorFilter, String productFilter, int page, int pageSize) {
+        Map<String, Object> result = new HashMap<>();
+        List<Object[]> summary = new ArrayList<>();
+        if (connection == null) {
+            result.put("data", summary);
+            result.put("totalRecords", 0);
+            result.put("totalPages", 0);
+            return result;
+        }
+
+        StringBuilder countSql = new StringBuilder("SELECT COUNT(*) FROM ProductVariants pv "
+                + "JOIN Products p ON pv.productId = p.productId "
+                + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                + "JOIN Colors c ON pv.colorId = c.colorId WHERE 1=1 ");
+        StringBuilder sql = new StringBuilder(
+                "SELECT pv.variantId, pv.productId, p.name AS productName, "
                 + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, "
                 + "pv.stockQty, pv.reservedQty, pv.priceOverride, pv.createdAt "
                 + "FROM ProductVariants pv "
@@ -31,27 +54,59 @@ public class WarehouseDAO extends DBContext {
                 + "JOIN Colors c ON pv.colorId = c.colorId "
                 + "WHERE 1=1 ");
 
+        List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
+
         if (keyword != null && !keyword.isBlank()) {
-            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(pv.sku) LIKE ?) ");
-            params.add("%" + keyword.toLowerCase() + "%");
-            params.add("%" + keyword.toLowerCase() + "%");
+            String cond = "AND (LOWER(p.name) LIKE ? OR LOWER(pv.sku) LIKE ?) ";
+            countSql.append(cond);
+            sql.append(cond);
+            String like = "%" + keyword.toLowerCase() + "%";
+            countParams.add(like);
+            countParams.add(like);
+            params.add(like);
+            params.add(like);
+        }
+        if (productFilter != null && !productFilter.isBlank()) {
+            String cond = "AND p.productId = ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(productFilter);
+            params.add(productFilter);
         }
         if (sizeFilter != null && !sizeFilter.isBlank()) {
-            sql.append("AND s.sizeId = ? ");
+            String cond = "AND s.sizeId = ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(sizeFilter);
             params.add(sizeFilter);
         }
         if (colorFilter != null && !colorFilter.isBlank()) {
-            sql.append("AND c.colorId = ? ");
+            String cond = "AND c.colorId = ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(colorFilter);
             params.add(colorFilter);
         }
 
-        sql.append("ORDER BY p.name, s.sizeName, c.colorName");
+        int totalRecords = 0;
+        try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
+            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) totalRecords = rs.getInt(1);
+            }
+        } catch (SQLException ex) {
+            System.out.println("getInventorySummaryPaginated count error: " + ex.getMessage());
+        }
+
+        int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+        int offset = (page - 1) * pageSize;
+        sql.append("ORDER BY p.name, s.sizeName, c.colorName OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
-            }
+            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            ps.setInt(params.size() + 1, offset);
+            ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Object[] row = new Object[12];
@@ -71,16 +126,22 @@ public class WarehouseDAO extends DBContext {
                 }
             }
         } catch (SQLException ex) {
-            System.out.println("getInventorySummary error: " + ex.getMessage());
+            System.out.println("getInventorySummaryPaginated error: " + ex.getMessage());
         }
-        return summary;
+
+        result.put("data", summary);
+        result.put("totalRecords", totalRecords);
+        result.put("totalPages", totalPages);
+        return result;
     }
 
     public List<Object[]> getAllSizes() {
         List<Object[]> sizes = new ArrayList<>();
         if (connection == null) return sizes;
 
-        String sql = "SELECT sizeId, sizeName FROM Sizes ORDER BY sizeName";
+        String sql = "SELECT DISTINCT s.sizeId, s.sizeName FROM Sizes s "
+                   + "JOIN ProductVariants pv ON s.sizeId = pv.sizeId "
+                   + "ORDER BY s.sizeName";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -99,7 +160,9 @@ public class WarehouseDAO extends DBContext {
         List<Object[]> colors = new ArrayList<>();
         if (connection == null) return colors;
 
-        String sql = "SELECT colorId, colorName, hexCode FROM Colors ORDER BY colorName";
+        String sql = "SELECT DISTINCT c.colorId, c.colorName, c.hexCode FROM Colors c "
+                   + "JOIN ProductVariants pv ON c.colorId = pv.colorId "
+                   + "ORDER BY c.colorName";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -314,25 +377,103 @@ public class WarehouseDAO extends DBContext {
     }
 
     public List<Object[]> getRecentImports(int limit) {
+        Map<String, Object> result = getRecentImportsPaginated(null, null, null, null, null, 1, limit);
+        @SuppressWarnings("unchecked")
+        List<Object[]> imports = (List<Object[]>) result.get("data");
+        return imports;
+    }
+
+    public Map<String, Object> getRecentImportsPaginated(String productFilter, String importerFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
+        Map<String, Object> result = new HashMap<>();
         List<Object[]> imports = new ArrayList<>();
-        if (connection == null) return imports;
+        if (connection == null) {
+            result.put("data", imports);
+            result.put("totalRecords", 0);
+            result.put("totalPages", 0);
+            return result;
+        }
 
-        String sql = "SELECT TOP (?) wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
-                + "wi.importedBy, wi.importDate, a.fullName AS importerName, "
-                + "p.name AS productName, s.sizeName, c.colorName "
-                + "FROM WarehouseImports wi "
-                + "JOIN Accounts a ON wi.importedBy = a.accountId "
-                + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
-                + "JOIN Products p ON pv.productId = p.productId "
-                + "JOIN Sizes s ON pv.sizeId = s.sizeId "
-                + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "ORDER BY wi.importDate DESC";
+        StringBuilder countSql = new StringBuilder(
+            "SELECT COUNT(*) FROM WarehouseImports wi "
+            + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+            + "JOIN Products p ON pv.productId = p.productId "
+            + "JOIN Accounts a ON wi.importedBy = a.accountId "
+            + "WHERE 1=1 ");
+        StringBuilder sql = new StringBuilder(
+            "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
+            + "wi.importedBy, wi.importDate, a.fullName AS importerName, "
+            + "p.name AS productName, s.sizeName, c.colorName, p.productId "
+            + "FROM WarehouseImports wi "
+            + "JOIN Accounts a ON wi.importedBy = a.accountId "
+            + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+            + "JOIN Products p ON pv.productId = p.productId "
+            + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+            + "JOIN Colors c ON pv.colorId = c.colorId "
+            + "WHERE 1=1 ");
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, limit);
+        List<Object> countParams = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
+        if (productFilter != null && !productFilter.isBlank()) {
+            String cond = " AND p.productId = ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(productFilter);
+            params.add(productFilter);
+        }
+        if (importerFilter != null && !importerFilter.isBlank()) {
+            String cond = " AND a.accountId = ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(importerFilter);
+            params.add(importerFilter);
+        }
+        if (dateFrom != null && !dateFrom.isBlank()) {
+            String cond = " AND wi.importDate >= ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
+            params.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
+        }
+        if (dateTo != null && !dateTo.isBlank()) {
+            String cond = " AND wi.importDate <= ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(LocalDateTime.parse(dateTo + "T23:59:59"));
+            params.add(LocalDateTime.parse(dateTo + "T23:59:59"));
+        }
+        if (search != null && !search.isBlank()) {
+            String cond = " AND (p.name LIKE ? OR a.fullName LIKE ?) ";
+            countSql.append(cond);
+            sql.append(cond);
+            String like = "%" + search + "%";
+            countParams.add(like);
+            countParams.add(like);
+            params.add(like);
+            params.add(like);
+        }
+
+        int totalRecords = 0;
+        try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
+            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) totalRecords = rs.getInt(1);
+            }
+        } catch (SQLException ex) {
+            System.out.println("getRecentImportsPaginated count error: " + ex.getMessage());
+        }
+
+        int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+        int offset = (page - 1) * pageSize;
+        sql.append(" ORDER BY wi.importDate DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            ps.setInt(params.size() + 1, offset);
+            ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Object[] row = new Object[10];
+                    Object[] row = new Object[11];
                     row[0] = rs.getString("importId");
                     row[1] = rs.getString("variantId");
                     row[2] = rs.getInt("quantity");
@@ -343,13 +484,37 @@ public class WarehouseDAO extends DBContext {
                     row[7] = rs.getString("productName");
                     row[8] = rs.getString("sizeName");
                     row[9] = rs.getString("colorName");
+                    row[10] = rs.getString("productId");
                     imports.add(row);
                 }
             }
         } catch (SQLException ex) {
-            System.out.println("getRecentImports error: " + ex.getMessage());
+            System.out.println("getRecentImportsPaginated error: " + ex.getMessage());
         }
-        return imports;
+
+        result.put("data", imports);
+        result.put("totalRecords", totalRecords);
+        result.put("totalPages", totalPages);
+        return result;
+    }
+
+    public List<Object[]> getAllImporters() {
+        List<Object[]> importers = new ArrayList<>();
+        if (connection == null) return importers;
+        String sql = "SELECT DISTINCT a.accountId, a.fullName FROM WarehouseImports wi "
+                   + "JOIN Accounts a ON wi.importedBy = a.accountId ORDER BY a.fullName";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Object[] row = new Object[2];
+                row[0] = rs.getString("accountId");
+                row[1] = rs.getString("fullName");
+                importers.add(row);
+            }
+        } catch (SQLException ex) {
+            System.out.println("getAllImporters error: " + ex.getMessage());
+        }
+        return importers;
     }
 
     private String generateId(String prefix) {

@@ -55,6 +55,26 @@ public class CartCheckoutServlet extends HttpServlet {
             return;
         }
 
+        // Validate: require shipping address and phone
+        String address = trimOrNull(request.getParameter("shippingAddress"));
+        String phone = trimOrNull(request.getParameter("phone"));
+
+        // If not provided in form, try to use from profile
+        if (isEmpty(address)) {
+            address = trimOrNull(account.getAddress());
+        }
+        if (isEmpty(phone)) {
+            phone = trimOrNull(account.getPhone());
+        }
+
+        // Still missing? Redirect to checkout page to fill in
+        if (isEmpty(address) || isEmpty(phone)) {
+            session.setAttribute("errorMessage",
+                    "Please provide your shipping address and phone number before placing an order.");
+            response.sendRedirect(request.getContextPath() + "/customer/checkout");
+            return;
+        }
+
         CartDAO cartDAO = new CartDAO();
         Cart cart = cartDAO.getActiveCart(account.getAccountId());
 
@@ -95,8 +115,8 @@ public class CartCheckoutServlet extends HttpServlet {
          */
         String orderId = orderService.createPendingOrderFromCart(
                 account.getAccountId(),
-                "",
-                account.getPhone(),
+                address,
+                phone,
                 checkoutCart,
                 cart.getCartId(),
                 selectedItems
@@ -127,5 +147,15 @@ public class CartCheckoutServlet extends HttpServlet {
 
         response.sendRedirect(request.getContextPath()
                 + "/customer/order-detail?orderId=" + orderId);
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private String trimOrNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

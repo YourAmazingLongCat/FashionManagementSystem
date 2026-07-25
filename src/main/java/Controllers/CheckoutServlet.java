@@ -1,6 +1,9 @@
 package Controllers;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import DALs.CartDAO;
@@ -9,7 +12,7 @@ import DALs.CategoryDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItem;
-import Models.Order;
+import Models.CartItemView;
 import Services.OrderService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -43,15 +46,30 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        prepareCheckoutPage(request, session, customerId);
+        // Check if we have checkout cart items in session
+        List<CartItem> checkoutCart = (List<CartItem>) session.getAttribute("checkoutCart");
+        if (checkoutCart == null || checkoutCart.isEmpty()) {
+            session.setAttribute("errorMessage", "No items selected for checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
 
-        List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
-        if (cart != null && !cart.isEmpty()) {
-            Order preview = orderService.reviewOrder(customerId, "Preview", "Preview", cart);
-            if (preview != null) {
-                request.setAttribute("checkoutTotal", preview.getTotalAmount());
+        BigDecimal totalAmount = (BigDecimal) session.getAttribute("checkoutTotal");
+        if (totalAmount == null) {
+            totalAmount = BigDecimal.ZERO;
+            for (CartItem item : checkoutCart) {
+                totalAmount = totalAmount.add(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
             }
         }
+
+        Account user = (Account) session.getAttribute("USER");
+        String address = user != null ? user.getAddress() : "";
+        String phone = user != null ? user.getPhone() : "";
+
+        request.setAttribute("shippingAddress", address);
+        request.setAttribute("phone", phone);
+        request.setAttribute("checkoutTotal", totalAmount);
+        request.setAttribute("categories", new CategoryDAO().getAllCategories());
 
         forwardLayout(request, response, CHECKOUT_PAGE);
     }
@@ -71,77 +89,79 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        List<CartItem> cart = (List<CartItem>) session.getAttribute("cart");
-        if (cart == null || cart.isEmpty()) {
-            request.setAttribute("errorMessage", "Your cart is empty.");
-            prepareCheckoutPage(request, session, customerId);
-            forwardLayout(request, response, CHECKOUT_PAGE);
+        // Check if this is a place order action
+        String action = request.getParameter("action");
+        if ("placeOrder".equals(action)) {
+            doPlaceOrder(request, response, session, customerId);
             return;
         }
 
-        prepareCheckoutPage(request, session, customerId);
-        String shippingAddress = trim(request.getParameter("shippingAddress"));
-        String phone = trim(request.getParameter("phone"));
-
-        Account user = (Account) session.getAttribute("USER");
-        if (user != null) {
-            if (isEmpty(shippingAddress)) {
-                shippingAddress = user.getAddress();
-            }
-            if (isEmpty(phone)) {
-                phone = user.getPhone();
-            }
-        }
-
-        request.setAttribute("shippingAddress", shippingAddress);
-        request.setAttribute("phone", phone);
-
-        if (isEmpty(shippingAddress) || isEmpty(phone)) {
-            request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
-            forwardLayout(request, response, CHECKOUT_PAGE);
+        // Get selected items from form
+        String selectedItemsStr = request.getParameter("selectedItemsList");
+        if (selectedItemsStr == null || selectedItemsStr.trim().isEmpty()) {
+            session.setAttribute("errorMessage", "Please select at least one product to checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        Order preview = orderService.reviewOrder(customerId, shippingAddress, phone, cart);
-        if (preview == null) {
-            request.setAttribute("errorMessage", "Cannot create order. Please check your cart again.");
-            forwardLayout(request, response, CHECKOUT_PAGE);
+        List<String> selectedItemIds = Arrays.asList(selectedItemsStr.split(","));
+        if (selectedItemIds.isEmpty()) {
+            session.setAttribute("errorMessage", "Please select at least one product to checkout.");
+            response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        // Create order directly - Bill will be created when staff confirms the order
-        String orderId = orderService.checkout(customerId, shippingAddress, phone, cart);
-
-        if (orderId == null) {
-            request.setAttribute("errorMessage", "Checkout failed. Please check your information.");
-            request.setAttribute("checkoutTotal", preview.getTotalAmount());
-            forwardLayout(request, response, CHECKOUT_PAGE);
-            return;
-        }
-
-        session.setAttribute("successMessage", "Order created successfully! Order ID: " + orderId);
-
-        removeCheckedOutItemsFromDatabaseCart(session, customerId);
-        session.removeAttribute("cart");
-        session.removeAttribute("checkoutCartItemIds");
-        session.setAttribute("cartCount", 0);
-
-        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
-    }
-
-    private void removeCheckedOutItemsFromDatabaseCart(HttpSession session, String customerId) {
-        Object selectedIdsObject = session.getAttribute("checkoutCartItemIds");
-        if (!(selectedIdsObject instanceof String[])) {
-            return;
-        }
-
-        String[] selectedIds = (String[]) selectedIdsObject;
-        Cart cart = new CartDAO().getActiveCart(customerId);
+        // Load cart items from database
+        CartDAO cartDAO = new CartDAO();
+        Cart cart = cartDAO.getActiveCart(customerId);
         if (cart == null) {
+            session.setAttribute("errorMessage", "Your cart is empty.");
+            response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        new CartItemDAO().deleteItemsByIds(cart.getCartId(), selectedIds);
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        String[] itemIds = selectedItemIds.toArray(new String[0]);
+        List<CartItemView> selectedCartItems = cartItemDAO.getCartItemsByIds(cart.getCartId(), itemIds);
+
+        if (selectedCartItems == null || selectedCartItems.isEmpty()) {
+            session.setAttribute("errorMessage", "Selected items are no longer available.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Convert to CartItem list
+        List<CartItem> checkoutCart = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (CartItemView viewItem : selectedCartItems) {
+            CartItem item = new CartItem();
+            item.setVariantId(viewItem.getVariantId());
+            item.setProductName(viewItem.getProductName());
+            item.setProductImageUrl(viewItem.getImageUrl());
+            item.setSizeName(viewItem.getSizeName());
+            item.setColorName(viewItem.getColorName());
+            item.setQuantity(viewItem.getQuantity());
+            item.setUnitPrice(BigDecimal.valueOf(viewItem.getPrice()));
+            checkoutCart.add(item);
+            totalAmount = totalAmount.add(BigDecimal.valueOf(viewItem.getSubtotal()));
+        }
+
+        // Store in session
+        session.setAttribute("checkoutCart", checkoutCart);
+        session.setAttribute("checkoutCartIds", itemIds);
+        session.setAttribute("checkoutTotal", totalAmount);
+
+        // Get user info for pre-fill
+        Account user = (Account) session.getAttribute("USER");
+        String address = user != null && user.getAddress() != null ? user.getAddress() : "";
+        String phone = user != null && user.getPhone() != null ? user.getPhone() : "";
+
+        request.setAttribute("shippingAddress", address);
+        request.setAttribute("phone", phone);
+        request.setAttribute("checkoutTotal", totalAmount);
+        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+
+        forwardLayout(request, response, CHECKOUT_PAGE);
     }
 
     private void forwardLayout(HttpServletRequest request, HttpServletResponse response, String contentPage)
@@ -164,14 +184,93 @@ public class CheckoutServlet extends HttpServlet {
         return null;
     }
 
-    private void prepareCheckoutPage(HttpServletRequest request, HttpSession session, String customerId) {
-        request.setAttribute("categories", new CategoryDAO().getAllCategories());
+    @SuppressWarnings("unchecked")
+    protected void doPlaceOrder(HttpServletRequest request, HttpServletResponse response, HttpSession session, String customerId)
+            throws ServletException, IOException {
+
+        String[] selectedItemIds = (String[]) session.getAttribute("checkoutCartIds");
+        if (selectedItemIds == null || selectedItemIds.length == 0) {
+            session.setAttribute("errorMessage", "Your checkout session has expired. Please try again.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        String shippingAddress = trim(request.getParameter("shippingAddress"));
+        String phone = trim(request.getParameter("phone"));
 
         Account user = (Account) session.getAttribute("USER");
         if (user != null) {
-            request.setAttribute("shippingAddress", user.getAddress());
-            request.setAttribute("phone", user.getPhone());
+            if (isEmpty(shippingAddress)) {
+                shippingAddress = user.getAddress();
+            }
+            if (isEmpty(phone)) {
+                phone = user.getPhone();
+            }
         }
+
+        if (isEmpty(shippingAddress) || isEmpty(phone)) {
+            request.setAttribute("errorMessage", "Please enter shipping address and phone number.");
+            request.setAttribute("categories", new CategoryDAO().getAllCategories());
+            forwardLayout(request, response, CHECKOUT_PAGE);
+            return;
+        }
+
+        // Get cart and cart items from database
+        CartDAO cartDAO = new CartDAO();
+        Cart cart = cartDAO.getActiveCart(customerId);
+        if (cart == null) {
+            session.setAttribute("errorMessage", "Your cart is empty.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        List<CartItemView> selectedCartItems = cartItemDAO.getCartItemsByIds(cart.getCartId(), selectedItemIds);
+
+        if (selectedCartItems == null || selectedCartItems.isEmpty()) {
+            session.setAttribute("errorMessage", "Selected items are no longer available.");
+            response.sendRedirect(request.getContextPath() + "/cart");
+            return;
+        }
+
+        // Convert to CartItem list
+        List<CartItem> checkoutCart = new ArrayList<>();
+        for (CartItemView viewItem : selectedCartItems) {
+            CartItem item = new CartItem();
+            item.setVariantId(viewItem.getVariantId());
+            item.setProductName(viewItem.getProductName());
+            item.setProductImageUrl(viewItem.getImageUrl());
+            item.setSizeName(viewItem.getSizeName());
+            item.setColorName(viewItem.getColorName());
+            item.setQuantity(viewItem.getQuantity());
+            item.setUnitPrice(BigDecimal.valueOf(viewItem.getPrice()));
+            checkoutCart.add(item);
+        }
+
+        // Create order with stock reservation (using createPendingOrderFromCart)
+        String orderId = orderService.createPendingOrderFromCart(
+                customerId, shippingAddress, phone, checkoutCart,
+                cart.getCartId(), selectedItemIds);
+
+        if (orderId == null) {
+            request.setAttribute("errorMessage", "Checkout failed. Please check your cart again.");
+            request.setAttribute("categories", new CategoryDAO().getAllCategories());
+            forwardLayout(request, response, CHECKOUT_PAGE);
+            return;
+        }
+
+        // Clean up session
+        session.removeAttribute("checkoutCart");
+        session.removeAttribute("checkoutCartIds");
+        session.removeAttribute("checkoutItems");
+
+        // Update cart count
+        List<CartItemView> remainingItems = cartItemDAO.getCartItems(cart.getCartId());
+        int cartCount = remainingItems.stream().mapToInt(CartItemView::getQuantity).sum();
+        session.setAttribute("cartCount", cartCount);
+
+        session.setAttribute("successMessage", "Order created successfully! Order ID: " + orderId);
+        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
     }
 
     private String trim(String value) {
