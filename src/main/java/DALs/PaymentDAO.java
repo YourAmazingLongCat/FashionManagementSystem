@@ -520,6 +520,101 @@ public class PaymentDAO extends DBContext {
         return false;
     }
 
+    /**
+     * Refunds a VNPay payment by updating the payment status to REFUNDED.
+     * Note: Actual VNPay refund requires calling VNPay's refund API.
+     * This method updates the local payment record for tracking purposes.
+     */
+    public boolean refundVNPayPayment(String paymentId, String refundDescription) {
+        if (paymentId == null || paymentId.trim().isEmpty()) {
+            return false;
+        }
+
+        String query = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ? AND paymentMethod = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.REFUNDED);
+            ps.setString(2, paymentId.trim());
+            ps.setString(3, PaymentMethod.VNPAY);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("refundVNPayPayment error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public boolean refundVNPayPaymentByOrderId(String orderId, String refundPaymentId) {
+        if (orderId == null || orderId.trim().isEmpty()) {
+            return false;
+        }
+
+        String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
+                + "ORDER BY createdAt DESC";
+        String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
+        String insertRefundQuery = "INSERT INTO Payments "
+                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
+                + "amount, description, createdAt, paidAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+
+        try {
+            connection.setAutoCommit(false);
+
+            Payment paidVNPayPayment;
+            try (PreparedStatement ps = connection.prepareStatement(selectQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentMethod.VNPAY);
+                ps.setString(4, PaymentStatus.PAID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        connection.rollback();
+                        return false;
+                    }
+                    paidVNPayPayment = getPaymentFromResultSet(rs);
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {
+                ps.setString(1, PaymentStatus.REFUNDED);
+                ps.setString(2, paidVNPayPayment.getPaymentId());
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            String refundDesc = (refundPaymentId == null || refundPaymentId.trim().isEmpty())
+                    ? "Refund VNPay payment for cancelled order " + orderId
+                    : "Manual refund for order " + orderId;
+
+            try (PreparedStatement ps = connection.prepareStatement(insertRefundQuery)) {
+                ps.setString(1, refundPaymentId);
+                ps.setNull(2, Types.VARCHAR);
+                ps.setString(3, orderId);
+                ps.setString(4, PaymentType.REFUND);
+                ps.setString(5, PaymentMethod.VNPAY);
+                ps.setString(6, PaymentStatus.PAID);
+                ps.setBigDecimal(7, paidVNPayPayment.getAmount());
+                ps.setString(8, refundDesc);
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback("refundVNPayPaymentByOrderId", e);
+        } finally {
+            restoreAutoCommit("refundVNPayPaymentByOrderId");
+        }
+
+        return false;
+    }
+
     private void setPaymentParameters(PreparedStatement ps, Payment payment) throws SQLException {
         ps.setString(1, payment.getPaymentId());
 

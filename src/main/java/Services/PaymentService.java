@@ -528,6 +528,48 @@ public class PaymentService {
         return refunded;
     }
 
+    public boolean refundVNPayPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        boolean refunded = paymentDAO.refundVNPayPaymentByOrderId(orderId.trim(), generatePaymentId());
+
+        if (refunded) {
+            Payment latestPurchasePayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+            if (latestPurchasePayment != null
+                    && PaymentMethod.VNPAY.equals(latestPurchasePayment.getPaymentMethod())
+                    && PaymentStatus.REFUNDED.equals(latestPurchasePayment.getPaymentStatus())) {
+                syncBillSafely(latestPurchasePayment);
+            }
+        }
+
+        return refunded;
+    }
+
+    public boolean refundPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (payment == null) {
+            return false;
+        }
+
+        if (PaymentMethod.WALLET.equals(payment.getPaymentMethod())
+                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            return refundWalletPaymentIfNeeded(orderId);
+        }
+
+        if (PaymentMethod.VNPAY.equals(payment.getPaymentMethod())
+                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            return refundVNPayPaymentIfNeeded(orderId);
+        }
+
+        return false;
+    }
+
     public boolean lockWallet(String accountId) {
         Wallet wallet = getWalletByAccountId(accountId);
         if (wallet == null) {
