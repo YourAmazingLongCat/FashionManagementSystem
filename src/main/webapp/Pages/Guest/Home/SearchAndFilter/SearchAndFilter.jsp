@@ -8,6 +8,28 @@
 
         <aside class="sidebar">
             <section class="filter-section">
+                <h3 class="filter-title">PRICE RANGE</h3>
+                <div class="price-range-filter">
+                    <div class="price-input-wrapper">
+                        <span class="price-currency">đ</span>
+                        <input type="number" name="minPrice" placeholder="Min" value="${selectedMinPrice}" 
+                               class="price-input" min="0" step="1000" 
+                               onchange="validatePriceRange(this)" onkeyup="validatePriceRange(this)">
+                    </div>
+                    <span class="price-separator">-</span>
+                    <div class="price-input-wrapper">
+                        <span class="price-currency">đ</span>
+                        <input type="number" name="maxPrice" placeholder="Max" value="${selectedMaxPrice}" 
+                               class="price-input" min="0" step="1000"
+                               onchange="validatePriceRange(this)" onkeyup="validatePriceRange(this)">
+                    </div>
+                </div>
+                <div class="price-error" id="priceError"></div>
+                <button type="button" class="btn-apply-price" onclick="applyPriceFilter()">Apply</button>
+            </section>
+
+            <section class="filter-section">
+                <h3 class="filter-title">CATEGORIES</h3>
                 <div class="filter-group">
                     <c:forEach var="c" items="${categories}">
                         <c:choose>
@@ -141,6 +163,30 @@
         if (form) {
             form.submit();
         }
+    }
+
+    function validatePriceRange(input) {
+        if (input.value && parseFloat(input.value) < 0) {
+            input.value = 0;
+        }
+    }
+
+    function applyPriceFilter() {
+        const minInput = document.querySelector('input[name="minPrice"]');
+        const maxInput = document.querySelector('input[name="maxPrice"]');
+        const errorDiv = document.getElementById('priceError');
+        
+        const min = minInput.value ? parseFloat(minInput.value) : null;
+        const max = maxInput.value ? parseFloat(maxInput.value) : null;
+        
+        if (min !== null && max !== null && min > max) {
+            errorDiv.textContent = 'Min price cannot exceed max price';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        errorDiv.style.display = 'none';
+        submitSearchFilterForm();
     }
 
     function toggleWishlist(productId, button) {
