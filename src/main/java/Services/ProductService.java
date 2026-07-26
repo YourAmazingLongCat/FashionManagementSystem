@@ -166,6 +166,16 @@ public class ProductService {
         return productDAO.hasProductOrders(productId);
     }
 
+    public boolean hasWarehouseImports(String productId) {
+        if (productId == null || productId.isBlank()) return false;
+        return productDAO.hasWarehouseImports(productId);
+    }
+
+    public boolean isSkuDuplicate(String sku, String excludeProductId) {
+        if (sku == null || sku.isBlank()) return false;
+        return productDAO.isSkuDuplicate(sku, excludeProductId);
+    }
+
     public boolean isDatabaseReady() { return productDAO.isDatabaseReady(); }
     public BigDecimal getDisplayPrice(Product product) { return productDAO.getDisplayPrice(product); }
 }

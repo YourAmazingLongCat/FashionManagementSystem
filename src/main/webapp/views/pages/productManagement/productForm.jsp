@@ -71,7 +71,7 @@
                         <div class="alert alert-error">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
+                    <form id="productForm" method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="${formAction}">
                         <input type="hidden" name="existingImageUrl" value="${product.primaryImageUrl}">
                         <c:if test="${formAction eq 'edit'}">
@@ -120,8 +120,7 @@
                                 <div class="form-group">
                                     <label for="basePrice">Base price</label>
                                     <div class="price-input-wrap">
-                                        <input id="basePrice" name="basePrice" type="text" inputmode="numeric" value="${empty product.basePrice ? '' : product.basePrice.setScale(0, 0)}" placeholder="650.000" required>
-                                        <span class="price-suffix">đ</span>
+                                        <input id="basePrice" name="basePrice" type="text" inputmode="numeric" value="${empty product.basePrice ? '' : product.basePrice.setScale(0, 0)}" placeholder="650.000" required class="base-price-input">
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -142,8 +141,14 @@
                                     <p>Add each size/color option as a separate row. Stock quantity is managed through the Warehouse module.</p>
                                 </div>
                                 <c:choose>
-                                    <c:when test="${hasOrders}">
-                                        <span style="color: #b45309; font-size: 0.85rem; font-weight: 600;">Variants locked: product has existing orders</span>
+                                    <c:when test="${hasOrders || hasWarehouseImports}">
+                                        <span style="color: #b45309; font-size: 0.85rem; font-weight: 600;">
+                                            <c:choose>
+                                                <c:when test="${hasOrders && hasWarehouseImports}">Variants locked: product has existing orders and warehouse imports</c:when>
+                                                <c:when test="${hasOrders}">Variants locked: product has existing orders</c:when>
+                                                <c:otherwise>Variants locked: product has warehouse imports</c:otherwise>
+                                            </c:choose>
+                                        </span>
                                     </c:when>
                                     <c:otherwise>
                                         <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
@@ -371,8 +376,37 @@
 
                 const refreshAllSizeSelects = () => {
                     Array.from(variantsList.querySelectorAll('select[name="variantSizeId"]')).forEach(select => {
-                        replaceSelectOptions(select, sizeOptions, select.value, '-- Select size --');
-                        select.disabled = sizeOptions.length === 0;
+                        // Skip selects that belong to locked variant rows
+                        const row = select.closest('.variant-row');
+                        if (row && row.dataset.locked === 'true') {
+                            return; // This row is locked, skip it completely
+                        }
+                        // Only refresh unlocked selects
+                        if (sizeOptions.length > 0) {
+                            const currentVal = select.value;
+                            select.innerHTML = '';
+                            const placeholderOption = document.createElement('option');
+                            placeholderOption.value = '';
+                            placeholderOption.textContent = '-- Select size --';
+                            select.appendChild(placeholderOption);
+
+                            let hasSelectedValue = false;
+                            sizeOptions.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.id;
+                                option.textContent = item.name;
+                                if ((currentVal || '') === item.id) {
+                                    option.selected = true;
+                                    hasSelectedValue = true;
+                                }
+                                select.appendChild(option);
+                            });
+
+                            if (!hasSelectedValue) {
+                                select.value = '';
+                            }
+                        }
+                        select.disabled = sizeOptions.length === 0 || isVariantsLocked;
                     });
                 };
 
@@ -380,28 +414,91 @@
                     const removeBtn = row.querySelector('.variant-remove-btn');
                     const priceInput = row.querySelector('input[name="variantPriceOverride"]');
                     const sizeSelect = row.querySelector('select[name="variantSizeId"]');
+                    const colorSelect = row.querySelector('select[name="variantColorId"]');
+                    const skuInput = row.querySelector('input[name="variantSku"]');
+
                     if (removeBtn) {
                         removeBtn.addEventListener('click', () => {
                             row.remove();
                             renumberVariantRows();
                             updateEmptyState();
                         });
-                        // Disable remove button if product has orders
-                        if (hasOrdersFlag) {
+                        // Disable remove button if variants are locked
+                        if (isVariantsLocked) {
                             removeBtn.disabled = true;
                             removeBtn.style.opacity = '0.5';
                             removeBtn.style.cursor = 'not-allowed';
-                            removeBtn.title = 'Cannot remove variant: product has existing orders';
+                            if (hasOrdersFlag && hasWarehouseImportsFlag) {
+                                removeBtn.title = 'Cannot remove variant: product has existing orders and warehouse imports';
+                            } else if (hasOrdersFlag) {
+                                removeBtn.title = 'Cannot remove variant: product has existing orders';
+                            } else {
+                                removeBtn.title = 'Cannot remove variant: product has warehouse imports';
+                            }
                         }
                     }
+
+                    // Lock all variant fields if variants are locked
+                    if (isVariantsLocked) {
+                        row.dataset.locked = 'true';
+                        if (sizeSelect) {
+                            sizeSelect.disabled = true;
+                            // Add hidden input to preserve value
+                            if (!row.querySelector('input[type="hidden"][name="variantSizeId"]')) {
+                                const hiddenSize = document.createElement('input');
+                                hiddenSize.type = 'hidden';
+                                hiddenSize.name = 'variantSizeId';
+                                hiddenSize.value = sizeSelect ? sizeSelect.value : '';
+                                row.appendChild(hiddenSize);
+                            }
+                        }
+                        if (colorSelect) {
+                            colorSelect.disabled = true;
+                            // Add hidden input to preserve value
+                            if (!row.querySelector('input[type="hidden"][name="variantColorId"]')) {
+                                const hiddenColor = document.createElement('input');
+                                hiddenColor.type = 'hidden';
+                                hiddenColor.name = 'variantColorId';
+                                hiddenColor.value = colorSelect ? colorSelect.value : '';
+                                row.appendChild(hiddenColor);
+                            }
+                        }
+                        if (skuInput) {
+                            skuInput.disabled = true;
+                            skuInput.readOnly = true;
+                            skuInput.classList.add('locked-field');
+                            if (!row.querySelector('input[type="hidden"][name="variantSku"]')) {
+                                const hiddenSku = document.createElement('input');
+                                hiddenSku.type = 'hidden';
+                                hiddenSku.name = 'variantSku';
+                                hiddenSku.value = skuInput.value;
+                                row.appendChild(hiddenSku);
+                            }
+                        }
+                        if (priceInput) {
+                            priceInput.disabled = true;
+                            priceInput.readOnly = true;
+                            priceInput.classList.add('locked-field');
+                            if (!row.querySelector('input[type="hidden"][name="variantPriceOverride"]')) {
+                                const hiddenPrice = document.createElement('input');
+                                hiddenPrice.type = 'hidden';
+                                hiddenPrice.name = 'variantPriceOverride';
+                                hiddenPrice.value = priceInput.value;
+                                row.appendChild(hiddenPrice);
+                            }
+                        }
+                    }
+
                     if (sizeSelect) {
-                        sizeSelect.disabled = sizeOptions.length === 0 || hasOrdersFlag;
+                        sizeSelect.disabled = sizeOptions.length === 0 || isVariantsLocked;
                     }
                     bindCurrencyInput(priceInput);
                 };
 
-                // Pass hasOrders flag from server to JavaScript
+                // Pass hasOrders and hasWarehouseImports flags from server to JavaScript
                 const hasOrdersFlag = ${hasOrders != null ? hasOrders : false};
+                const hasWarehouseImportsFlag = ${hasWarehouseImports != null ? hasWarehouseImports : false};
+                const isVariantsLocked = hasOrdersFlag || hasWarehouseImportsFlag;
 
                 const addVariantRow = (variant = {}) => {
                     const row = document.createElement('div');
@@ -418,6 +515,19 @@
                     removeBtn.type = 'button';
                     removeBtn.className = 'variant-remove-btn';
                     removeBtn.textContent = 'Remove';
+                    // Disable remove button if variants are locked
+                    if (isVariantsLocked) {
+                        removeBtn.disabled = true;
+                        removeBtn.style.opacity = '0.5';
+                        removeBtn.style.cursor = 'not-allowed';
+                        if (hasOrdersFlag && hasWarehouseImportsFlag) {
+                            removeBtn.title = 'Cannot add variant: product has existing orders and warehouse imports';
+                        } else if (hasOrdersFlag) {
+                            removeBtn.title = 'Cannot add variant: product has existing orders';
+                        } else {
+                            removeBtn.title = 'Cannot add variant: product has warehouse imports';
+                        }
+                    }
 
                     header.appendChild(title);
                     header.appendChild(removeBtn);
@@ -425,13 +535,22 @@
                     const grid = document.createElement('div');
                     grid.className = 'variant-row-grid';
 
+                    // Create select elements
                     const sizeSelect = createSelect('variantSizeId', sizeOptions, variant.sizeId || '', '-- Select size --');
-                    sizeSelect.disabled = sizeOptions.length === 0;
+                    const colorSelect = createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --');
+
+                    // If variants are locked, disable size/color and add hidden inputs
+                    if (isVariantsLocked) {
+                        sizeSelect.disabled = true;
+                        colorSelect.disabled = true;
+                    } else {
+                        sizeSelect.disabled = sizeOptions.length === 0;
+                    }
 
                     grid.appendChild(createField('Size', sizeSelect));
-                    grid.appendChild(createField('Color', createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --')));
-                    grid.appendChild(createField('SKU', createInput({ name: 'variantSku', value: variant.sku || '', placeholder: 'Required SKU' })));
-                    grid.appendChild(createField('Price override', createInput({ name: 'variantPriceOverride', value: variant.priceOverride || '', placeholder: 'Optional', inputMode: 'numeric' })));
+                    grid.appendChild(createField('Color', colorSelect));
+                    grid.appendChild(createField('SKU', createInput({ name: 'variantSku', value: variant.sku || '', placeholder: 'Required SKU', disabled: isVariantsLocked })));
+                    grid.appendChild(createField('Price override', createInput({ name: 'variantPriceOverride', value: variant.priceOverride || '', placeholder: 'Optional', inputMode: 'numeric', disabled: isVariantsLocked })));
                     // Stock is managed through Warehouse module, default to 0 on create
 
                     const enabledInput = document.createElement('input');
@@ -478,16 +597,23 @@
                 }
 
                 if (addVariantBtn) {
-                    addVariantBtn.disabled = hasOrdersFlag;
-                    if (hasOrdersFlag) {
+                    addVariantBtn.disabled = isVariantsLocked;
+                    if (isVariantsLocked) {
                         addVariantBtn.style.opacity = '0.5';
                         addVariantBtn.style.cursor = 'not-allowed';
-                        addVariantBtn.title = 'Cannot add variant: product has existing orders';
+                        if (hasOrdersFlag && hasWarehouseImportsFlag) {
+                            addVariantBtn.title = 'Cannot add variant: product has existing orders and warehouse imports';
+                        } else if (hasOrdersFlag) {
+                            addVariantBtn.title = 'Cannot add variant: product has existing orders';
+                        } else {
+                            addVariantBtn.title = 'Cannot add variant: product has warehouse imports';
+                        }
                     } else {
                         addVariantBtn.addEventListener('click', () => addVariantRow());
                     }
                 }
 
+                // Load sizes BEFORE adding variant rows to ensure size values are preserved
                 loadSizesByCategory(categorySelect ? categorySelect.value : '');
 
                 if (existingVariants.length > 0) {
@@ -496,9 +622,51 @@
                     addVariantRow();
                 }
 
+                // Re-apply sizes after variants are added to ensure correct values are selected
+                loadSizesByCategory(categorySelect ? categorySelect.value : '');
+
                 setImagePreview(imagePreview && imagePreview.dataset.existingSrc ? ctx + imagePreview.dataset.existingSrc : '');
                 renumberVariantRows();
                 updateEmptyState();
+
+                // Lock base price if variants are locked
+                if (isVariantsLocked) {
+                    const basePriceInput = document.getElementById('basePrice');
+                    if (basePriceInput) {
+                        basePriceInput.disabled = true;
+                        basePriceInput.readOnly = true;
+                        basePriceInput.classList.add('locked-field');
+                        // Add hidden input to preserve value
+                        if (!document.querySelector('input[type="hidden"][name="basePrice"]')) {
+                            const hiddenBasePrice = document.createElement('input');
+                            hiddenBasePrice.type = 'hidden';
+                            hiddenBasePrice.name = 'basePrice';
+                            hiddenBasePrice.value = basePriceInput.value;
+                            basePriceInput.parentElement.appendChild(hiddenBasePrice);
+                        }
+                    }
+                }
+
+                // Form validation for duplicate SKU (only when variants are not locked)
+                const productForm = document.getElementById('productForm');
+                if (productForm && !isVariantsLocked) {
+                    productForm.addEventListener('submit', function(e) {
+                        const skuInputs = Array.from(variantsList.querySelectorAll('input[name="variantSku"]'));
+                        const skuValues = skuInputs
+                            .map(input => input.value.trim().toUpperCase())
+                            .filter(sku => sku !== '');
+
+                        const seenSkus = new Set();
+                        for (const sku of skuValues) {
+                            if (seenSkus.has(sku)) {
+                                e.preventDefault();
+                                alert('Duplicate SKU found: ' + sku + '. Each variant must have a unique SKU.');
+                                return false;
+                            }
+                            seenSkus.add(sku);
+                        }
+                    });
+                }
             })();
         </script>
     </body>

@@ -740,6 +740,65 @@ public class ProductDAO extends DBContext {
         return false;
     }
 
+    public boolean hasWarehouseImports(String productId) {
+        if (productId == null || productId.isBlank()) {
+            return false;
+        }
+
+        String sql = """
+            SELECT COUNT(*) FROM WarehouseImports wi
+            JOIN ProductVariants pv ON wi.variantId = pv.variantId
+            WHERE pv.productId = ?
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("hasWarehouseImports error: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean isSkuDuplicate(String sku, String excludeProductId) {
+        if (sku == null || sku.isBlank()) {
+            return false;
+        }
+
+        String sql;
+        PreparedStatement ps;
+
+        try {
+            if (excludeProductId != null && !excludeProductId.isBlank()) {
+                sql = """
+                    SELECT COUNT(*) FROM ProductVariants
+                    WHERE sku = ? AND productId != ?
+                    """;
+                ps = connection.prepareStatement(sql);
+                ps.setString(1, sku);
+                ps.setString(2, excludeProductId);
+            } else {
+                sql = "SELECT COUNT(*) FROM ProductVariants WHERE sku = ?";
+                ps = connection.prepareStatement(sql);
+                ps.setString(1, sku);
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+            ps.close();
+        } catch (SQLException e) {
+            System.out.println("isSkuDuplicate error: " + e.getMessage());
+        }
+        return false;
+    }
+
     public record ProductResult(List<Product> products, int totalCount) {
         public int totalPages(int pageSize) {
             return (int) Math.ceil((double) totalCount / pageSize);

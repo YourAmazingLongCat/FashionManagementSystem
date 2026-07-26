@@ -205,6 +205,7 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("formAction", "edit");
         request.setAttribute("pageTitle", "Update Product");
         request.setAttribute("hasOrders", productService.hasOrders(productId));
+        request.setAttribute("hasWarehouseImports", productService.hasWarehouseImports(productId));
         loadReferenceData(request, product.getCategoryId());
         request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }
@@ -226,7 +227,7 @@ public class ProductManagementServlet extends HttpServlet {
     private void createProduct(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         Product product = buildProductFromRequest(request, false);
-        String error = validateProduct(product);
+        String error = validateProduct(product, false);
 
         if (error != null) {
             forwardWithError(request, response, product, "create", "Add Product", error);
@@ -244,7 +245,7 @@ public class ProductManagementServlet extends HttpServlet {
     private void updateProduct(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         Product product = buildProductFromRequest(request, true);
-        String error = validateProduct(product);
+        String error = validateProduct(product, true);
 
         if (error != null) {
             forwardWithError(request, response, product, "edit", "Update Product", error);
@@ -585,7 +586,7 @@ public class ProductManagementServlet extends HttpServlet {
         return size;
     }
 
-    private String validateProduct(Product product) {
+    private String validateProduct(Product product, boolean isUpdate) {
         if (isBlank(product.getCategoryId())) return "Please select a category.";
         if (isBlank(product.getName())) return "Please enter product name.";
         if (product.getName().length() > 200) return "Product name cannot exceed 200 characters.";
@@ -599,6 +600,31 @@ public class ProductManagementServlet extends HttpServlet {
             if (variant.getStockQty() < 0) return "Stock quantity cannot be negative.";
             if (variant.getPriceOverride() != null && variant.getPriceOverride().compareTo(BigDecimal.ZERO) < 0) return "Price override cannot be negative.";
         }
+
+        // Check for duplicate SKU across variants in this product
+        java.util.Set<String> seenSkus = new java.util.HashSet<>();
+        for (ProductVariant variant : product.getVariants()) {
+            String sku = variant.getSku();
+            if (sku != null && !sku.isBlank()) {
+                String normalizedSku = sku.trim().toUpperCase();
+                if (seenSkus.contains(normalizedSku)) {
+                    return "Duplicate SKU found: " + sku + ". Each variant must have a unique SKU.";
+                }
+                seenSkus.add(normalizedSku);
+            }
+        }
+
+        // Only check for duplicate SKU in database when creating new product
+        // When updating, the product's own SKUs are expected to match
+        if (!isUpdate) {
+            for (ProductVariant variant : product.getVariants()) {
+                String sku = variant.getSku();
+                if (sku != null && !sku.isBlank() && productService.isSkuDuplicate(sku.trim(), null)) {
+                    return "SKU '" + sku + "' is already used by another product. Please use a different SKU.";
+                }
+            }
+        }
+
         return null;
     }
 
