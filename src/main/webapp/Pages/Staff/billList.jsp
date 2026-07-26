@@ -107,6 +107,34 @@
                 </form>
             </div>
 
+            <!-- Summary Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center p-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <h6 class="mb-1 opacity-75">Total Qty Sold</h6>
+                        <h3 class="mb-0">${totalQtySold}</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center p-3" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
+                        <h6 class="mb-1 opacity-75">Amount Collected (Paid)</h6>
+                        <h5 class="mb-0"><fmt:formatNumber value="${totalPaidAmount}" type="number" groupingUsed="true"/> đ</h5>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center p-3" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <h6 class="mb-1 opacity-75">Outstanding Amount</h6>
+                        <h5 class="mb-0"><fmt:formatNumber value="${totalUnpaidAmount}" type="number" groupingUsed="true"/> đ</h5>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center p-3" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                        <h6 class="mb-1 opacity-75">Unpaid Orders</h6>
+                        <h3 class="mb-0">${totalUnpaidQty}</h3>
+                    </div>
+                </div>
+            </div>
+
             <div class="card p-4">
                 <h5 class="mb-3">Product Details</h5>
                 <table class="table table-hover align-middle">
@@ -156,7 +184,7 @@
                             <label class="form-label">Payment Status</label>
                             <select name="paymentStatus" class="form-select">
                                 <option value="">-- All --</option>
-                                <c:forEach var="s" items="${['Pending','Paid','Failed','Refunded']}">
+                                <c:forEach var="s" items="${['Pending','Paid','Failed','Refunded','Cancelled']}">
                                     <option value="${s}" ${paymentStatus == s ? 'selected' : ''}>${s}</option>
                                 </c:forEach>
                             </select>

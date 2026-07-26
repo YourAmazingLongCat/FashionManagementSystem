@@ -193,7 +193,6 @@
                                 <select class="filter-select" name="statusFilter" onchange="submitProductFilterForm()">
                                     <option value="">All status</option>
                                     <option value="Available" ${param.statusFilter eq 'Available' ? 'selected' : ''}>Available</option>
-                                    <option value="OutOfStock" ${param.statusFilter eq 'OutOfStock' ? 'selected' : ''}>Out of stock</option>
                                     <option value="Inactive" ${param.statusFilter eq 'Inactive' ? 'selected' : ''}>Inactive</option>
                                 </select>
                                 <select class="filter-select" name="categoryFilter" onchange="submitProductFilterForm()">
@@ -260,7 +259,19 @@
                                                     </div>
                                                 </div>
                                                 <div class="product-side">
-                                                    <div class="info-card"><p class="info-copy">Stock</p><strong>${product.totalStockQty}</strong></div>
+                                                    <div class="info-card">
+                                                        <p class="info-copy">Stock</p>
+                                                        <strong>
+                                                            <c:choose>
+                                                                <c:when test="${product.totalStockQty <= 0}">
+                                                                    <span style="color: #b45309;">Out of Stock</span>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    ${product.totalStockQty}
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </strong>
+                                                    </div>
                                                     <div class="info-card"><p class="info-copy">Price</p><strong><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> đ</strong></div>
                                                     <div class="info-card"><p class="info-copy">Catalog</p><strong>${product.categoryName}</strong></div>
                                                 </div>
@@ -268,7 +279,15 @@
                                                     <span class="status-badge status-${product.status}">${product.status}</span>
                                                     <div class="action-group">
                                                         <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=edit&id=${product.productId}&tab=products">Edit</a>
-                                                        <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=delete&id=${product.productId}&tab=products">Delete</a>
+                                                        <c:set var="hasOrders" value="${productHasOrders[product.productId]}" />
+                                                        <c:choose>
+                                                            <c:when test="${hasOrders}">
+                                                                <span class="table-btn delete" style="background: #f1f5f9; color: #94a3b8; cursor: not-allowed;" title="Cannot delete: product has existing orders">Delete</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=delete&id=${product.productId}&tab=products">Delete</a>
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </div>
                                                 </div>
                                             </article>

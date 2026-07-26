@@ -92,6 +92,21 @@ public class CartItemDAO extends DBContext {
         return 0;
     }
 
+    public String getVariantIdByCartItemId(String cartItemId) {
+        String sql = "SELECT variantId FROM CartItems WHERE cartItemId = ?";
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, cartItemId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("variantId");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     // =========================
     // GET CART ITEMS (FIXED)
     // =========================

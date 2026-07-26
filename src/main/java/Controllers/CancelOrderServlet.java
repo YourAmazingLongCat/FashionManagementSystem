@@ -1,7 +1,9 @@
 package Controllers;
 
+import Models.Account;
 import Models.Order;
 import Services.OrderService;
+import Services.PaymentService;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,10 +16,12 @@ import jakarta.servlet.http.HttpSession;
 public class CancelOrderServlet extends HttpServlet {
 
     private OrderService orderService;
+    private PaymentService paymentService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
     }
 
     @Override
@@ -53,8 +57,13 @@ public class CancelOrderServlet extends HttpServlet {
         }
 
         boolean cancelled = orderService.cancelOrder(orderId, customerId);
-        session.setAttribute(cancelled ? "successMessage" : "errorMessage",
-                cancelled ? "Order cancelled successfully." : "This order cannot be cancelled now.");
+
+        if (cancelled) {
+            paymentService.refundPaymentIfNeeded(orderId);
+            session.setAttribute("successMessage", "Order cancelled successfully. Payment has been refunded if applicable.");
+        } else {
+            session.setAttribute("errorMessage", "This order cannot be cancelled now.");
+        }
 
         response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
     }
@@ -66,19 +75,8 @@ public class CancelOrderServlet extends HttpServlet {
         }
 
         Object user = session.getAttribute("USER");
-        if (user == null) {
-            return null;
-        }
-
-        String[] methodNames = {"getAccountId", "getCustomerId", "getUserId", "getId"};
-        for (String methodName : methodNames) {
-            try {
-                Object value = user.getClass().getMethod(methodName).invoke(user);
-                if (value != null && !value.toString().trim().isEmpty()) {
-                    return value.toString();
-                }
-            } catch (Exception ignored) {
-            }
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
         }
 
         return null;

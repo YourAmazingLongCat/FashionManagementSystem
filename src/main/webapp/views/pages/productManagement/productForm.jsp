@@ -89,12 +89,25 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="categoryId">Category</label>
-                                    <select id="categoryId" name="categoryId" required>
-                                        <option value="">-- Select category --</option>
-                                        <c:forEach var="category" items="${categories}">
-                                            <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
-                                        </c:forEach>
-                                    </select>
+                                    <c:choose>
+                                        <c:when test="${hasOrders}">
+                                            <select id="categoryId" name="categoryId" required disabled>
+                                                <c:forEach var="category" items="${categories}">
+                                                    <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
+                                                </c:forEach>
+                                            </select>
+                                            <input type="hidden" name="categoryId" value="${product.categoryId}">
+                                            <small style="color: #b45309; font-size: 0.8rem;">Category locked: product has existing orders</small>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <select id="categoryId" name="categoryId" required>
+                                                <option value="">-- Select category --</option>
+                                                <c:forEach var="category" items="${categories}">
+                                                    <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
+                                                </c:forEach>
+                                            </select>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                             </div>
                         </section>
@@ -128,7 +141,14 @@
                                     <h3>Product variants</h3>
                                     <p>Add each size/color option as a separate row. Stock quantity is managed through the Warehouse module.</p>
                                 </div>
-                                <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
+                                <c:choose>
+                                    <c:when test="${hasOrders}">
+                                        <span style="color: #b45309; font-size: 0.85rem; font-weight: 600;">Variants locked: product has existing orders</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
 
                             <div id="variantsList" class="variants-list"></div>
@@ -366,12 +386,22 @@
                             renumberVariantRows();
                             updateEmptyState();
                         });
+                        // Disable remove button if product has orders
+                        if (hasOrdersFlag) {
+                            removeBtn.disabled = true;
+                            removeBtn.style.opacity = '0.5';
+                            removeBtn.style.cursor = 'not-allowed';
+                            removeBtn.title = 'Cannot remove variant: product has existing orders';
+                        }
                     }
                     if (sizeSelect) {
-                        sizeSelect.disabled = sizeOptions.length === 0;
+                        sizeSelect.disabled = sizeOptions.length === 0 || hasOrdersFlag;
                     }
                     bindCurrencyInput(priceInput);
                 };
+
+                // Pass hasOrders flag from server to JavaScript
+                const hasOrdersFlag = ${hasOrders != null ? hasOrders : false};
 
                 const addVariantRow = (variant = {}) => {
                     const row = document.createElement('div');
@@ -448,8 +478,14 @@
                 }
 
                 if (addVariantBtn) {
-                    addVariantBtn.disabled = false;
-                    addVariantBtn.addEventListener('click', () => addVariantRow());
+                    addVariantBtn.disabled = hasOrdersFlag;
+                    if (hasOrdersFlag) {
+                        addVariantBtn.style.opacity = '0.5';
+                        addVariantBtn.style.cursor = 'not-allowed';
+                        addVariantBtn.title = 'Cannot add variant: product has existing orders';
+                    } else {
+                        addVariantBtn.addEventListener('click', () => addVariantRow());
+                    }
                 }
 
                 loadSizesByCategory(categorySelect ? categorySelect.value : '');

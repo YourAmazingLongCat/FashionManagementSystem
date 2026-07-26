@@ -147,16 +147,13 @@ public class ProductDAO extends DBContext {
 
         boolean hasVariantFilter = (skuFilter != null && !skuFilter.isBlank())
                                 || (sizeFilter != null && !sizeFilter.isBlank())
-                                || (colorFilter != null && !colorFilter.isBlank());
+                                || (colorFilter != null && !colorFilter.isBlank())
+                                || (keyword != null && !keyword.isBlank());
 
         if (hasVariantFilter) {
-            sql.append("INNER JOIN ProductVariants pv ON p.productId = pv.productId ");
-            if (sizeFilter != null && !sizeFilter.isBlank()) {
-                sql.append("INNER JOIN Sizes s ON pv.sizeId = s.sizeId ");
-            }
-            if (colorFilter != null && !colorFilter.isBlank()) {
-                sql.append("INNER JOIN Colors cl ON pv.colorId = cl.colorId ");
-            }
+            sql.append("LEFT JOIN ProductVariants pv ON p.productId = pv.productId ");
+            sql.append("LEFT JOIN Sizes s ON pv.sizeId = s.sizeId ");
+            sql.append("LEFT JOIN Colors cl ON pv.colorId = cl.colorId ");
         }
 
         sql.append("WHERE 1=1 ");
@@ -203,16 +200,13 @@ public class ProductDAO extends DBContext {
 
         boolean hasVariantFilter = (skuFilter != null && !skuFilter.isBlank())
                                 || (sizeFilter != null && !sizeFilter.isBlank())
-                                || (colorFilter != null && !colorFilter.isBlank());
+                                || (colorFilter != null && !colorFilter.isBlank())
+                                || (keyword != null && !keyword.isBlank());
 
         if (hasVariantFilter) {
-            sql.append("INNER JOIN ProductVariants pv ON p.productId = pv.productId ");
-            if (sizeFilter != null && !sizeFilter.isBlank()) {
-                sql.append("INNER JOIN Sizes s ON pv.sizeId = s.sizeId ");
-            }
-            if (colorFilter != null && !colorFilter.isBlank()) {
-                sql.append("INNER JOIN Colors cl ON pv.colorId = cl.colorId ");
-            }
+            sql.append("LEFT JOIN ProductVariants pv ON p.productId = pv.productId ");
+            sql.append("LEFT JOIN Sizes s ON pv.sizeId = s.sizeId ");
+            sql.append("LEFT JOIN Colors cl ON pv.colorId = cl.colorId ");
         }
 
         sql.append("WHERE 1=1 ");
@@ -720,6 +714,30 @@ public class ProductDAO extends DBContext {
             System.out.println("getVariantById error: " + e.getMessage());
         }
         return null;
+    }
+
+    public boolean hasProductOrders(String productId) {
+        if (productId == null || productId.isBlank()) {
+            return false;
+        }
+
+        String sql = """
+            SELECT COUNT(*) FROM OrderItems oi
+            JOIN ProductVariants pv ON oi.variantId = pv.variantId
+            WHERE pv.productId = ?
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("hasProductOrders error: " + e.getMessage());
+        }
+        return false;
     }
 
     public record ProductResult(List<Product> products, int totalCount) {

@@ -1,6 +1,10 @@
 package Controllers;
 
+import Services.BillIntegrationService;
 import Services.OrderService;
+import Services.PaymentService;
+import Utils.PaymentMethod;
+import Utils.PaymentStatus;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -13,10 +17,14 @@ import jakarta.servlet.http.HttpSession;
 public class StaffCancelOrderServlet extends HttpServlet {
 
     private OrderService orderService;
+    private PaymentService paymentService;
+    private BillIntegrationService billService;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
+        paymentService = new PaymentService();
+        billService = new BillIntegrationService();
     }
 
     @Override
@@ -39,10 +47,13 @@ public class StaffCancelOrderServlet extends HttpServlet {
         }
 
         boolean cancelled = orderService.cancelOrder(orderId);
-        session.setAttribute(cancelled ? "successMessage" : "errorMessage",
-                cancelled
-                        ? "Order cancelled successfully."
-                        : "This order cannot be cancelled by staff before the customer presses Place order or after shipping begins.");
+
+        if (cancelled) {
+            paymentService.refundPaymentIfNeeded(orderId);
+            session.setAttribute("successMessage", "Order cancelled successfully. Payment has been refunded if applicable.");
+        } else {
+            session.setAttribute("errorMessage", "This order cannot be cancelled by staff before the customer presses Place order or after shipping begins.");
+        }
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }

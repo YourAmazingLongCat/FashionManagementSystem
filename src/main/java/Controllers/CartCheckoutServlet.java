@@ -193,9 +193,8 @@ public class CartCheckoutServlet extends HttpServlet {
             if (!paymentService.canPayAmountByWallet(accountId, totalAmount)) {
                 return "INSUFFICIENT_WALLET_BALANCE";
             }
-            // Create payment record
-            paymentService.createCODPaymentForOrder(accountId, orderId);
-            // Process wallet payment immediately
+            // DON'T create payment record here - payOrderByWallet will create WALLET payment
+            // Process wallet payment immediately (this creates the WALLET payment)
             if (!paymentService.payOrderByWallet(accountId, orderId)) {
                 return null;
             }

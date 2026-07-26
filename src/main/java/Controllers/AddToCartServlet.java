@@ -48,16 +48,18 @@ public class AddToCartServlet extends HttpServlet {
             quantity = Math.max(1, Integer.parseInt(quantityStr));
         } catch (NumberFormatException ignored) {}
 
-        // Check stock availability
         ProductDAO productDAO = new ProductDAO();
         ProductVariant variant = productDAO.getVariantById(variantId);
-        if (variant == null || variant.getAvailableQty() <= 0) {
+        if (variant == null) {
             response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
             return;
         }
 
-        // Limit quantity to available stock
-        quantity = Math.min(quantity, variant.getAvailableQty());
+        int availableStock = variant.getAvailableQty();
+        if (availableStock <= 0) {
+            response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
+            return;
+        }
 
         CartDAO cartDAO = new CartDAO();
         Cart cart = cartDAO.getActiveCart(acc.getAccountId());
@@ -71,13 +73,24 @@ public class AddToCartServlet extends HttpServlet {
 
         CartItemDAO itemDAO = new CartItemDAO();
 
+        int currentCartQty = itemDAO.getQuantityInCart(cartId, variantId);
+        int totalRequestedQty = currentCartQty + quantity;
+
+        if (totalRequestedQty > availableStock) {
+            int maxCanAdd = availableStock - currentCartQty;
+            if (maxCanAdd <= 0) {
+                response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=cart-quantity-exceeded");
+                return;
+            }
+            quantity = maxCanAdd;
+        }
+
         if (itemDAO.existsItem(cartId, variantId)) {
             itemDAO.increaseQuantity(cartId, variantId, quantity);
         } else {
             itemDAO.addItem(cartId, variantId, quantity);
         }
 
-        // Update cart count in session for header display
         List<CartItemView> items = itemDAO.getCartItems(cartId);
         int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
         request.getSession().setAttribute("cartCount", cartCount);

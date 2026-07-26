@@ -191,14 +191,15 @@ public class StatisticController extends HttpServlet {
                     .collect(java.util.stream.Collectors.toList());
             }
 
-            // Filter by search keyword (product name or customer name)
+            // Filter by search keyword (product name, customer name, or comment content)
             List<Comment> filteredComments = allComments;
             if (searchComment != null && !searchComment.trim().isEmpty()) {
                 String kw = searchComment.trim().toLowerCase();
                 filteredComments = allComments.stream()
                     .filter(c -> (c.getProductName() != null && c.getProductName().toLowerCase().contains(kw))
                               || (c.getAccountFullName() != null && c.getAccountFullName().toLowerCase().contains(kw))
-                              || (c.getAccountUsername() != null && c.getAccountUsername().toLowerCase().contains(kw)))
+                              || (c.getAccountUsername() != null && c.getAccountUsername().toLowerCase().contains(kw))
+                              || (c.getContent() != null && c.getContent().toLowerCase().contains(kw)))
                     .collect(java.util.stream.Collectors.toList());
             }
             request.setAttribute("allComments", filteredComments);
@@ -211,11 +212,6 @@ public class StatisticController extends HttpServlet {
 
         var topCustomers = dao.getTopCustomers();
         var topSpenders = dao.getTopSpenders(10, fromDate, toDate);
-
-        System.out.println("[DEBUG] loadDashboard: totalCustomers=" + dao.getTotalCustomers());
-        System.out.println("[DEBUG] loadDashboard: totalOrders=" + dao.getTotalOrders());
-        System.out.println("[DEBUG] loadDashboard: topCustomers size=" + topCustomers.size());
-        System.out.println("[DEBUG] loadDashboard: topSpenders size=" + topSpenders.size());
 
         request.setAttribute("totalCustomers", dao.getTotalCustomers());
         request.setAttribute("totalOrders", dao.getTotalOrders());

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,7 @@ import jakarta.servlet.http.Part;
 @MultipartConfig
 public class ProductManagementServlet extends HttpServlet {
 
-    private static final List<String> VALID_STATUSES = Arrays.asList("Available", "OutOfStock", "Inactive");
+    private static final List<String> VALID_STATUSES = Arrays.asList("Available", "Inactive");
     private static final int DEFAULT_PAGE_SIZE = 8;
 
     private ProductService productService;
@@ -153,7 +154,18 @@ public class ProductManagementServlet extends HttpServlet {
                     productResult.totalPages(DEFAULT_PAGE_SIZE), productResult.totalCount());
         };
 
+        // Build map of productId -> hasOrders for UI restrictions
+        Map<String, Boolean> productHasOrders = new HashMap<>();
+        if (productResult.products() != null) {
+            for (Product p : productResult.products()) {
+                if (p.getProductId() != null) {
+                    productHasOrders.put(p.getProductId(), productService.hasOrders(p.getProductId()));
+                }
+            }
+        }
+
         request.setAttribute("products", productResult.products());
+        request.setAttribute("productHasOrders", productHasOrders);
         request.setAttribute("totalProducts", productResult.totalCount());
         request.setAttribute("categoryItems", categoryPage.items());
         request.setAttribute("totalCategories", allCategories.size());
@@ -192,6 +204,7 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("product", product);
         request.setAttribute("formAction", "edit");
         request.setAttribute("pageTitle", "Update Product");
+        request.setAttribute("hasOrders", productService.hasOrders(productId));
         loadReferenceData(request, product.getCategoryId());
         request.getRequestDispatcher("/views/pages/productManagement/productForm.jsp").forward(request, response);
     }

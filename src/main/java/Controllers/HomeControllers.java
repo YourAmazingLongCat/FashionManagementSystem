@@ -34,6 +34,20 @@ public class HomeControllers extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        Models.Account loggedInUser = (session != null) ? (Models.Account) session.getAttribute("USER") : null;
+        
+        if (loggedInUser != null) {
+            String role = loggedInUser.getRole();
+            if ("Staff".equals(role)) {
+                response.sendRedirect(request.getContextPath() + "/staff/products");
+                return;
+            } else if ("Admin".equals(role)) {
+                response.sendRedirect(request.getContextPath() + "/admin");
+                return;
+            }
+        }
+        
         String servletPath = request.getServletPath();
         if ("/home/view-detail-product".equals(servletPath)) {
             showProductDetail(request, response);

@@ -182,7 +182,7 @@
                                 </c:if>
 
                                 <c:choose>
-                                    <c:when test="${not empty previousStatus}">
+                                    <c:when test="${not empty previousStatus and (order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing' or order.orderStatus eq 'Shipping')}">
                                         <form class="order-inline-form" method="post"
                                               action="${pageContext.request.contextPath}/staff/change-shipping-status"
                                               onsubmit="return confirmOrderStatusChange('backward', '${order.orderStatus}', '${previousStatus}');">
@@ -194,13 +194,13 @@
                                             </button>
                                         </form>
                                     </c:when>
-                                    <c:when test="${order.orderStatus ne 'Cancelled'}">
+                                    <c:otherwise>
                                         <button class="order-btn" type="button" disabled
                                                 style="opacity: 0.45; cursor: not-allowed;">
                                             <span class="material-symbols-outlined">block</span>
-                                            No previous status
+                                            No backward movement
                                         </button>
-                                    </c:when>
+                                    </c:otherwise>
                                 </c:choose>
 
                                 <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">

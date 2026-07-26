@@ -60,7 +60,12 @@
                                 <tr>
                                     <td><strong>${payment.paymentId}</strong></td>
                                     <td>${payment.walletId}</td>
-                                    <td>${payment.paymentMethod}</td>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${payment.paymentType eq 'Deposit'}">Manual deposit</c:when>
+                                            <c:otherwise>${payment.paymentMethod}</c:otherwise>
+                                        </c:choose>
+                                    </td>
                                     <td class="wallet-money"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</td>
                                     <td>${payment.createdAt}</td>
                                     <td>
@@ -114,7 +119,12 @@
                                 <tr>
                                     <td><strong>${payment.paymentId}</strong></td>
                                     <td>${payment.paymentType}</td>
-                                    <td>${payment.paymentMethod}</td>
+                                    <td>
+                                        <c:choose>
+                                            <c:when test="${payment.paymentType eq 'Deposit'}">Manual deposit</c:when>
+                                            <c:otherwise>${payment.paymentMethod}</c:otherwise>
+                                        </c:choose>
+                                    </td>
                                     <td>
                                         <span class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">
                                             ${payment.paymentStatus}

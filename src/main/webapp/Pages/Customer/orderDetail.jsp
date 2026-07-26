@@ -220,6 +220,18 @@
                         </div>
                     </div>
 
+                    <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed'}">
+                        <form method="post" action="${pageContext.request.contextPath}/customer/cancel-order"
+                              onsubmit="return confirm('Are you sure you want to cancel this order?');"
+                              style="margin-top: 16px;">
+                            <input type="hidden" name="orderId" value="${order.orderId}" />
+                            <button type="submit" class="wallet-btn" style="background: #dc3545; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <span class="material-symbols-outlined">cancel</span>
+                                Cancel Order
+                            </button>
+                        </form>
+                    </c:if>
+
                     <div class="wallet-table-wrap wallet-table-space">
                         <table class="wallet-table">
                             <thead>

@@ -86,6 +86,44 @@ public class CommentDAO {
         return list;
     }
 
+    // ==================== SEARCH ====================
+    public List<Comment> searchComments(String keyword) {
+        List<Comment> list = new ArrayList<>();
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllComments();
+        }
+        String sql = BASE_SELECT 
+                + "WHERE c.content LIKE ? OR a.fullName LIKE ? OR a.username LIKE ? OR p.name LIKE ? "
+                + "ORDER BY c.createdAt DESC";
+        Connection conn = null;
+        try {
+            conn = new DBContext().getConnection();
+            if (conn == null) {
+                return list;
+            }
+            String likePattern = "%" + keyword.trim() + "%";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, likePattern);
+            ps.setString(2, likePattern);
+            ps.setString(3, likePattern);
+            ps.setString(4, likePattern);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapComment(rs));
+            }
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) try {
+                conn.close();
+            } catch (SQLException e) {
+            }
+        }
+        return list;
+    }
+
     public List<Comment> getAllComments() {
         List<Comment> list = new ArrayList<>();
         String sql = BASE_SELECT + "ORDER BY c.createdAt DESC";

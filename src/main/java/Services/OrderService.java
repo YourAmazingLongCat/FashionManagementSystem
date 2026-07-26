@@ -1,14 +1,17 @@
 package Services;
 
 import DALs.BillDAO;
+import DALs.BillIntegrationDAO;
 import DALs.OrderDAO;
 import DALs.OrderItemDAO;
+import DALs.PaymentDAO;
 import DALs.ProductVariantDAO;
 import Models.Account;
 import Models.CartItem;
 import Models.Order;
 import Models.OrderItem;
 import Utils.OrderStatus;
+import Utils.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,12 +24,14 @@ public class OrderService {
     private final OrderItemDAO orderItemDAO;
     private final BillDAO billDAO;
     private final ProductVariantDAO productVariantDAO;
+    private final PaymentDAO paymentDAO;
 
     public OrderService() {
         orderDAO = new OrderDAO();
         orderItemDAO = new OrderItemDAO();
         billDAO = new BillDAO();
         productVariantDAO = new ProductVariantDAO();
+        paymentDAO = new PaymentDAO();
     }
 
     public Order reviewOrder(String customerId, String shippingAddress, String phone, List<CartItem> cart) {
@@ -166,7 +171,21 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
+        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
+
+        if (cancelled) {
+            System.out.println("OrderService: Order cancelled, updating payment and bill status");
+            
+            BillIntegrationDAO billDAO = new BillIntegrationDAO();
+            billDAO.updateBillPaymentStatus(orderId.trim(), PaymentStatus.REFUNDED);
+            
+            PaymentService paymentService = new PaymentService();
+            paymentService.cancelCashPaymentIfNeeded(orderId.trim());
+            paymentService.refundWalletPaymentIfNeeded(orderId.trim());
+            paymentService.refundVNPayPaymentIfNeeded(orderId.trim());
+        }
+
+        return cancelled;
     }
 
     public boolean cancelOrder(String orderId, String customerId) {
@@ -180,7 +199,21 @@ public class OrderService {
             return false;
         }
 
-        return orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
+        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
+
+        if (cancelled) {
+            System.out.println("OrderService: Order cancelled, updating payment and bill status");
+            
+            BillIntegrationDAO billDAO = new BillIntegrationDAO();
+            billDAO.updateBillPaymentStatus(orderId.trim(), PaymentStatus.REFUNDED);
+            
+            PaymentService paymentService = new PaymentService();
+            paymentService.cancelCashPaymentIfNeeded(orderId.trim());
+            paymentService.refundWalletPaymentIfNeeded(orderId.trim());
+            paymentService.refundVNPayPaymentIfNeeded(orderId.trim());
+        }
+
+        return cancelled;
     }
 
     public boolean changeShipStatus(String orderId, String newStatus) {
@@ -231,8 +264,12 @@ public class OrderService {
         boolean updated = orderDAO.changeOrderStatusWithInventory(
                 orderId.trim(), currentStatus, normalizedStatus);
 
-        // Update Bill payment status when order is Delivered
+        // Update Payments table payment status to Paid when order is Delivered (for COD orders)
         if (updated && OrderStatus.DELIVERED.equals(normalizedStatus)) {
+            System.out.println("OrderService: Order " + orderId + " delivered, updating payment status to Paid in Payments table");
+            boolean paymentUpdated = paymentDAO.completeCashPayment(orderId.trim());
+            System.out.println("OrderService: Payment status update result (Payments table): " + paymentUpdated);
+            // Also update Bills table for consistency
             billDAO.updatePaymentStatusByOrderId(orderId.trim(), "Paid");
         }
 
