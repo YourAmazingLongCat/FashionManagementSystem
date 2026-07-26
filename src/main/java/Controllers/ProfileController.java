@@ -65,13 +65,25 @@ public class ProfileController extends HttpServlet {
         String phone = request.getParameter("phone");
         String address = request.getParameter("address");
 
-        // 2. Cập nhật dữ liệu vào object Account hiện tại
+        // 2. Validate
+        AccountDAO dao = new AccountDAO();
+        if (fullName == null || fullName.isBlank()) {
+            session.setAttribute("toastError", "Họ tên không được để trống!");
+            response.sendRedirect(request.getContextPath() + "/profile");
+            return;
+        }
+        if (phone != null && !phone.isBlank() && dao.phoneExistsForOtherAccount(phone, user.getAccountId())) {
+            session.setAttribute("toastError", "Số điện thoại đã được sử dụng bởi tài khoản khác!");
+            response.sendRedirect(request.getContextPath() + "/profile");
+            return;
+        }
+
+        // 3. Cập nhật dữ liệu vào object Account hiện tại
         user.setFullName(fullName);
         user.setPhone(phone);
         user.setAddress(address);
 
         // 4. Gọi DAO để cập nhật Database
-        AccountDAO dao = new AccountDAO();
         boolean isSuccess = dao.updateProfile(user);
 
         if (isSuccess) {
@@ -83,7 +95,7 @@ public class ProfileController extends HttpServlet {
             session.setAttribute("toastError", "Có lỗi xảy ra khi lưu dữ liệu!");
         }
 
-        // 5. Redirect lại trang profile (Dùng sendRedirect để tránh lỗi resubmit form khi F5)
+        // 5. Redirect lại trang profile
         response.sendRedirect(request.getContextPath() + "/profile");
     }
 }

@@ -49,12 +49,12 @@
 
         <div class="register-page-wrapper">
             <div class="register-container">
-                <h1 class="page-title">ĐĂNG KÝ TÀI KHOẢN</h1>
+                <h1 class="page-title">CREATE ACCOUNT</h1>
                 
                 <form method="post" action="<%= request.getContextPath() %>/auth/register">
                     
                     <div class="form-group">
-                        <label for="name">Họ và Tên<span class="required">*</span></label>
+                        <label for="name">Full Name<span class="required">*</span></label>
                         <input type="text" id="name" name="name" required>
                     </div>
 
@@ -64,27 +64,27 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="phoneNumber">Số điện thoại<span class="required">*</span></label>
-                        <input type="text" id="phoneNumber" name="phoneNumber" required>
+                        <label for="phoneNumber">Phone Number<span class="required">*</span></label>
+                        <input type="tel" id="phoneNumber" name="phoneNumber" required pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)">
                     </div>
 
                     <div class="form-group">
-                        <label for="password">Mật khẩu<span class="required">*</span></label>
+                        <label for="password">Password<span class="required">*</span></label>
                         <input type="password" id="password" name="password" required 
                                pattern="^[A-Z](?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':&quot;\\|,.<>\/?]).+$"
-                               title="Mật khẩu phải bắt đầu bằng chữ cái viết hoa, chứa ít nhất 1 chữ số và 1 ký tự đặc biệt.">
+                               title="Password must start with an uppercase letter, contain at least 1 digit and 1 special character.">
                     </div>
 
                     <div class="form-group">
-                        <label for="confirmPassword">Xác nhận mật khẩu<span class="required">*</span></label>
+                        <label for="confirmPassword">Confirm Password<span class="required">*</span></label>
                         <input type="password" id="confirmPassword" name="confirmPassword" required>
                     </div>
                     <div class="action-row">
-                        <button type="submit" class="btn-submit">ĐĂNG KÝ</button>
+                        <button type="submit" class="btn-submit">REGISTER</button>
                         
                         <div class="form-links">
-                            <span class="separator">Đã có tài khoản?</span>
-                            <a href="<%= request.getContextPath() %>/auth/login" class="login-link">Đăng nhập ngay</a>
+                            <span class="separator">Already have an account?</span>
+                            <a href="<%= request.getContextPath() %>/auth/login" class="login-link">Login now</a>
                         </div>
                     </div>
                     
@@ -94,15 +94,15 @@
 
         <div class="scrolling-ticker">
             <div class="ticker-content">
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
                 
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
             </div>
         </div>
 

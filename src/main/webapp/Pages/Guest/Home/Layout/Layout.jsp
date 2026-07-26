@@ -50,6 +50,7 @@
             <c:remove var="errorMessage" scope="session" />
         </c:if>
 
+        <c:if test="${hideStaffHeader != 'true'}">
         <header>
             <c:choose>
                 <c:when test="${not empty sessionScope.USER}">                  
@@ -60,6 +61,7 @@
                 </c:otherwise>
             </c:choose>
         </header>
+        </c:if>
 
         <div class="main-container">
             <main>
@@ -68,7 +70,7 @@
                 </c:catch>
                 <c:if test="${not empty contentError}">
                     <h3 style="color:red; text-align:center; padding: 50px;">
-                        Đường dẫn trang nội dung (${contentPage}) không tồn tại! <br> Lỗi: ${contentError.message}
+                        The requested page (${contentPage}) does not exist! <br> Error: ${contentError.message}
                     </h3>
                 </c:if>
             </main>
@@ -76,15 +78,15 @@
 
         <div class="scrolling-ticker">
             <div class="ticker-content">
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
                 
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
-                <span>FREESHIP CHO MỌI ĐƠN HÀNG FASHION STORE™ 2026</span>
-                <span>GET TO KNOW ABOUT OUR VIBE FASHION STORE™ 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
+                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
+                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
             </div>
         </div>
 
@@ -95,6 +97,15 @@
                 </p>
             </div>
         </footer>
+
+        <c:if test="${hideStaffHeader == 'true'}">
+            <style>
+                .scrolling-ticker { display: none !important; }
+                footer { display: none !important; }
+                .main-container { padding-top: 0 !important; }
+                body { background: #f6f7fb !important; }
+            </style>
+        </c:if>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         

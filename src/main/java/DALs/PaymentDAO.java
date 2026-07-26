@@ -71,10 +71,33 @@ public class PaymentDAO extends DBContext {
         return null;
     }
 
+    public Payment getPaymentByIdAndAccountId(String paymentId, String accountId) {
+        String query = "SELECT p.* FROM Payments p "
+                + "LEFT JOIN Wallets w ON p.walletId = w.walletId "
+                + "LEFT JOIN Orders o ON p.orderId = o.orderId "
+                + "WHERE p.paymentId = ? AND (w.accountId = ? OR o.customerId = ?)";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, paymentId);
+            ps.setString(2, accountId);
+            ps.setString(3, accountId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return getPaymentFromResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getPaymentByIdAndAccountId error: " + e);
+        }
+
+        return null;
+    }
+
     public Payment getLatestPaymentByOrderId(String orderId) {
         String query = "SELECT TOP 1 * FROM Payments "
                 + "WHERE orderId = ? AND paymentType <> ? "
-                + "ORDER BY createdAt DESC";
+                + "ORDER BY createdAt DESC, paymentId DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -113,13 +136,15 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getPaymentsByAccountId(String accountId) {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT p.* FROM Payments p "
-                + "INNER JOIN Wallets w ON p.walletId = w.walletId "
-                + "WHERE w.accountId = ? "
+        String query = "SELECT DISTINCT p.* FROM Payments p "
+                + "LEFT JOIN Wallets w ON p.walletId = w.walletId "
+                + "LEFT JOIN Orders o ON p.orderId = o.orderId "
+                + "WHERE w.accountId = ? OR o.customerId = ? "
                 + "ORDER BY p.createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, accountId);
+            ps.setString(2, accountId);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -149,6 +174,38 @@ public class PaymentDAO extends DBContext {
         return payments;
     }
 
+    public int countAllPayments() {
+        String query = "SELECT COUNT(*) FROM Payments";
+        try (PreparedStatement ps = connection.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.out.println("countAllPayments error: " + e);
+        }
+        return 0;
+    }
+
+    public List<Payment> getAllPaymentsPaginated(int offset, int limit) {
+        List<Payment> payments = new ArrayList<>();
+        String query = "SELECT * FROM Payments ORDER BY createdAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setInt(1, offset);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    payments.add(getPaymentFromResultSet(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getAllPaymentsPaginated error: " + e);
+        }
+
+        return payments;
+    }
+
     public List<Payment> getPendingDeposits() {
         List<Payment> payments = new ArrayList<>();
         String query = "SELECT * FROM Payments "
@@ -171,15 +228,109 @@ public class PaymentDAO extends DBContext {
         return payments;
     }
 
+    /**
+     * Creates a Pending order payment only when the order belongs to the account
+     * and no other active Purchase payment exists. The order row and payment
+     * range are locked in one transaction to avoid concurrent payment methods.
+     */
+    public boolean createOrderPayment(Payment payment, String accountId) {
+        if (payment == null || accountId == null || accountId.trim().isEmpty()
+                || payment.getOrderId() == null || payment.getOrderId().trim().isEmpty()
+                || !PaymentType.PURCHASE.equals(payment.getPaymentType())
+                || !PaymentStatus.PENDING.equals(payment.getPaymentStatus())
+                || (!PaymentMethod.COD.equals(payment.getPaymentMethod())
+                && !PaymentMethod.VNPAY.equals(payment.getPaymentMethod()))
+                || payment.getAmount() == null) {
+            return false;
+        }
+
+        String lockOrderQuery = "SELECT totalAmount, orderStatus FROM Orders "
+                + "WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND customerId = ?";
+        String activePaymentQuery = "SELECT TOP 1 paymentId FROM Payments "
+                + "WITH (UPDLOCK, HOLDLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? "
+                + "AND paymentStatus IN (?, ?) "
+                + "ORDER BY createdAt DESC, paymentId DESC";
+        String insertQuery = "INSERT INTO Payments "
+                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
+                + "amount, description, createdAt, paidAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try {
+            connection.setAutoCommit(false);
+
+            BigDecimal orderAmount = null;
+            String orderStatus = null;
+            try (PreparedStatement ps = connection.prepareStatement(lockOrderQuery)) {
+                ps.setString(1, payment.getOrderId().trim());
+                ps.setString(2, accountId.trim());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        orderAmount = rs.getBigDecimal("totalAmount");
+                        orderStatus = rs.getString("orderStatus");
+                    }
+                }
+            }
+
+            if (orderAmount == null || orderAmount.compareTo(payment.getAmount()) != 0
+                    || "Cancelled".equals(orderStatus) || "Delivered".equals(orderStatus)) {
+                connection.rollback();
+                return false;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(activePaymentQuery)) {
+                ps.setString(1, payment.getOrderId().trim());
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentStatus.PENDING);
+                ps.setString(4, PaymentStatus.PAID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(insertQuery)) {
+                setPaymentParameters(ps, payment);
+                if (ps.executeUpdate() != 1) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback("createOrderPayment", e);
+            return false;
+        } finally {
+            restoreAutoCommit("createOrderPayment");
+        }
+    }
+
     public boolean completeDeposit(String paymentId) {
+        return completeDeposit(paymentId, null);
+    }
+
+    public boolean completeDeposit(String paymentId, String description) {
         String paymentQuery = "SELECT * FROM Payments WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE paymentId = ? AND paymentType = ? AND paymentStatus = ?";
-        String updatePaymentQuery = "UPDATE Payments "
-                + "SET paymentStatus = ?, paidAt = GETDATE() "
-                + "WHERE paymentId = ?";
+        String updatePaymentQuery;
         String updateWalletQuery = "UPDATE Wallets "
                 + "SET balance = balance + ?, updatedAt = GETDATE() "
                 + "WHERE walletId = ? AND walletStatus = ?";
+
+        if (description != null) {
+            updatePaymentQuery = "UPDATE Payments "
+                    + "SET paymentStatus = ?, paidAt = GETDATE(), description = ? "
+                    + "WHERE paymentId = ?";
+        } else {
+            updatePaymentQuery = "UPDATE Payments "
+                    + "SET paymentStatus = ?, paidAt = GETDATE() "
+                    + "WHERE paymentId = ?";
+        }
 
         try {
             connection.setAutoCommit(false);
@@ -215,7 +366,12 @@ public class PaymentDAO extends DBContext {
 
             try (PreparedStatement ps = connection.prepareStatement(updatePaymentQuery)) {
                 ps.setString(1, PaymentStatus.PAID);
-                ps.setString(2, paymentId);
+                if (description != null) {
+                    ps.setString(2, description);
+                    ps.setString(3, paymentId);
+                } else {
+                    ps.setString(2, paymentId);
+                }
 
                 if (ps.executeUpdate() <= 0) {
                     connection.rollback();
@@ -236,6 +392,14 @@ public class PaymentDAO extends DBContext {
 
     public boolean payOrderWithWallet(String paymentId, String accountId, String orderId,
             BigDecimal amount, String description) {
+        String orderQuery = "SELECT totalAmount, orderStatus FROM Orders "
+                + "WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND customerId = ?";
+        String activePaymentQuery = "SELECT TOP 1 paymentStatus FROM Payments "
+                + "WITH (UPDLOCK, HOLDLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? "
+                + "AND paymentStatus IN (?, ?) "
+                + "ORDER BY createdAt DESC, paymentId DESC";
         String walletQuery = "SELECT * FROM Wallets WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE accountId = ?";
         String updateWalletQuery = "UPDATE Wallets "
@@ -248,6 +412,38 @@ public class PaymentDAO extends DBContext {
 
         try {
             connection.setAutoCommit(false);
+
+            BigDecimal orderAmount = null;
+            String orderStatus = null;
+            try (PreparedStatement ps = connection.prepareStatement(orderQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, accountId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        orderAmount = rs.getBigDecimal("totalAmount");
+                        orderStatus = rs.getString("orderStatus");
+                    }
+                }
+            }
+
+            if (orderAmount == null || orderAmount.compareTo(amount) != 0
+                    || "Cancelled".equals(orderStatus) || "Delivered".equals(orderStatus)) {
+                connection.rollback();
+                return false;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(activePaymentQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentStatus.PENDING);
+                ps.setString(4, PaymentStatus.PAID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+            }
 
             Wallet wallet = null;
             try (PreparedStatement ps = connection.prepareStatement(walletQuery)) {
@@ -321,7 +517,7 @@ public class PaymentDAO extends DBContext {
             ps.setString(4, PaymentStatus.PENDING);
             ps.setString(5, PaymentMethod.COD);
 
-            return ps.executeUpdate() >= 0;
+            return ps.executeUpdate() == 1;
         } catch (SQLException e) {
             System.out.println("completeCashPayment error: " + e);
         }
@@ -329,10 +525,83 @@ public class PaymentDAO extends DBContext {
         return false;
     }
 
+    public boolean cancelCashPayment(String orderId) {
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ? "
+                + "WHERE orderId = ? "
+                + "AND paymentType = ? "
+                + "AND paymentStatus = ? "
+                + "AND paymentMethod = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.CANCELLED);
+            ps.setString(2, orderId);
+            ps.setString(3, PaymentType.PURCHASE);
+            ps.setString(4, PaymentStatus.PENDING);
+            ps.setString(5, PaymentMethod.COD);
+
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.out.println("cancelCashPayment error: " + e);
+        }
+
+        return false;
+    }
+
+    public boolean completeVNPayPurchase(String paymentId, BigDecimal amount,
+            String description) {
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ?, paidAt = GETDATE(), "
+                + "description = COALESCE(NULLIF(?, ''), description) "
+                + "WHERE paymentId = ? AND paymentType = ? "
+                + "AND paymentMethod = ? AND paymentStatus = ? AND amount = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.PAID);
+            ps.setString(2, description);
+            ps.setString(3, paymentId);
+            ps.setString(4, PaymentType.PURCHASE);
+            ps.setString(5, PaymentMethod.VNPAY);
+            ps.setString(6, PaymentStatus.PENDING);
+            ps.setBigDecimal(7, amount);
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.out.println("completeVNPayPurchase error: " + e);
+            return false;
+        }
+    }
+
+    public boolean markVNPayPaymentUnsuccessful(String paymentId, BigDecimal amount,
+            String newStatus, String description) {
+        if (!PaymentStatus.FAILED.equals(newStatus)
+                && !PaymentStatus.CANCELLED.equals(newStatus)) {
+            return false;
+        }
+
+        String query = "UPDATE Payments "
+                + "SET paymentStatus = ?, paidAt = NULL, "
+                + "description = COALESCE(NULLIF(?, ''), description) "
+                + "WHERE paymentId = ? AND paymentMethod = ? "
+                + "AND paymentStatus = ? AND amount = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, newStatus);
+            ps.setString(2, description);
+            ps.setString(3, paymentId);
+            ps.setString(4, PaymentMethod.VNPAY);
+            ps.setString(5, PaymentStatus.PENDING);
+            ps.setBigDecimal(6, amount);
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.out.println("markVNPayPaymentUnsuccessful error: " + e);
+            return false;
+        }
+    }
+
     public boolean refundWalletPaymentIfNeeded(String orderId, String refundPaymentId) {
         String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
-                + "ORDER BY createdAt DESC";
+                + "ORDER BY createdAt DESC, paymentId DESC";
         String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
         String updateWalletQuery = "UPDATE Wallets SET balance = balance + ?, updatedAt = GETDATE() WHERE walletId = ?";
         String insertRefundQuery = "INSERT INTO Payments "
@@ -358,18 +627,33 @@ public class PaymentDAO extends DBContext {
             }
 
             if (paidWalletPayment == null) {
+                System.out.println("refundWalletPaymentIfNeeded: No PAID wallet payment found for orderId: " + orderId);
                 connection.rollback();
                 return true;
             }
+
+            if (paidWalletPayment.getWalletId() == null) {
+                System.out.println("refundWalletPaymentIfNeeded: WalletId is NULL for payment: " + paidWalletPayment.getPaymentId());
+                connection.rollback();
+                return false;
+            }
+
+            System.out.println("refundWalletPaymentIfNeeded: Found payment - paymentId=" + paidWalletPayment.getPaymentId() 
+                + ", walletId=" + paidWalletPayment.getWalletId() + ", amount=" + paidWalletPayment.getAmount());
 
             try (PreparedStatement ps = connection.prepareStatement(updateWalletQuery)) {
                 ps.setBigDecimal(1, paidWalletPayment.getAmount());
                 ps.setString(2, paidWalletPayment.getWalletId());
 
+                System.out.println("refundWalletPaymentIfNeeded: walletId=" + paidWalletPayment.getWalletId() 
+                    + ", amount=" + paidWalletPayment.getAmount());
+
                 if (ps.executeUpdate() <= 0) {
+                    System.out.println("refundWalletPaymentIfNeeded: WALLET UPDATE FAILED - no rows affected for walletId: " + paidWalletPayment.getWalletId());
                     connection.rollback();
                     return false;
                 }
+                System.out.println("refundWalletPaymentIfNeeded: WALLET UPDATED successfully");
             }
 
             try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {
@@ -404,6 +688,101 @@ public class PaymentDAO extends DBContext {
             rollback("refundWalletPaymentIfNeeded", e);
         } finally {
             restoreAutoCommit("refundWalletPaymentIfNeeded");
+        }
+
+        return false;
+    }
+
+    /**
+     * Refunds a VNPay payment by updating the payment status to REFUNDED.
+     * Note: Actual VNPay refund requires calling VNPay's refund API.
+     * This method updates the local payment record for tracking purposes.
+     */
+    public boolean refundVNPayPayment(String paymentId, String refundDescription) {
+        if (paymentId == null || paymentId.trim().isEmpty()) {
+            return false;
+        }
+
+        String query = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ? AND paymentMethod = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            ps.setString(1, PaymentStatus.REFUNDED);
+            ps.setString(2, paymentId.trim());
+            ps.setString(3, PaymentMethod.VNPAY);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("refundVNPayPayment error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    public boolean refundVNPayPaymentByOrderId(String orderId, String refundPaymentId) {
+        if (orderId == null || orderId.trim().isEmpty()) {
+            return false;
+        }
+
+        String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
+                + "ORDER BY createdAt DESC, paymentId DESC";
+        String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
+        String insertRefundQuery = "INSERT INTO Payments "
+                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
+                + "amount, description, createdAt, paidAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+
+        try {
+            connection.setAutoCommit(false);
+
+            Payment paidVNPayPayment;
+            try (PreparedStatement ps = connection.prepareStatement(selectQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentMethod.VNPAY);
+                ps.setString(4, PaymentStatus.PAID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        connection.rollback();
+                        return false;
+                    }
+                    paidVNPayPayment = getPaymentFromResultSet(rs);
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {
+                ps.setString(1, PaymentStatus.REFUNDED);
+                ps.setString(2, paidVNPayPayment.getPaymentId());
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            String refundDesc = (refundPaymentId == null || refundPaymentId.trim().isEmpty())
+                    ? "Refund VNPay payment for cancelled order " + orderId
+                    : "Manual refund for order " + orderId;
+
+            try (PreparedStatement ps = connection.prepareStatement(insertRefundQuery)) {
+                ps.setString(1, refundPaymentId);
+                ps.setNull(2, Types.VARCHAR);
+                ps.setString(3, orderId);
+                ps.setString(4, PaymentType.REFUND);
+                ps.setString(5, PaymentMethod.VNPAY);
+                ps.setString(6, PaymentStatus.PAID);
+                ps.setBigDecimal(7, paidVNPayPayment.getAmount());
+                ps.setString(8, refundDesc);
+                if (ps.executeUpdate() <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback("refundVNPayPaymentByOrderId", e);
+        } finally {
+            restoreAutoCommit("refundVNPayPaymentByOrderId");
         }
 
         return false;

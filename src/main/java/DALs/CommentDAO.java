@@ -12,7 +12,10 @@ import java.util.Map;
 public class CommentDAO {
 
     // Giới hạn chỉnh sửa: 7 ngày (tính bằng milliseconds)
-    public static final long EDIT_LIMIT_MS = 1L * 60 * 1000;
+    public static final long EDIT_LIMIT_MS = 7L * 24 * 60 * 60 * 1000;
+
+    // Giới hạn thêm comment mới: 7 ngày sau khi đơn hàng được giao
+    public static final int ADD_LIMIT_DAYS = 7;
 
     private static final String BASE_SELECT
             = "SELECT c.commentId, c.orderItemId, c.accountId, c.rating, c.content, c.createdAt, c.status, "
@@ -66,6 +69,44 @@ public class CommentDAO {
             }
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, productId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapComment(rs));
+            }
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) try {
+                conn.close();
+            } catch (SQLException e) {
+            }
+        }
+        return list;
+    }
+
+    // ==================== SEARCH ====================
+    public List<Comment> searchComments(String keyword) {
+        List<Comment> list = new ArrayList<>();
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllComments();
+        }
+        String sql = BASE_SELECT 
+                + "WHERE c.content LIKE ? OR a.fullName LIKE ? OR a.username LIKE ? OR p.name LIKE ? "
+                + "ORDER BY c.createdAt DESC";
+        Connection conn = null;
+        try {
+            conn = new DBContext().getConnection();
+            if (conn == null) {
+                return list;
+            }
+            String likePattern = "%" + keyword.trim() + "%";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, likePattern);
+            ps.setString(2, likePattern);
+            ps.setString(3, likePattern);
+            ps.setString(4, likePattern);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(mapComment(rs));
@@ -274,7 +315,46 @@ public class CommentDAO {
     // ==================== PERMISSION CHECKS ====================
     public String getEligibleOrderItemId(String accountId, String productId) {
         String sql
-                = "SELECT oi.orderItemId "
+                = "SELECT oi.orderItemId, o.placedAt "
+                + "FROM OrderItems oi "
+                + "JOIN Orders o ON oi.orderId = o.orderId "
+                + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "WHERE o.customerId = ? "
+                + "AND pv.productId = ? "
+                + "AND o.orderStatus = 'Delivered' "
+                + "AND DATEDIFF(DAY, o.placedAt, GETDATE()) <= ? "
+                + "AND oi.orderItemId NOT IN (SELECT orderItemId FROM Comments WHERE accountId = ?)";
+        Connection conn = null;
+        try {
+            conn = new DBContext().getConnection();
+            if (conn == null) {
+                return null;
+            }
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, accountId);
+            ps.setString(2, productId);
+            ps.setInt(3, ADD_LIMIT_DAYS);
+            ps.setString(4, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("orderItemId");
+            }
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) try {
+                conn.close();
+            } catch (SQLException e) {
+            }
+        }
+        return null;
+    }
+
+    public int getRemainingDaysToComment(String accountId, String productId) {
+        String sql
+                = "SELECT TOP 1 DATEDIFF(DAY, o.placedAt, GETDATE()) AS daysPassed "
                 + "FROM OrderItems oi "
                 + "JOIN Orders o ON oi.orderId = o.orderId "
                 + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
@@ -286,7 +366,7 @@ public class CommentDAO {
         try {
             conn = new DBContext().getConnection();
             if (conn == null) {
-                return null;
+                return -1;
             }
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, accountId);
@@ -294,7 +374,104 @@ public class CommentDAO {
             ps.setString(3, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return rs.getString("orderItemId");
+                int daysPassed = rs.getInt("daysPassed");
+                return Math.max(0, ADD_LIMIT_DAYS - daysPassed);
+            }
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) try {
+                conn.close();
+            } catch (SQLException e) {
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Kiểm tra eligibility cho một orderItem cụ thể
+     */
+    public EligibilityStatus checkOrderItemEligibility(String orderItemId, String accountId) {
+        String sql
+                = "SELECT o.orderStatus, o.placedAt, o.customerId, "
+                + "(SELECT COUNT(*) FROM Comments WHERE orderItemId = ?) AS commentCount "
+                + "FROM OrderItems oi "
+                + "JOIN Orders o ON oi.orderId = o.orderId "
+                + "WHERE oi.orderItemId = ?";
+        Connection conn = null;
+        try {
+            conn = new DBContext().getConnection();
+            if (conn == null) {
+                return EligibilityStatus.notEligible("Cannot connect to database");
+            }
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, orderItemId);
+            ps.setString(2, orderItemId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                String orderStatus = rs.getString("orderStatus");
+                Timestamp placedAt = rs.getTimestamp("placedAt");
+                String customerId = rs.getString("customerId");
+                int commentCount = rs.getInt("commentCount");
+
+                // Check if belongs to this customer
+                if (!accountId.equals(customerId)) {
+                    return EligibilityStatus.notEligible("This order does not belong to you");
+                }
+
+                // Check if already reviewed
+                if (commentCount > 0) {
+                    return EligibilityStatus.alreadyReviewed("You have already reviewed this product");
+                }
+
+                // Check if delivered
+                if (!"Delivered".equalsIgnoreCase(orderStatus)) {
+                    return EligibilityStatus.notEligible("Order must be delivered before reviewing");
+                }
+
+                // Check 7-day window
+                if (placedAt != null) {
+                    long daysPassed = (System.currentTimeMillis() - placedAt.getTime()) / (24 * 60 * 60 * 1000);
+                    if (daysPassed > ADD_LIMIT_DAYS) {
+                        return EligibilityStatus.windowExpired("Review window has expired (7 days limit)");
+                    }
+                    return EligibilityStatus.eligible((int) (ADD_LIMIT_DAYS - daysPassed));
+                }
+
+                return EligibilityStatus.eligible(ADD_LIMIT_DAYS);
+            }
+            rs.close();
+            ps.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) try {
+                conn.close();
+            } catch (SQLException e) {
+            }
+        }
+        return EligibilityStatus.notEligible("Order item not found");
+    }
+
+    /**
+     * Lấy comment của customer cho một orderItem cụ thể
+     */
+    public Comment getCommentByOrderItem(String orderItemId, String accountId) {
+        String sql = BASE_SELECT + "WHERE c.orderItemId = ? AND c.accountId = ?";
+        Connection conn = null;
+        try {
+            conn = new DBContext().getConnection();
+            if (conn == null) {
+                return null;
+            }
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, orderItemId);
+            ps.setString(2, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapComment(rs);
             }
             rs.close();
             ps.close();
@@ -339,35 +516,11 @@ public class CommentDAO {
 
     /**
      * Kiểm tra comment còn trong thời hạn chỉnh sửa 7 ngày không
+     * Chỉ áp dụng cho Admin/Staff, KHÔNG cho customer
      */
     public boolean isWithinEditLimit(String commentId) {
-        String sql = "SELECT createdAt FROM Comments WHERE commentId = ?";
-        Connection conn = null;
-        try {
-            conn = new DBContext().getConnection();
-            if (conn == null) {
-                return false;
-            }
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, commentId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                Timestamp createdAt = rs.getTimestamp("createdAt");
-                if (createdAt != null) {
-                    long diff = System.currentTimeMillis() - createdAt.getTime();
-                    return diff <= EDIT_LIMIT_MS;
-                }
-            }
-            rs.close();
-            ps.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            if (conn != null) try {
-                conn.close();
-            } catch (SQLException e) {
-            }
-        }
+        // Customer reviews from order detail KHONG duoc sua/xoa
+        // Chi Admin/Staff moi co the sua trong 7 ngay
         return false;
     }
 
@@ -408,9 +561,9 @@ public class CommentDAO {
      * Lấy rating trung bình + tổng số đánh giá của 1 sản phẩm Trả về double[] {
      * avgRating, totalCount }
      */
-    /**
+/**
  * Lấy rating trung bình + tổng số đánh giá của 1 sản phẩm
- * Chỉ tính comment đang Active (comment bị ẩn sẽ không tính vào cả sao lẫn số lượt đánh giá)
+ * Tính CẢ comment Hidden (chỉ ẩn nội dung bình luận, rating vẫn được tính)
  */
 public double[] getRatingSummary(String productId) {
     String sql =
@@ -418,7 +571,7 @@ public double[] getRatingSummary(String productId) {
         "FROM Comments c " +
         "JOIN OrderItems oi ON c.orderItemId = oi.orderItemId " +
         "JOIN ProductVariants pv ON oi.variantId = pv.variantId " +
-        "WHERE pv.productId = ? AND c.status = 'Active'";
+        "WHERE pv.productId = ?";
     Connection conn = null;
     try {
         conn = new DBContext().getConnection();
@@ -442,7 +595,7 @@ public double[] getRatingSummary(String productId) {
 
 /**
  * Lấy rating cho NHIỀU sản phẩm cùng lúc (trang chủ / related products)
- * Chỉ tính comment đang Active
+ * Tính CẢ comment Hidden
  */
 public Map<String, double[]> getRatingSummaryMap(List<String> productIds) {
     Map<String, double[]> result = new HashMap<>();
@@ -458,7 +611,7 @@ public Map<String, double[]> getRatingSummaryMap(List<String> productIds) {
         "FROM Comments c " +
         "JOIN OrderItems oi ON c.orderItemId = oi.orderItemId " +
         "JOIN ProductVariants pv ON oi.variantId = pv.variantId " +
-        "WHERE pv.productId IN (" + placeholders + ") AND c.status = 'Active' " +
+        "WHERE pv.productId IN (" + placeholders + ") " +
         "GROUP BY pv.productId";
 
     Connection conn = null;
@@ -501,5 +654,47 @@ public Map<String, double[]> getRatingSummaryMap(List<String> productIds) {
         c.setProductName(rs.getString("productName"));
         c.setVariantInfo(rs.getString("sizeName") + " - " + rs.getString("colorName"));
         return c;
+    }
+
+    /**
+     * Inner class for eligibility status
+     */
+    public static class EligibilityStatus {
+        private final boolean eligible;
+        private final boolean alreadyReviewed;
+        private final boolean windowExpired;
+        private final int remainingDays;
+        private final String reason;
+
+        private EligibilityStatus(boolean eligible, boolean alreadyReviewed, boolean windowExpired,
+                int remainingDays, String reason) {
+            this.eligible = eligible;
+            this.alreadyReviewed = alreadyReviewed;
+            this.windowExpired = windowExpired;
+            this.remainingDays = remainingDays;
+            this.reason = reason;
+        }
+
+        public static EligibilityStatus eligible(int remainingDays) {
+            return new EligibilityStatus(true, false, false, remainingDays, null);
+        }
+
+        public static EligibilityStatus notEligible(String reason) {
+            return new EligibilityStatus(false, false, false, 0, reason);
+        }
+
+        public static EligibilityStatus alreadyReviewed(String reason) {
+            return new EligibilityStatus(false, true, false, 0, reason);
+        }
+
+        public static EligibilityStatus windowExpired(String reason) {
+            return new EligibilityStatus(false, false, true, 0, reason);
+        }
+
+        public boolean isEligible() { return eligible; }
+        public boolean isAlreadyReviewed() { return alreadyReviewed; }
+        public boolean isWindowExpired() { return windowExpired; }
+        public int getRemainingDays() { return remainingDays; }
+        public String getReason() { return reason; }
     }
 }

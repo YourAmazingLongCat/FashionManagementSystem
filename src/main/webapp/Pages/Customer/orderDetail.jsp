@@ -73,8 +73,16 @@
                             <span class="material-symbols-outlined">hourglass_top</span>
                         </div>
                         <div class="co-notice-content">
-                            <strong>Your order is waiting for confirmation</strong>
-                            <p>We have received your order and will update its status after it is reviewed.</p>
+                            <c:choose>
+                                <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and payment.paymentStatus ne 'Paid'}">
+                                    <strong>Complete your VNPay payment</strong>
+                                    <p>Your order has been saved. Complete the payment so it can be confirmed.</p>
+                                </c:when>
+                                <c:otherwise>
+                                    <strong>Your order is waiting for confirmation</strong>
+                                    <p>We have received your order and will update its status after it is reviewed.</p>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
                 </c:if>
@@ -338,7 +346,24 @@
                                             <div class="co-mini-message co-mini-info">Payment will be collected when your order is delivered.</div>
                                         </c:when>
                                         <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and payment.paymentStatus eq 'Pending'}">
-                                            <div class="co-mini-message co-mini-info">Your VNPay payment is being processed.</div>
+                                            <div class="co-mini-message co-mini-info">Continue to VNPay Sandbox to complete your payment.</div>
+                                            <form action="${pageContext.request.contextPath}/customer/vnpay/start" method="post">
+                                                <input type="hidden" name="paymentId" value="${payment.paymentId}" />
+                                                <button class="co-primary-btn co-full-btn" type="submit">
+                                                    Pay with VNPay
+                                                    <span class="material-symbols-outlined">open_in_new</span>
+                                                </button>
+                                            </form>
+                                        </c:when>
+                                        <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and (payment.paymentStatus eq 'Failed' or payment.paymentStatus eq 'Cancelled')}">
+                                            <div class="co-mini-message co-mini-info">The previous VNPay payment was not completed.</div>
+                                            <form action="${pageContext.request.contextPath}/customer/vnpay/start" method="post">
+                                                <input type="hidden" name="orderId" value="${order.orderId}" />
+                                                <button class="co-primary-btn co-full-btn" type="submit">
+                                                    Try VNPay again
+                                                    <span class="material-symbols-outlined">refresh</span>
+                                                </button>
+                                            </form>
                                         </c:when>
                                     </c:choose>
                                 </div>

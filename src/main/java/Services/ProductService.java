@@ -151,6 +151,8 @@ public class ProductService {
         for (ProductVariant variant : variants) {
             if (isBlank(variant.getSizeId())) return false;
             if (isBlank(variant.getColorId())) return false;
+            // Stock quantity is managed through Warehouse module, not product form
+            // So we allow stockQty >= 0 (including 0)
             if (variant.getStockQty() < 0) return false;
             if (variant.getPriceOverride() != null && variant.getPriceOverride().compareTo(BigDecimal.ZERO) < 0) return false;
         }
@@ -158,6 +160,11 @@ public class ProductService {
     }
 
     private boolean isBlank(String str) { return str == null || str.isBlank(); }
+
+    public boolean hasOrders(String productId) {
+        if (productId == null || productId.isBlank()) return false;
+        return productDAO.hasProductOrders(productId);
+    }
 
     public boolean isDatabaseReady() { return productDAO.isDatabaseReady(); }
     public BigDecimal getDisplayPrice(Product product) { return productDAO.getDisplayPrice(product); }

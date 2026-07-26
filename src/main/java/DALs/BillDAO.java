@@ -2,10 +2,13 @@ package DALs;
 
 import Models.Bill;
 import Models.BillOrderItem;
+import Models.CategorySales;
+import Models.PaymentMethodStats;
 import Models.ProductOption;
 import Models.ProductSaleStat;
 import Models.ProductSalesRow;
 import Models.RevenueStat;
+import Models.TopProduct;
 import Utils.DBContext;
 
 import java.math.BigDecimal;
@@ -101,6 +104,121 @@ public class BillDAO {
             for (int i = 0; i < params.size(); i++) {
                 ps.setObject(i + 1, params.get(i));
             }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapBill(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    /**
+     * Đếm tổng số bills thỏa điều kiện filter (không filter theo ngày vì Bills không có ngày).
+     */
+    public int countBills(String keyword, String paymentStatus, String orderStatus) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM Bills b "
+              + "JOIN Orders o ON b.orderId = o.orderId "
+              + "JOIN Accounts a ON o.customerId = a.accountId "
+              + "WHERE 1 = 1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (b.billId LIKE ? OR b.orderId LIKE ? OR a.fullName LIKE ? OR a.phone LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
+            sql.append("AND b.paymentStatus = ? ");
+            params.add(paymentStatus.trim());
+        }
+
+        if (orderStatus != null && !orderStatus.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(orderStatus.trim());
+        }
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    /**
+     * Tìm kiếm + lọc hóa đơn có phân trang (không filter theo ngày vì Bills không có ngày).
+     */
+    public List<Bill> searchBillsPaginated(String keyword, String paymentStatus, String orderStatus,
+                                            int offset, int limit) {
+        List<Bill> list = new ArrayList<>();
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT b.billId, b.orderId, b.paymentMethod, b.paymentStatus, b.issuedDate, b.totalAmount, "
+              + "       o.customerId, o.orderStatus, o.shippingAddress, o.placedAt, "
+              + "       a.fullName AS customerName, a.phone AS customerPhone "
+              + "FROM Bills b "
+              + "JOIN Orders o ON b.orderId = o.orderId "
+              + "JOIN Accounts a ON o.customerId = a.accountId "
+              + "WHERE 1 = 1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (b.billId LIKE ? OR b.orderId LIKE ? OR a.fullName LIKE ? OR a.phone LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
+            sql.append("AND b.paymentStatus = ? ");
+            params.add(paymentStatus.trim());
+        }
+
+        if (orderStatus != null && !orderStatus.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(orderStatus.trim());
+        }
+
+        sql.append("ORDER BY b.issuedDate DESC ");
+        sql.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx++, limit);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -458,16 +576,17 @@ public class BillDAO {
                 "SELECT p.productId, p.name AS productName, "
               + "       SUM(oi.quantity) AS totalQuantity, "
               + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN oi.quantity ELSE 0 END) AS paidQuantity, "
-              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
               + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN "
               + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalRevenuePaid, "
-              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN "
               + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalUnpaidAmount "
               + "FROM OrderItems oi "
               + "JOIN Bills b ON b.orderId = oi.orderId "
+              + "JOIN Orders o ON o.orderId = oi.orderId "
               + "JOIN ProductVariants pv ON pv.variantId = oi.variantId "
               + "JOIN Products p ON p.productId = pv.productId "
-              + "WHERE 1 = 1 "
+              + "WHERE o.orderStatus <> 'Cancelled' "
         );
 
         List<Object> params = new ArrayList<>();
@@ -573,5 +692,395 @@ public class BillDAO {
         }
 
         return result;
+    }
+
+    // ================= INSERT / UPDATE BILL =================
+
+    /**
+     * Insert a new Bill into the database.
+     *
+     * @param bill the Bill object to insert (only DB columns are used)
+     * @return true if insert successful
+     */
+    public boolean insertBill(Bill bill) {
+        if (bill == null || isEmpty(bill.getBillId()) || isEmpty(bill.getOrderId())) {
+            return false;
+        }
+
+        String sql = """
+            INSERT INTO Bills (billId, orderId, paymentMethod, paymentStatus, issuedDate, totalAmount)
+            VALUES (?, ?, ?, ?, GETDATE(), ?)
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, bill.getBillId());
+            ps.setString(2, bill.getOrderId());
+            ps.setString(3, bill.getPaymentMethod() != null ? bill.getPaymentMethod() : "COD");
+            ps.setString(4, bill.getPaymentStatus() != null ? bill.getPaymentStatus() : "Pending");
+            ps.setBigDecimal(5, bill.getTotalAmount());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("insertBill error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Update the payment status of an existing Bill.
+     *
+     * @param billId        the billId to update
+     * @param paymentStatus new payment status (e.g., Paid, Refunded)
+     * @return true if update successful
+     */
+    public boolean updatePaymentStatus(String billId, String paymentStatus) {
+        if (isEmpty(billId) || isEmpty(paymentStatus)) {
+            return false;
+        }
+
+        String sql = "UPDATE Bills SET paymentStatus = ? WHERE billId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, paymentStatus.trim());
+            ps.setString(2, billId.trim());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("updatePaymentStatus error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Update payment status by orderId (when order is delivered, payment becomes Paid).
+     */
+    public boolean updatePaymentStatusByOrderId(String orderId, String paymentStatus) {
+        if (isEmpty(orderId) || isEmpty(paymentStatus)) {
+            return false;
+        }
+
+        String sql = "UPDATE Bills SET paymentStatus = ? WHERE orderId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, paymentStatus.trim());
+            ps.setString(2, orderId.trim());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            System.err.println("updatePaymentStatusByOrderId error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a Bill already exists for an order.
+     *
+     * @param orderId the orderId to check
+     * @return true if a Bill exists for this order
+     */
+    public boolean billExistsForOrder(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) FROM Bills WHERE orderId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, orderId.trim());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("billExistsForOrder error: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    /**
+     * Get Bill by orderId.
+     */
+    public Bill getBillByOrderId(String orderId) {
+        if (isEmpty(orderId)) {
+            return null;
+        }
+
+        String sql = "SELECT b.billId, b.orderId, b.paymentMethod, b.paymentStatus, b.issuedDate, b.totalAmount, "
+                   + "       o.customerId, o.orderStatus, o.shippingAddress, o.placedAt, "
+                   + "       a.fullName AS customerName, a.phone AS customerPhone "
+                   + "FROM Bills b "
+                   + "JOIN Orders o ON b.orderId = o.orderId "
+                   + "JOIN Accounts a ON o.customerId = a.accountId "
+                   + "WHERE b.orderId = ?";
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, orderId.trim());
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapBill(rs);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("getBillByOrderId error: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Danh sách chi tiết theo từng sản phẩm với filter Paid/Unpaid và sort.
+     */
+    public List<ProductSalesRow> getProductSalesSummaryByFilter(String paidFilter, String productId, String sortBy) {
+        List<ProductSalesRow> list = new ArrayList<>();
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT p.productId, p.name AS productName, "
+              + "       SUM(oi.quantity) AS totalQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN oi.quantity ELSE 0 END) AS paidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN "
+              + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalRevenuePaid, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN "
+              + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalUnpaidAmount "
+              + "FROM OrderItems oi "
+              + "JOIN Bills b ON b.orderId = oi.orderId "
+              + "JOIN Orders o ON o.orderId = oi.orderId "
+              + "JOIN ProductVariants pv ON pv.variantId = oi.variantId "
+              + "JOIN Products p ON p.productId = pv.productId "
+              + "WHERE o.orderStatus <> 'Cancelled' "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if ("Paid".equals(paidFilter)) {
+            sql.append("AND b.paymentStatus = 'Paid' ");
+        } else if ("Unpaid".equals(paidFilter)) {
+            sql.append("AND b.paymentStatus <> 'Paid' ");
+        }
+
+        if (productId != null && !productId.trim().isEmpty()) {
+            sql.append("AND p.productId = ? ");
+            params.add(productId.trim());
+        }
+
+        sql.append("GROUP BY p.productId, p.name ");
+
+        if ("asc".equals(sortBy)) {
+            sql.append("ORDER BY totalUnpaidAmount ASC");
+        } else if ("desc".equals(sortBy)) {
+            sql.append("ORDER BY totalUnpaidAmount DESC");
+        } else {
+            sql.append("ORDER BY totalQuantity DESC");
+        }
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    BigDecimal paid = rs.getBigDecimal("totalRevenuePaid");
+                    BigDecimal unpaid = rs.getBigDecimal("totalUnpaidAmount");
+                    list.add(new ProductSalesRow(
+                            rs.getString("productId"),
+                            rs.getString("productName"),
+                            rs.getInt("totalQuantity"),
+                            rs.getInt("paidQuantity"),
+                            rs.getInt("unpaidQuantity"),
+                            paid == null ? BigDecimal.ZERO : paid,
+                            unpaid == null ? BigDecimal.ZERO : unpaid
+                    ));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    // ================= TOP SELLING PRODUCTS =================
+
+    /**
+     * Get top selling products by quantity sold.
+     */
+    public List<TopProduct> getTopSellingProducts(int limit) {
+        List<TopProduct> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) p.productId, p.name AS productName,
+                   (SELECT TOP 1 pi.imageUrl FROM ProductImages pi
+                    WHERE pi.productId = p.productId AND pi.isPrimary = 1) AS imageUrl,
+                   SUM(oi.quantity) AS totalSold
+            FROM OrderItems oi
+            JOIN Bills b ON b.orderId = oi.orderId
+            JOIN ProductVariants pv ON pv.variantId = oi.variantId
+            JOIN Products p ON p.productId = pv.productId
+            WHERE b.paymentStatus = 'Paid'
+            GROUP BY p.productId, p.name
+            ORDER BY totalSold DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new TopProduct(
+                            rs.getString("productId"),
+                            rs.getString("productName"),
+                            rs.getString("imageUrl"),
+                            rs.getInt("totalSold"),
+                            0
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /**
+     * Get top revenue products.
+     */
+    public List<TopProduct> getTopRevenueProducts(int limit) {
+        List<TopProduct> list = new ArrayList<>();
+        String sql = """
+            SELECT TOP (?) p.productId, p.name AS productName,
+                   (SELECT TOP 1 pi.imageUrl FROM ProductImages pi
+                    WHERE pi.productId = p.productId AND pi.isPrimary = 1) AS imageUrl,
+                   SUM(oi.quantity) AS totalSold,
+                   SUM(oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) AS totalRevenue
+            FROM OrderItems oi
+            JOIN Bills b ON b.orderId = oi.orderId
+            JOIN ProductVariants pv ON pv.variantId = oi.variantId
+            JOIN Products p ON p.productId = pv.productId
+            WHERE b.paymentStatus = 'Paid'
+            GROUP BY p.productId, p.name
+            ORDER BY totalRevenue DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new TopProduct(
+                            rs.getString("productId"),
+                            rs.getString("productName"),
+                            rs.getString("imageUrl"),
+                            rs.getInt("totalSold"),
+                            rs.getInt("totalRevenue")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // ================= SALES BY CATEGORY =================
+
+    /**
+     * Get sales statistics grouped by category.
+     */
+    public List<CategorySales> getSalesByCategory() {
+        List<CategorySales> list = new ArrayList<>();
+        String sql = """
+            SELECT c.categoryId, c.name AS categoryName,
+                   SUM(oi.quantity) AS totalSold,
+                   SUM(CASE WHEN b.paymentStatus = 'Paid'
+                        THEN oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)
+                        ELSE 0 END) AS totalRevenue
+            FROM OrderItems oi
+            JOIN Bills b ON b.orderId = oi.orderId
+            JOIN ProductVariants pv ON pv.variantId = oi.variantId
+            JOIN Products p ON p.productId = pv.productId
+            JOIN Categories c ON c.categoryId = p.categoryId
+            GROUP BY c.categoryId, c.name
+            ORDER BY totalRevenue DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new CategorySales(
+                        rs.getString("categoryId"),
+                        rs.getString("categoryName"),
+                        rs.getInt("totalSold"),
+                        rs.getBigDecimal("totalRevenue")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // ================= SALES BY PAYMENT METHOD =================
+
+    /**
+     * Get sales statistics grouped by payment method.
+     */
+    public List<PaymentMethodStats> getSalesByPaymentMethod() {
+        List<PaymentMethodStats> list = new ArrayList<>();
+        String sql = """
+            SELECT b.paymentMethod,
+                   COUNT(*) AS totalBills,
+                   SUM(b.totalAmount) AS totalRevenue
+            FROM Bills b
+            WHERE b.paymentStatus = 'Paid'
+            GROUP BY b.paymentMethod
+            ORDER BY totalRevenue DESC
+        """;
+
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new PaymentMethodStats(
+                        rs.getString("paymentMethod"),
+                        rs.getInt("totalBills"),
+                        rs.getBigDecimal("totalRevenue")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 }

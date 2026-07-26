@@ -3,23 +3,38 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-<div class="content-page order-page">
+<div class="content-page order-page staff-ops-page">
     <div class="order-container">
-        <section class="order-hero">
+        <section class="order-hero staff-ops-hero">
             <div>
-                <p class="order-eyebrow">Staff / Order Detail</p>
-                <h1 class="order-title">Manage Order</h1>
+                <p class="order-eyebrow">Staff Operations</p>
+                <h1 class="order-title">Order Detail</h1>
                 <p class="order-subtitle">
-                    Move order status forward or backward one level at a time. Each change requires staff confirmation.
+                    Review fulfilment and payment information, then manage the order through its allowed status flow.
                 </p>
             </div>
             <div class="order-actions-row">
                 <a class="order-btn" href="${pageContext.request.contextPath}/staff/orders">
                     <span class="material-symbols-outlined">arrow_back</span>
-                    Back to list
+                    Orders
+                </a>
+                <a class="order-btn" href="${pageContext.request.contextPath}/staff/payments">
+                    <span class="material-symbols-outlined">payments</span>
+                    Payments
                 </a>
             </div>
         </section>
+
+        <nav class="staff-module-tabs" aria-label="Order and payment management">
+            <a class="staff-module-tab active" href="${pageContext.request.contextPath}/staff/orders">
+                <span class="material-symbols-outlined">receipt_long</span>
+                Orders
+            </a>
+            <a class="staff-module-tab" href="${pageContext.request.contextPath}/staff/payments">
+                <span class="material-symbols-outlined">payments</span>
+                Payments
+            </a>
+        </nav>
 
         <c:choose>
             <c:when test="${empty order}">
@@ -91,52 +106,64 @@
                     </section>
 
                     <aside class="order-grid">
-                        <div class="wallet-payment-panel" style="position: static;">
-                            <div class="wallet-form-head">
-                                <span class="material-symbols-outlined">payments</span>
+                        <section class="order-panel order-panel-padding staff-payment-detail-card">
+                            <div class="order-panel-header">
                                 <div>
-                                    <h2>Payment Information</h2>
-                                    <p>A payment record means the customer has pressed Place order. Staff actions stay locked until that step is completed.</p>
+                                    <h3 class="order-section-title">Payment Information</h3>
+                                    <p class="order-muted">Staff actions remain locked until the customer completes Place order.</p>
                                 </div>
+                                <span class="staff-panel-icon material-symbols-outlined">payments</span>
                             </div>
 
                             <c:choose>
                                 <c:when test="${not empty payment}">
-                                    <div class="wallet-payment-row">
-                                        <span>Payment ID</span>
-                                        <strong>${payment.paymentId}</strong>
-                                    </div>
-                                    <div class="wallet-payment-row">
-                                        <span>Method</span>
-                                        <strong>${payment.paymentMethod}</strong>
-                                    </div>
-                                    <div class="wallet-payment-row">
-                                        <span>Status</span>
-                                        <strong class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
-                                    </div>
-                                    <div class="wallet-payment-row">
-                                        <span>Amount</span>
-                                        <strong><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</strong>
-                                    </div>
-                                    <div class="wallet-payment-row">
-                                        <span>Paid At</span>
-                                        <strong><c:choose><c:when test="${empty payment.paidAt}">-</c:when><c:otherwise>${payment.paidAt}</c:otherwise></c:choose></strong>
+                                    <div class="staff-detail-list">
+                                        <div class="staff-detail-row">
+                                            <span>Payment ID</span>
+                                            <strong>${payment.paymentId}</strong>
+                                        </div>
+                                        <div class="staff-detail-row">
+                                            <span>Type</span>
+                                            <strong>${payment.paymentType}</strong>
+                                        </div>
+                                        <div class="staff-detail-row">
+                                            <span>Method</span>
+                                            <strong class="staff-method-badge">${payment.paymentMethod}</strong>
+                                        </div>
+                                        <div class="staff-detail-row">
+                                            <span>Status</span>
+                                            <strong class="order-status status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</strong>
+                                        </div>
+                                        <div class="staff-detail-row">
+                                            <span>Amount</span>
+                                            <strong class="order-price"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</strong>
+                                        </div>
+                                        <div class="staff-detail-row">
+                                            <span>Paid At</span>
+                                            <strong>
+                                                <c:choose>
+                                                    <c:when test="${empty payment.paidAt}">-</c:when>
+                                                    <c:otherwise>${fn:replace(payment.paidAt, 'T', ' ')}</c:otherwise>
+                                                </c:choose>
+                                            </strong>
+                                        </div>
                                     </div>
                                     <c:if test="${payment.paymentMethod eq 'COD' and payment.paymentStatus eq 'Pending'}">
-                                        <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                                            COD order: payment will be marked Paid automatically when status becomes Delivered.
+                                        <div class="staff-info-box staff-info-success">
+                                            <span class="material-symbols-outlined">info</span>
+                                            <span>COD payment will be marked Paid automatically when the order becomes Delivered.</span>
                                         </div>
                                     </c:if>
                                 </c:when>
                                 <c:otherwise>
-                                    <div class="wallet-empty wallet-empty-small">
+                                    <div class="order-empty staff-panel-empty staff-panel-empty-compact">
                                         <span class="material-symbols-outlined">money_off</span>
-                                        <h3>Customer has not placed this order</h3>
-                                        <p>The Cart Checkout button only created a Pending reservation. Wait until the customer completes the shared Order page.</p>
+                                        <h3>Order not placed</h3>
+                                        <p>The customer created a Pending reservation but has not completed Place order.</p>
                                     </div>
                                 </c:otherwise>
                             </c:choose>
-                        </div>
+                        </section>
 
                         <div class="order-panel order-panel-padding">
                             <div class="order-panel-header">
@@ -160,10 +187,6 @@
                                 </c:when>
                                 <c:when test="${order.orderStatus eq 'Shipping'}">
                                     <c:set var="nextStatus" value="Delivered" />
-                                    <c:set var="previousStatus" value="Processing" />
-                                </c:when>
-                                <c:when test="${order.orderStatus eq 'Delivered'}">
-                                    <c:set var="previousStatus" value="Shipping" />
                                 </c:when>
                             </c:choose>
 
@@ -195,6 +218,13 @@
                                         </c:if>
 
                                         <c:choose>
+                                            <c:when test="${order.orderStatus eq 'Shipping' or order.orderStatus eq 'Delivered'}">
+                                                <button class="order-btn" type="button" disabled
+                                                        style="opacity: 0.45; cursor: not-allowed;">
+                                                    <span class="material-symbols-outlined">lock</span>
+                                                    Status locked after Shipping
+                                                </button>
+                                            </c:when>
                                             <c:when test="${not empty previousStatus}">
                                                 <form class="order-inline-form" method="post"
                                                       action="${pageContext.request.contextPath}/staff/change-shipping-status"
@@ -235,7 +265,8 @@
                                         </c:if>
 
                                         <div class="order-warning-box">
-                                            Forward and backward movement must be one status level each time.
+                                            Forward and backward movement must be one status level each time before Shipping.
+                                            Once an order reaches Shipping, it cannot move backward or be cancelled.
                                             Wallet/VNPay orders must be Paid before moving forward.
                                             COD orders can move forward while payment is Pending and become Paid automatically when Delivered.
                                         </div>

@@ -45,7 +45,7 @@
                 <div class="cw-card-head">
                     <div>
                         <h2>Add money</h2>
-                        <p>Create a VNPay deposit request for your wallet.</p>
+                        <p>Add money securely through VNPay Sandbox.</p>
                     </div>
                     <span class="material-symbols-outlined cw-card-icon">add_card</span>
                 </div>
@@ -73,7 +73,7 @@
                     </div>
 
                     <button class="cw-primary-btn cw-full-btn" type="submit">
-                        Create deposit request
+                        Pay with VNPay
                         <span class="material-symbols-outlined">arrow_forward</span>
                     </button>
                 </form>

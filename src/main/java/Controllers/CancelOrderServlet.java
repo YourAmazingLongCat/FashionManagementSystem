@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Models.Order;
 import Services.OrderService;
 import java.io.IOException;
@@ -54,7 +55,9 @@ public class CancelOrderServlet extends HttpServlet {
 
         boolean cancelled = orderService.cancelOrder(orderId, customerId);
         session.setAttribute(cancelled ? "successMessage" : "errorMessage",
-                cancelled ? "Order cancelled successfully." : "This order cannot be cancelled now.");
+                cancelled
+                        ? "Order cancelled successfully. Payment was refunded or cancelled when applicable."
+                        : "This order cannot be cancelled once it reaches Shipping.");
 
         response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
     }
@@ -66,6 +69,9 @@ public class CancelOrderServlet extends HttpServlet {
         }
 
         Object user = session.getAttribute("USER");
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
+        }
         if (user == null) {
             return null;
         }

@@ -24,6 +24,17 @@
             margin: auto;
         }
 
+        .cart-header {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
         .cart-item {
             background: white;
             border-radius: 8px;
@@ -77,6 +88,26 @@
             background: #d73211;
             color: white;
         }
+
+        .select-all-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .select-all-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .item-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -97,20 +128,31 @@
 
         <c:otherwise>
 
-            <form action="${pageContext.request.contextPath}/cart/checkout" method="post">
+            <form id="checkoutForm" action="${pageContext.request.contextPath}/cart/checkout" method="post">
+                <!-- Hidden fields for selected items -->
+                <input type="hidden" name="selectedItemsList" id="selectedItemsList" value="">
 
                 <div class="row">
 
                     <!-- LEFT CART -->
                     <div class="col-md-8">
 
+                        <!-- Select All Header -->
+                        <div class="cart-header">
+                            <label class="select-all-checkbox">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                <span>Select All (${cartItems.size()} items)</span>
+                            </label>
+                        </div>
+
                         <c:forEach items="${cartItems}" var="item">
 
                             <div class="cart-item">
 
                                 <input type="checkbox"
+                                       class="item-checkbox"
                                        name="selectedItems"
-                                       value="${item.cartItemId}" data-subtotal="${item.subtotal}" onchange="calculateTotal()">
+                                       value="${item.cartItemId}" data-subtotal="${item.subtotal}" onchange="updateSelectAllState(); calculateTotal()">
 
                                 <div class="img-box">
                                     <img src="${pageContext.request.contextPath}${item.imageUrl}">
@@ -155,11 +197,24 @@
 
                             <hr>
 
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Selected items:</span>
+                                    <span id="selectedCount">0</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Total:</span>
+                                </div>
+                            </div>
+
                             <h4 class="text-danger">
                                 <span id="totalPrice">0 VND</span>
                             </h4>
 
-                            <button type="submit" class="btn btn-shopee w-100 mt-3">
+                            <button type="button" class="btn btn-shopee w-100 mt-3" onclick="proceedToCheckout()">
                                 Checkout
                             </button>
 
@@ -185,9 +240,10 @@ function saveCheckedItems() {
         .forEach(cb => checked.push(cb.value));
 
     localStorage.setItem("checkedItems", JSON.stringify(checked));
+    return checked;
 }
-function updateQty(id, qty) {
 
+function updateQty(id, qty) {
     saveCheckedItems();
 
     fetch('${pageContext.request.contextPath}/cart/update', {
@@ -199,23 +255,61 @@ function updateQty(id, qty) {
     }).then(() => {
         location.reload();
     });
-
 }
-window.onload = function () {
 
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const itemCheckboxes = document.querySelectorAll("input[name='selectedItems']");
+    
+    itemCheckboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+    });
+    
+    calculateTotal();
+    updateSelectedCount();
+}
+
+function updateSelectAllState() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const itemCheckboxes = document.querySelectorAll("input[name='selectedItems']");
+    const checkedCount = document.querySelectorAll("input[name='selectedItems']:checked").length;
+    
+    selectAllCheckbox.checked = itemCheckboxes.length > 0 && checkedCount === itemCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < itemCheckboxes.length;
+    
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const count = document.querySelectorAll("input[name='selectedItems']:checked").length;
+    document.getElementById('selectedCount').textContent = count;
+}
+
+window.onload = function () {
     let checked = JSON.parse(localStorage.getItem("checkedItems") || "[]");
 
     document.querySelectorAll("input[name='selectedItems']").forEach(cb => {
-
         if (checked.includes(cb.value)) {
             cb.checked = true;
         }
-
     });
 
+    updateSelectAllState();
     calculateTotal();
 
+    // Listen for individual checkbox changes
+    document.querySelectorAll("input[name='selectedItems']").forEach(cb => {
+        cb.addEventListener('change', function() {
+            updateSelectAllState();
+            calculateTotal();
+        });
+    });
 };
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN').format(amount);
+}
+
 function calculateTotal() {
     let total = 0;
 
@@ -225,7 +319,24 @@ function calculateTotal() {
         });
 
     document.getElementById("totalPrice").innerHTML =
-        total.toLocaleString('vi-VN') + " VND";
+        formatCurrency(total) + " VND";
+    
+    updateSelectedCount();
+}
+
+function proceedToCheckout() {
+    let selected = [];
+    document.querySelectorAll("input[name='selectedItems']:checked")
+        .forEach(cb => selected.push(cb.value));
+
+    if (selected.length === 0) {
+        alert('Please select at least one product to checkout.');
+        return;
+    }
+
+    // Set hidden field with comma-separated IDs
+    document.getElementById("selectedItemsList").value = selected.join(",");
+    document.getElementById("checkoutForm").submit();
 }
 </script>
 

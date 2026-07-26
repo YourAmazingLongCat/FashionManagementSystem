@@ -11,6 +11,7 @@ import Utils.PaymentMethod;
 import Utils.PaymentStatus;
 import Utils.PaymentType;
 import Utils.WalletStatus;
+import Utils.VNPayProcessResult;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -79,6 +80,14 @@ public class PaymentService {
         return paymentDAO.getAllPayments();
     }
 
+    public int countAllPayments() {
+        return paymentDAO.countAllPayments();
+    }
+
+    public List<Payment> getAllPaymentsPaginated(int offset, int limit) {
+        return paymentDAO.getAllPaymentsPaginated(offset, limit);
+    }
+
     public List<Payment> getPendingDeposits() {
         return paymentDAO.getPendingDeposits();
     }
@@ -89,6 +98,23 @@ public class PaymentService {
         }
 
         return paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+    }
+
+    public Payment getPaymentById(String paymentId) {
+        if (isEmpty(paymentId)) {
+            return null;
+        }
+
+        return paymentDAO.getPaymentById(paymentId.trim());
+    }
+
+    public Payment getPaymentForCustomer(String paymentId, String accountId) {
+        if (isEmpty(paymentId) || isEmpty(accountId)) {
+            return null;
+        }
+
+        return paymentDAO.getPaymentByIdAndAccountId(
+                paymentId.trim(), accountId.trim());
     }
 
     public String createDepositPayment(String accountId, BigDecimal amount, String paymentMethod) {
@@ -112,7 +138,7 @@ public class PaymentService {
                 normalizedMethod,
                 PaymentStatus.PENDING,
                 amount,
-                "Deposit request to wallet. Awaiting staff confirmation.",
+                "VNPay Sandbox wallet deposit request.",
                 now,
                 null
         );
@@ -122,9 +148,8 @@ public class PaymentService {
     }
 
     /*
-     * Kept for backward compatibility.
-     * New business rule: deposit does NOT add balance immediately.
-     * Staff/Admin must approve it through /staff/payments.
+     * Kept for backward compatibility with older controller code.
+     * The wallet balance is credited only after a verified VNPay result.
      */
     public String depositToWallet(String accountId, BigDecimal amount, String paymentMethod) {
         return createDepositPayment(accountId, amount, paymentMethod);
@@ -165,9 +190,17 @@ public class PaymentService {
         }
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(trimmedOrderId);
+        System.out.println("createCODPaymentForOrder: orderId=" + trimmedOrderId + ", existingPayment=" 
+            + (existingPayment != null ? existingPayment.getPaymentId() + "/" + existingPayment.getPaymentType() + "/" + existingPayment.getPaymentMethod() + "/" + existingPayment.getPaymentStatus() : "null"));
+        
         if (existingPayment != null) {
-            syncBillSafely(existingPayment);
-            return true;
+            if (PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+                syncBillSafely(existingPayment);
+                return true;
+            }
+            if (PaymentStatus.PENDING.equals(existingPayment.getPaymentStatus())) {
+                return PaymentMethod.COD.equals(existingPayment.getPaymentMethod());
+            }
         }
 
         Wallet wallet = getOrCreateWallet(trimmedAccountId);
@@ -195,50 +228,162 @@ public class PaymentService {
     }
 
     public boolean createVNPayPaymentForOrder(String accountId, String orderId) {
+        return getOrCreateVNPayPaymentForOrder(accountId, orderId) != null;
+    }
+
+    public Payment getOrCreateVNPayPaymentForOrder(String accountId, String orderId) {
         if (isEmpty(accountId) || isEmpty(orderId)) {
-            return false;
+            return null;
         }
 
         String trimmedOrderId = orderId.trim();
         String trimmedAccountId = accountId.trim();
 
-        Order order = orderDAO.getOrderByIdAndCustomerId(trimmedOrderId, trimmedAccountId);
-        if (order == null) {
-            order = orderDAO.getOrderById(trimmedOrderId);
-        }
-
-        if (order == null || order.getTotalAmount() == null) {
-            return false;
+        Order order = orderDAO.getOrderByIdAndCustomerId(
+                trimmedOrderId, trimmedAccountId);
+        if (order == null || order.getTotalAmount() == null
+                || OrderStatus.CANCELLED.equals(order.getOrderStatus())
+                || OrderStatus.DELIVERED.equals(order.getOrderStatus())) {
+            return null;
         }
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(trimmedOrderId);
         if (existingPayment != null) {
-            syncBillSafely(existingPayment);
-            return true;
+            if (!PaymentMethod.VNPAY.equals(existingPayment.getPaymentMethod())) {
+                return null;
+            }
+
+            if (PaymentStatus.PENDING.equals(existingPayment.getPaymentStatus())
+                    || PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+                syncBillSafely(existingPayment);
+                return existingPayment;
+            }
+
+            /*
+             * Failed/cancelled attempts use a new paymentId because vnp_TxnRef
+             * must be unique for each new VNPay request.
+             */
         }
 
         Wallet wallet = getOrCreateWallet(trimmedAccountId);
-        String walletId = wallet == null ? null : wallet.getWalletId();
+        if (wallet == null || !WalletStatus.ACTIVE.equals(wallet.getWalletStatus())) {
+            return null;
+        }
 
         Payment payment = new Payment(
                 generatePaymentId(),
-                walletId,
+                wallet.getWalletId(),
                 trimmedOrderId,
                 PaymentType.PURCHASE,
                 PaymentMethod.VNPAY,
                 PaymentStatus.PENDING,
                 order.getTotalAmount(),
-                "VNPay payment request for order " + trimmedOrderId,
+                "VNPay Sandbox payment request for order " + trimmedOrderId,
                 LocalDateTime.now(),
                 null
         );
 
         boolean created = paymentDAO.createPayment(payment);
-        if (created) {
-            syncBillSafely(payment);
+        if (!created) {
+            return null;
         }
 
-        return created;
+        syncBillSafely(payment);
+        return payment;
+    }
+
+    public VNPayProcessResult processVNPayResult(String paymentId,
+            BigDecimal returnedAmount, String responseCode,
+            String transactionStatus, String transactionNo, String bankCode) {
+        if (isEmpty(paymentId)) {
+            return VNPayProcessResult.PAYMENT_NOT_FOUND;
+        }
+
+        Payment payment = paymentDAO.getPaymentById(paymentId.trim());
+        if (payment == null) {
+            return VNPayProcessResult.PAYMENT_NOT_FOUND;
+        }
+
+        if (!PaymentMethod.VNPAY.equals(payment.getPaymentMethod())
+                || (!PaymentType.PURCHASE.equals(payment.getPaymentType())
+                && !PaymentType.DEPOSIT.equals(payment.getPaymentType()))) {
+            return VNPayProcessResult.INVALID_PAYMENT;
+        }
+
+        if (returnedAmount == null || payment.getAmount() == null
+                || payment.getAmount().compareTo(returnedAmount) != 0) {
+            return VNPayProcessResult.INVALID_AMOUNT;
+        }
+
+        boolean gatewaySuccess = "00".equals(responseCode)
+                && "00".equals(transactionStatus);
+
+        if (!PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+            return VNPayProcessResult.ALREADY_PROCESSED;
+        }
+
+        String description = buildVNPayResultDescription(
+                payment, responseCode, transactionStatus, transactionNo, bankCode);
+        boolean updated;
+
+        if (gatewaySuccess) {
+            if (PaymentType.DEPOSIT.equals(payment.getPaymentType())) {
+                updated = paymentDAO.completeDeposit(payment.getPaymentId(), description);
+            } else {
+                updated = paymentDAO.completeVNPayPurchase(
+                        payment.getPaymentId(), payment.getAmount(), description);
+                if (updated) {
+                    syncBillSafely(payment.getOrderId(), PaymentMethod.VNPAY,
+                            PaymentStatus.PAID, payment.getAmount());
+                }
+            }
+        } else {
+            String unsuccessfulStatus = "24".equals(responseCode)
+                    ? PaymentStatus.CANCELLED : PaymentStatus.FAILED;
+            updated = paymentDAO.markVNPayPaymentUnsuccessful(
+                    payment.getPaymentId(), payment.getAmount(),
+                    unsuccessfulStatus, description);
+
+            if (updated && PaymentType.PURCHASE.equals(payment.getPaymentType())) {
+                syncBillSafely(payment.getOrderId(), PaymentMethod.VNPAY,
+                        PaymentStatus.FAILED, payment.getAmount());
+            }
+        }
+
+        if (updated) {
+            return VNPayProcessResult.PROCESSED;
+        }
+
+        Payment latest = paymentDAO.getPaymentById(payment.getPaymentId());
+        if (latest != null && !PaymentStatus.PENDING.equals(latest.getPaymentStatus())) {
+            return VNPayProcessResult.ALREADY_PROCESSED;
+        }
+
+        return VNPayProcessResult.UPDATE_FAILED;
+    }
+
+    private String buildVNPayResultDescription(Payment payment,
+            String responseCode, String transactionStatus,
+            String transactionNo, String bankCode) {
+        StringBuilder description = new StringBuilder();
+        description.append("VNPay Sandbox result for payment ")
+                .append(payment.getPaymentId());
+
+        if (!isEmpty(transactionNo)) {
+            description.append("; transactionNo=").append(transactionNo.trim());
+        }
+        if (!isEmpty(bankCode)) {
+            description.append("; bankCode=").append(bankCode.trim());
+        }
+        if (!isEmpty(responseCode)) {
+            description.append("; responseCode=").append(responseCode.trim());
+        }
+        if (!isEmpty(transactionStatus)) {
+            description.append("; transactionStatus=")
+                    .append(transactionStatus.trim());
+        }
+
+        return description.toString();
     }
 
     public boolean canPayOrderByWallet(String accountId, String orderId) {
@@ -372,6 +517,79 @@ public class PaymentService {
         return completed;
     }
 
+    public boolean cancelOrderPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (payment == null) {
+            return true;
+        }
+
+        if (PaymentStatus.REFUNDED.equals(payment.getPaymentStatus())
+                || PaymentStatus.CANCELLED.equals(payment.getPaymentStatus())
+                || PaymentStatus.FAILED.equals(payment.getPaymentStatus())) {
+            syncBillSafely(payment);
+            return true;
+        }
+
+        if (PaymentMethod.WALLET.equals(payment.getPaymentMethod())
+                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            return refundWalletPaymentIfNeeded(orderId);
+        }
+
+        if (PaymentMethod.VNPAY.equals(payment.getPaymentMethod())) {
+            if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+                return refundVNPayPaymentIfNeeded(orderId);
+            }
+
+            if (PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+                boolean cancelled = paymentDAO.markVNPayPaymentUnsuccessful(
+                        payment.getPaymentId(), payment.getAmount(),
+                        PaymentStatus.CANCELLED,
+                        "VNPay payment cancelled because order " + orderId.trim() + " was cancelled");
+                if (cancelled) {
+                    syncBillSafely(orderId.trim(), PaymentMethod.VNPAY,
+                            PaymentStatus.CANCELLED, payment.getAmount());
+                }
+                return cancelled;
+            }
+        }
+
+        if (isCashOnDeliveryMethod(payment.getPaymentMethod())) {
+            if (PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+                boolean cancelled = paymentDAO.cancelCashPayment(orderId.trim());
+                if (cancelled) {
+                    syncBillSafely(orderId.trim(), PaymentMethod.COD,
+                            PaymentStatus.CANCELLED, payment.getAmount());
+                }
+                return cancelled;
+            }
+            return PaymentStatus.PAID.equals(payment.getPaymentStatus());
+        }
+
+        return true;
+    }
+
+    public boolean cancelCashPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+
+        if (payment == null || !isCashOnDeliveryMethod(payment.getPaymentMethod())) {
+            return true;
+        }
+
+        if (PaymentStatus.CANCELLED.equals(payment.getPaymentStatus())) {
+            return true;
+        }
+
+        return paymentDAO.cancelCashPayment(orderId.trim());
+    }
+
     public boolean refundWalletPaymentIfNeeded(String orderId) {
         if (isEmpty(orderId)) {
             return false;
@@ -389,6 +607,55 @@ public class PaymentService {
         }
 
         return refunded;
+    }
+
+    public boolean refundVNPayPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        boolean refunded = paymentDAO.refundVNPayPaymentByOrderId(orderId.trim(), generatePaymentId());
+
+        if (refunded) {
+            Payment latestPurchasePayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+            if (latestPurchasePayment != null
+                    && PaymentMethod.VNPAY.equals(latestPurchasePayment.getPaymentMethod())
+                    && PaymentStatus.REFUNDED.equals(latestPurchasePayment.getPaymentStatus())) {
+                syncBillSafely(latestPurchasePayment);
+            }
+        }
+
+        return refunded;
+    }
+
+    public boolean refundPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (payment == null) {
+            System.out.println("refundPaymentIfNeeded: No payment found for orderId: " + orderId);
+            return false;
+        }
+
+        System.out.println("refundPaymentIfNeeded: orderId=" + orderId + ", paymentMethod=" + payment.getPaymentMethod() 
+            + ", paymentStatus=" + payment.getPaymentStatus() + ", paymentType=" + payment.getPaymentType());
+
+        if (PaymentMethod.WALLET.equals(payment.getPaymentMethod())
+                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            System.out.println("refundPaymentIfNeeded: Calling refundWalletPaymentIfNeeded");
+            return refundWalletPaymentIfNeeded(orderId);
+        }
+
+        if (PaymentMethod.VNPAY.equals(payment.getPaymentMethod())
+                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            System.out.println("refundPaymentIfNeeded: Calling refundVNPayPaymentIfNeeded");
+            return refundVNPayPaymentIfNeeded(orderId);
+        }
+
+        System.out.println("refundPaymentIfNeeded: No refund triggered - conditions not met");
+        return false;
     }
 
     public boolean lockWallet(String accountId) {

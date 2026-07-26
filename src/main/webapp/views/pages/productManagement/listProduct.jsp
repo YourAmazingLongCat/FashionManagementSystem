@@ -147,11 +147,19 @@
                 <div class="sidebar-block">
                     <p class="sidebar-label">Management</p>
                     <div class="sidebar-tabs">
-                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=products"><span>Products</span><span class="tab-badge">${totalProducts}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span><span class="tab-badge">${totalCategories}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span><span class="tab-badge">${totalColors}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span><span class="tab-badge">${totalSizes}</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory"><span>Warehouse</span><span class="tab-badge">&#128203;</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=products"><span>Products</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span></a>
+                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory"><span>Warehouse</span></a>
+                    </div>
+                </div>
+                <div class="sidebar-block">
+                    <p class="sidebar-label">Order Management</p>
+                    <div class="sidebar-tabs">
+                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/orders"><span>Orders</span></a>
+                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/BillServlet?action=list"><span>Bills</span></a>
+                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/payments"><span>Payments</span></a>
                     </div>
                 </div>
                 <!-- Profile & Logout removed per UI requirements -->
@@ -185,7 +193,6 @@
                                 <select class="filter-select" name="statusFilter" onchange="submitProductFilterForm()">
                                     <option value="">All status</option>
                                     <option value="Available" ${param.statusFilter eq 'Available' ? 'selected' : ''}>Available</option>
-                                    <option value="OutOfStock" ${param.statusFilter eq 'OutOfStock' ? 'selected' : ''}>Out of stock</option>
                                     <option value="Inactive" ${param.statusFilter eq 'Inactive' ? 'selected' : ''}>Inactive</option>
                                 </select>
                                 <select class="filter-select" name="categoryFilter" onchange="submitProductFilterForm()">
@@ -252,7 +259,19 @@
                                                     </div>
                                                 </div>
                                                 <div class="product-side">
-                                                    <div class="info-card"><p class="info-copy">Stock</p><strong>${product.totalStockQty}</strong></div>
+                                                    <div class="info-card">
+                                                        <p class="info-copy">Stock</p>
+                                                        <strong>
+                                                            <c:choose>
+                                                                <c:when test="${product.totalStockQty <= 0}">
+                                                                    <span style="color: #b45309;">Out of Stock</span>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    ${product.totalStockQty}
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </strong>
+                                                    </div>
                                                     <div class="info-card"><p class="info-copy">Price</p><strong><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> đ</strong></div>
                                                     <div class="info-card"><p class="info-copy">Catalog</p><strong>${product.categoryName}</strong></div>
                                                 </div>
@@ -260,7 +279,15 @@
                                                     <span class="status-badge status-${product.status}">${product.status}</span>
                                                     <div class="action-group">
                                                         <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=edit&id=${product.productId}&tab=products">Edit</a>
-                                                        <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=delete&id=${product.productId}&tab=products">Delete</a>
+                                                        <c:set var="hasOrders" value="${productHasOrders[product.productId]}" />
+                                                        <c:choose>
+                                                            <c:when test="${hasOrders}">
+                                                                <span class="table-btn delete" style="background: #f1f5f9; color: #94a3b8; cursor: not-allowed;" title="Cannot delete: product has existing orders">Delete</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=delete&id=${product.productId}&tab=products">Delete</a>
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </div>
                                                 </div>
                                             </article>

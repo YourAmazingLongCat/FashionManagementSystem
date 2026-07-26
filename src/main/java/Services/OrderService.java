@@ -74,14 +74,6 @@ public class OrderService {
         return result ? orderId : null;
     }
 
-    /**
-     * Creates the Pending order as soon as the customer presses Checkout in
-     * the cart. Delivery details may still be empty at this point and are
-     * completed later from the checkout/order screen.
-     *
-     * Order creation, stock reservation and selected-cart-row removal are
-     * committed by OrderDAO in one transaction.
-     */
     public String createPendingOrderFromCart(String customerId,
             String initialShippingAddress, String initialPhone,
             List<CartItem> cart, String cartId, String[] cartItemIds) {
@@ -140,7 +132,7 @@ public class OrderService {
             return false;
         }
 
-        String status = order.getOrderStatus();
+        String status = normalizeOrderStatus(order.getOrderStatus());
         return OrderStatus.PENDING.equals(status)
                 || OrderStatus.CONFIRMED.equals(status)
                 || OrderStatus.PROCESSING.equals(status);
@@ -151,30 +143,27 @@ public class OrderService {
             return false;
         }
 
-        Order order = orderDAO.getOrderById(orderId.trim());
+        String trimmedOrderId = orderId.trim();
+        Order order = orderDAO.getOrderById(trimmedOrderId);
 
-        if (order == null) {
+        if (order == null || !OrderStatus.PENDING.equals(
+                normalizeOrderStatus(order.getOrderStatus()))) {
             return false;
         }
 
-        if (!OrderStatus.PENDING.equals(order.getOrderStatus())) {
-            return false;
-        }
-
-        // A cart checkout creates an incomplete Pending order immediately.
-        // Staff must not confirm it until delivery details and payment method
-        // have been completed by the customer.
+        // A Pending order created from Cart is incomplete until the customer
+        // supplies delivery information and chooses a payment method.
         if (isEmpty(order.getShippingAddress()) || isEmpty(order.getPhone())
-                || paymentService.getPaymentByOrderId(orderId.trim()) == null) {
+                || paymentService.getPaymentByOrderId(trimmedOrderId) == null) {
             return false;
         }
 
-        if (!paymentService.canForwardOrderStatusByPayment(orderId.trim())) {
+        if (!paymentService.canForwardOrderStatusByPayment(trimmedOrderId)) {
             return false;
         }
 
         return orderDAO.changeOrderStatusWithInventory(
-                orderId.trim(), OrderStatus.PENDING, OrderStatus.CONFIRMED);
+                trimmedOrderId, OrderStatus.PENDING, OrderStatus.CONFIRMED);
     }
 
     public boolean cancelOrder(String orderId) {
@@ -182,19 +171,19 @@ public class OrderService {
             return false;
         }
 
-        Order order = orderDAO.getOrderById(orderId.trim());
+        String trimmedOrderId = orderId.trim();
+        Order order = orderDAO.getOrderById(trimmedOrderId);
 
-        // This overload is used by Staff/Admin. A Cart Checkout only creates
-        // an incomplete Pending record; staff cannot change any status,
-        // including Cancelled, until the customer presses Place order.
+        // Staff cannot cancel the incomplete Pending record created before
+        // the customer presses Place order.
         if (!canCancelOrder(order)
-                || paymentService.getPaymentByOrderId(orderId.trim()) == null) {
+                || paymentService.getPaymentByOrderId(trimmedOrderId) == null) {
             return false;
         }
 
-        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
+        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(trimmedOrderId);
         if (cancelled) {
-            paymentService.refundWalletPaymentIfNeeded(orderId.trim());
+            handleCancelledOrderPayment(trimmedOrderId);
         }
         return cancelled;
     }
@@ -204,17 +193,23 @@ public class OrderService {
             return false;
         }
 
-        Order order = orderDAO.getOrderByIdAndCustomerId(orderId.trim(), customerId.trim());
+        String trimmedOrderId = orderId.trim();
+        Order order = orderDAO.getOrderByIdAndCustomerId(
+                trimmedOrderId, customerId.trim());
 
         if (!canCancelOrder(order)) {
             return false;
         }
 
-        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(orderId.trim());
+        boolean cancelled = orderDAO.cancelOrderAndAdjustInventory(trimmedOrderId);
         if (cancelled) {
-            paymentService.refundWalletPaymentIfNeeded(orderId.trim());
+            handleCancelledOrderPayment(trimmedOrderId);
         }
         return cancelled;
+    }
+
+    private void handleCancelledOrderPayment(String orderId) {
+        paymentService.cancelOrderPaymentIfNeeded(orderId);
     }
 
     public boolean changeShipStatus(String orderId, String newStatus) {
@@ -222,22 +217,20 @@ public class OrderService {
             return false;
         }
 
+        String trimmedOrderId = orderId.trim();
         String normalizedStatus = normalizeOrderStatus(newStatus);
 
         if (!isOrderProgressStatus(normalizedStatus)) {
             return false;
         }
 
-        Order order = orderDAO.getOrderById(orderId.trim());
-
+        Order order = orderDAO.getOrderById(trimmedOrderId);
         if (order == null) {
             return false;
         }
 
-        // A Payment row is the project marker that the customer has pressed
-        // Place order. Before that point staff must not move the status in
-        // either direction.
-        if (paymentService.getPaymentByOrderId(orderId.trim()) == null) {
+        // The Payment row marks that the customer completed Place order.
+        if (paymentService.getPaymentByOrderId(trimmedOrderId) == null) {
             return false;
         }
 
@@ -259,19 +252,18 @@ public class OrderService {
         boolean isForward = newIndex > currentIndex;
         boolean isBackward = newIndex < currentIndex;
 
-        /*
-         * Business rule:
-         * - Forward: only one status level each time.
-         * - Backward: only one status level each time.
-         * - Payment check only applies to Wallet and VNPay when moving forward.
-         * - COD is not blocked by payment status and becomes Paid automatically when Delivered.
-         */
+        // Shipping is an irreversible boundary.
+        if (isBackward
+                && currentIndex >= getOrderStatusIndex(OrderStatus.SHIPPING)) {
+            return false;
+        }
+
         if (isForward) {
             if (newIndex - currentIndex != 1) {
                 return false;
             }
 
-            if (!paymentService.canForwardOrderStatusByPayment(orderId.trim())) {
+            if (!paymentService.canForwardOrderStatusByPayment(trimmedOrderId)) {
                 return false;
             }
         }
@@ -281,10 +273,10 @@ public class OrderService {
         }
 
         boolean updated = orderDAO.changeOrderStatusWithInventory(
-                orderId.trim(), currentStatus, normalizedStatus);
+                trimmedOrderId, currentStatus, normalizedStatus);
 
         if (updated && OrderStatus.DELIVERED.equals(normalizedStatus)) {
-            paymentService.completeCashPaymentForDeliveredOrder(orderId.trim());
+            paymentService.completeCashPaymentForDeliveredOrder(trimmedOrderId);
         }
 
         return updated;
@@ -334,6 +326,15 @@ public class OrderService {
         return orderItemDAO.getOrderItemsByOrderId(orderId.trim());
     }
 
+    public List<Order> viewOrdersForStaff(int page, int pageSize) {
+        int offset = (page - 1) * pageSize;
+        return orderDAO.getOrdersPaginated(null, offset, pageSize);
+    }
+
+    public int countOrdersForStaff() {
+        return orderDAO.countOrders(null);
+    }
+
     public List<Order> viewOrdersForStaff() {
         return orderDAO.getAllOrders();
     }
@@ -362,6 +363,21 @@ public class OrderService {
         return viewOrderDetailForStaff(orderId);
     }
 
+    public List<Order> searchOrdersForStaff(String keyword, int page, int pageSize) {
+        if (isEmpty(keyword)) {
+            return viewOrdersForStaff(page, pageSize);
+        }
+        int offset = (page - 1) * pageSize;
+        return orderDAO.searchOrdersPaginated(keyword.trim(), offset, pageSize);
+    }
+
+    public int countSearchOrdersForStaff(String keyword) {
+        if (isEmpty(keyword)) {
+            return countOrdersForStaff();
+        }
+        return orderDAO.countOrders(keyword.trim());
+    }
+
     public List<Order> searchOrdersForStaff(String keyword) {
         if (isEmpty(keyword)) {
             return orderDAO.getAllOrders();
@@ -375,11 +391,11 @@ public class OrderService {
             return false;
         }
 
-        String status = order.getOrderStatus();
+        String status = normalizeOrderStatus(order.getOrderStatus());
+        int statusIndex = getOrderStatusIndex(status);
 
-        return !OrderStatus.SHIPPING.equals(status)
-                && !OrderStatus.DELIVERED.equals(status)
-                && !OrderStatus.CANCELLED.equals(status);
+        return statusIndex >= 0
+                && statusIndex < getOrderStatusIndex(OrderStatus.SHIPPING);
     }
 
     private BigDecimal calculateTotalAmount(List<CartItem> cart) {

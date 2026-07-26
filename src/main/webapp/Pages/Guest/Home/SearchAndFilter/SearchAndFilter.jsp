@@ -30,25 +30,6 @@
                 </div>
             </section>
 
-            <section class="filter-section">
-                <h3 class="filter-section-title">PRICE RANGE</h3>
-                <div class="price-inputs">
-                    <div class="price-input-wrapper">
-                        <label>Min (đ)</label>
-                        <input type="number" class="price-input-field" name="minPrice" value="${selectedMinPrice}" placeholder="0" />
-                    </div>
-                    <span class="price-separator">-</span>
-                    <div class="price-input-wrapper">
-                        <label>Max (đ)</label>
-                        <input type="number" class="price-input-field" name="maxPrice" value="${selectedMaxPrice}" placeholder="0" />
-                    </div>
-                </div>
-                <div id="priceError" class="price-error" style="display: none;">
-                    Max price cannot be less than min price
-                </div>
-            </section>
-
-            <button type="submit" class="btn btn-apply" onclick="return validatePriceRange()">APPLY FILTERS</button>
             <a href="${pageContext.request.contextPath}/home/search" class="btn btn-reset">RESET ALL</a>
         </aside>
 
@@ -160,25 +141,6 @@
         if (form) {
             form.submit();
         }
-    }
-
-    function validatePriceRange() {
-        const minPriceInput = document.querySelector('input[name="minPrice"]');
-        const maxPriceInput = document.querySelector('input[name="maxPrice"]');
-        const priceError = document.getElementById('priceError');
-
-        const minPrice = parseFloat(minPriceInput.value) || 0;
-        const maxPrice = parseFloat(maxPriceInput.value) || 0;
-
-        if (maxPrice > 0 && maxPrice < minPrice) {
-            priceError.style.display = 'block';
-            maxPriceInput.style.borderColor = '#dc2626';
-            return false;
-        }
-
-        priceError.style.display = 'none';
-        maxPriceInput.style.borderColor = '';
-        return true;
     }
 
     function toggleWishlist(productId, button) {

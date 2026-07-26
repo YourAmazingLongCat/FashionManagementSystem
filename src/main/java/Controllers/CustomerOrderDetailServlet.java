@@ -147,7 +147,20 @@ public class CustomerOrderDetailServlet extends HttpServlet {
                 return;
             }
         } else if (PaymentMethod.VNPAY.equals(paymentMethod)) {
-            placed = paymentService.createVNPayPaymentForOrder(customerId, orderId);
+            Payment vnPayPayment = paymentService.getOrCreateVNPayPaymentForOrder(
+                    customerId, orderId);
+            if (vnPayPayment == null) {
+                session.setAttribute("errorMessage",
+                        "The VNPay payment request could not be created. Please try again.");
+                response.sendRedirect(detailUrl);
+                return;
+            }
+
+            session.removeAttribute("pendingCheckoutOrderId");
+            response.sendRedirect(request.getContextPath()
+                    + "/customer/vnpay/start?paymentId="
+                    + vnPayPayment.getPaymentId());
+            return;
         } else {
             placed = paymentService.createCODPaymentForOrder(customerId, orderId);
         }

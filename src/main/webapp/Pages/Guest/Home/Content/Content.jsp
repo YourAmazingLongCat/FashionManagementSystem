@@ -73,7 +73,7 @@
                                         <span class="product-review-count">(${rs[1]})</span>
                                     </c:when>
                                     <c:otherwise>
-                                        <span class="product-no-rating">Chưa có đánh giá</span>
+                                        <span class="product-no-rating">No reviews yet</span>
                                     </c:otherwise>
                                 </c:choose>
                             </div>
