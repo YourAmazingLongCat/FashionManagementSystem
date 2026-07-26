@@ -182,7 +182,7 @@
                                 </c:if>
 
                                 <c:choose>
-                                    <c:when test="${not empty previousStatus and (order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing')}">
+                                    <c:when test="${not empty previousStatus and (order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing' or order.orderStatus eq 'Shipping')}">
                                         <form class="order-inline-form" method="post"
                                               action="${pageContext.request.contextPath}/staff/change-shipping-status"
                                               onsubmit="return confirmOrderStatusChange('backward', '${order.orderStatus}', '${previousStatus}');">
