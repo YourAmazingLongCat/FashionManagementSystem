@@ -5,6 +5,8 @@
 package Controllers;
 
 import DALs.CartItemDAO;
+import DALs.ProductDAO;
+import Models.ProductVariant;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -30,24 +32,44 @@ public class UpdateCartServlet extends HttpServlet {
             String cartItemId = request.getParameter("cartItemId");
             String qtyStr = request.getParameter("quantity");
 
-            int quantity = 1;
+            if (cartItemId == null || cartItemId.isBlank()) {
+                response.sendRedirect(request.getContextPath() + "/cart");
+                return;
+            }
 
+            int quantity = 1;
             if (qtyStr != null && !qtyStr.isEmpty()) {
-                quantity = Integer.parseInt(qtyStr);
+                try {
+                    quantity = Integer.parseInt(qtyStr);
+                } catch (NumberFormatException ignored) {}
             }
 
             if (quantity < 1) {
                 quantity = 1;
             }
 
-            CartItemDAO dao = new CartItemDAO();
-            dao.updateQuantity(cartItemId, quantity);
+            CartItemDAO cartItemDAO = new CartItemDAO();
+            ProductDAO productDAO = new ProductDAO();
+
+            String variantId = cartItemDAO.getVariantIdByCartItemId(cartItemId);
+            if (variantId != null) {
+                ProductVariant variant = productDAO.getVariantById(variantId);
+                if (variant != null) {
+                    int availableStock = variant.getAvailableQty();
+                    if (quantity > availableStock) {
+                        quantity = availableStock;
+                    }
+                }
+            }
+
+            if (quantity >= 1) {
+                cartItemDAO.updateQuantity(cartItemId, quantity);
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // QUAN TRỌNG: quay lại cart
         response.sendRedirect(request.getContextPath() + "/cart");
     }
 }

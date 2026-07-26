@@ -161,6 +161,11 @@ public class ProductService {
 
     private boolean isBlank(String str) { return str == null || str.isBlank(); }
 
+    public boolean hasOrders(String productId) {
+        if (productId == null || productId.isBlank()) return false;
+        return productDAO.hasProductOrders(productId);
+    }
+
     public boolean isDatabaseReady() { return productDAO.isDatabaseReady(); }
     public BigDecimal getDisplayPrice(Product product) { return productDAO.getDisplayPrice(product); }
 }

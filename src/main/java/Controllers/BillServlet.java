@@ -375,12 +375,38 @@ public class BillServlet extends HttpServlet {
         List<ProductSalesRow> productDetails = billDAO.getProductSalesSummaryByFilter(paidFilter, productId, sortBy);
         List<ProductOption> productOptions = billDAO.getAllProductOptions();
 
+        // Calculate totals for summary display
+        int totalQtySold = 0;
+        int totalPaidQty = 0;
+        int totalUnpaidQty = 0;
+        BigDecimal totalPaidAmount = BigDecimal.ZERO;
+        BigDecimal totalUnpaidAmount = BigDecimal.ZERO;
+
+        for (ProductSalesRow row : productDetails) {
+            totalQtySold += row.getTotalQuantity();
+            totalPaidQty += row.getPaidQuantity();
+            totalUnpaidQty += row.getUnpaidQuantity();
+            if (row.getTotalRevenuePaid() != null) {
+                totalPaidAmount = totalPaidAmount.add(row.getTotalRevenuePaid());
+            }
+            if (row.getTotalUnpaidAmount() != null) {
+                totalUnpaidAmount = totalUnpaidAmount.add(row.getTotalUnpaidAmount());
+            }
+        }
+
         request.setAttribute("productDetails", productDetails);
         request.setAttribute("productOptions", productOptions);
         request.setAttribute("selectedPaidFilter", paidFilter);
         request.setAttribute("selectedProductId", productId);
         request.setAttribute("selectedSortBy", sortBy);
         request.setAttribute("activeTab", "byProduct");
+
+        // Summary totals
+        request.setAttribute("totalQtySold", totalQtySold);
+        request.setAttribute("totalPaidQty", totalPaidQty);
+        request.setAttribute("totalUnpaidQty", totalUnpaidQty);
+        request.setAttribute("totalPaidAmount", totalPaidAmount);
+        request.setAttribute("totalUnpaidAmount", totalUnpaidAmount);
 
         request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
     }

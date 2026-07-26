@@ -716,6 +716,30 @@ public class ProductDAO extends DBContext {
         return null;
     }
 
+    public boolean hasProductOrders(String productId) {
+        if (productId == null || productId.isBlank()) {
+            return false;
+        }
+
+        String sql = """
+            SELECT COUNT(*) FROM OrderItems oi
+            JOIN ProductVariants pv ON oi.variantId = pv.variantId
+            WHERE pv.productId = ?
+            """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("hasProductOrders error: " + e.getMessage());
+        }
+        return false;
+    }
+
     public record ProductResult(List<Product> products, int totalCount) {
         public int totalPages(int pageSize) {
             return (int) Math.ceil((double) totalCount / pageSize);

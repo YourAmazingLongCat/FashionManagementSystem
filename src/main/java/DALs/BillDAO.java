@@ -576,16 +576,17 @@ public class BillDAO {
                 "SELECT p.productId, p.name AS productName, "
               + "       SUM(oi.quantity) AS totalQuantity, "
               + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN oi.quantity ELSE 0 END) AS paidQuantity, "
-              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
               + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN "
               + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalRevenuePaid, "
-              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN "
               + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalUnpaidAmount "
               + "FROM OrderItems oi "
               + "JOIN Bills b ON b.orderId = oi.orderId "
+              + "JOIN Orders o ON o.orderId = oi.orderId "
               + "JOIN ProductVariants pv ON pv.variantId = oi.variantId "
               + "JOIN Products p ON p.productId = pv.productId "
-              + "WHERE 1 = 1 "
+              + "WHERE o.orderStatus <> 'Cancelled' "
         );
 
         List<Object> params = new ArrayList<>();
@@ -860,16 +861,17 @@ public class BillDAO {
                 "SELECT p.productId, p.name AS productName, "
               + "       SUM(oi.quantity) AS totalQuantity, "
               + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN oi.quantity ELSE 0 END) AS paidQuantity, "
-              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN oi.quantity ELSE 0 END) AS unpaidQuantity, "
               + "       SUM(CASE WHEN b.paymentStatus = 'Paid' THEN "
               + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalRevenuePaid, "
-              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' THEN "
+              + "       SUM(CASE WHEN b.paymentStatus <> 'Paid' AND o.orderStatus <> 'Cancelled' THEN "
               + "            (oi.quantity * oi.unitPrice - ISNULL(oi.discountAmount, 0)) ELSE 0 END) AS totalUnpaidAmount "
               + "FROM OrderItems oi "
               + "JOIN Bills b ON b.orderId = oi.orderId "
+              + "JOIN Orders o ON o.orderId = oi.orderId "
               + "JOIN ProductVariants pv ON pv.variantId = oi.variantId "
               + "JOIN Products p ON p.productId = pv.productId "
-              + "WHERE 1 = 1 "
+              + "WHERE o.orderStatus <> 'Cancelled' "
         );
 
         List<Object> params = new ArrayList<>();
