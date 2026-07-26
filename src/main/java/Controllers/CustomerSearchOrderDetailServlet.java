@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Models.Order;
 import Services.OrderService;
 import java.io.IOException;
@@ -23,38 +24,54 @@ public class CustomerSearchOrderDetailServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-        response.setCharacterEncoding("UTF-8");
-
         HttpSession session = request.getSession();
-        String customerId = (String) session.getAttribute("customerId");
+        String customerId = getCustomerId(session);
 
         if (customerId == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
-        String orderId = request.getParameter("orderId");
+        String orderId = trim(request.getParameter("orderId"));
         if (isEmpty(orderId)) {
-            orderId = request.getParameter("keyword");
+            orderId = trim(request.getParameter("keyword"));
         }
 
         if (isEmpty(orderId)) {
-            request.setAttribute("errorMessage", "Please enter an order ID.");
-            request.getRequestDispatcher("/Pages/Customer/orderHistory.jsp").forward(request, response);
+            session.setAttribute("errorMessage", "Please enter an order ID.");
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
         Order order = orderService.searchOrderDetailForCustomer(customerId, orderId);
-
         if (order == null) {
-            request.setAttribute("errorMessage", "Order not found.");
-            request.setAttribute("keyword", orderId.trim());
-            request.getRequestDispatcher("/Pages/Customer/orderHistory.jsp").forward(request, response);
+            session.setAttribute("errorMessage", "Order not found.");
+            response.sendRedirect(request.getContextPath()
+                    + "/customer/order-history?keyword="
+                    + java.net.URLEncoder.encode(orderId, java.nio.charset.StandardCharsets.UTF_8));
             return;
         }
 
-        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + order.getOrderId());
+        response.sendRedirect(request.getContextPath()
+                + "/customer/order-detail?orderId=" + order.getOrderId());
+    }
+
+    private String getCustomerId(HttpSession session) {
+        Object direct = session.getAttribute("customerId");
+        if (direct != null && !direct.toString().trim().isEmpty()) {
+            return direct.toString().trim();
+        }
+
+        Object user = session.getAttribute("USER");
+        if (user instanceof Account) {
+            return ((Account) user).getAccountId();
+        }
+
+        return null;
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private boolean isEmpty(String value) {

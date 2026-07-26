@@ -448,6 +448,12 @@ public class OrderDAO extends DBContext {
                 return false;
             }
 
+            // Shipping is irreversible: Shipping/Delivered cannot move backward.
+            if (isForbiddenTransitionFromShippingOrLater(currentStatus, newStatus)) {
+                rollback();
+                return false;
+            }
+
             if ("Pending".equals(currentStatus) && "Confirmed".equals(newStatus)) {
                 // Check if order has reserved stock (created from cart)
                 boolean hasReservedStock = hasReservedStock(orderId);
@@ -557,12 +563,49 @@ public class OrderDAO extends DBContext {
         }
     }
 
+    private boolean isForbiddenTransitionFromShippingOrLater(String currentStatus, String newStatus) {
+        int currentIndex = getProgressStatusIndex(currentStatus);
+        int newIndex = getProgressStatusIndex(newStatus);
+        int shippingIndex = getProgressStatusIndex("Shipping");
+
+        if (currentIndex < shippingIndex) {
+            return false;
+        }
+
+        // Shipping may remain Shipping or move to Delivered. Delivered is final.
+        // Cancelled/unknown statuses have index -1 and are also rejected here.
+        return newIndex < currentIndex;
+    }
+
+    private int getProgressStatusIndex(String status) {
+        if ("Pending".equals(status)) {
+            return 0;
+        }
+        if ("Confirmed".equals(status)) {
+            return 1;
+        }
+        if ("Processing".equals(status)) {
+            return 2;
+        }
+        if ("Shipping".equals(status)) {
+            return 3;
+        }
+        if ("Delivered".equals(status)) {
+            return 4;
+        }
+        return -1;
+    }
+
     public boolean updateOrderStatus(String orderId, String orderStatus) {
-        String query = "UPDATE Orders SET orderStatus = ? WHERE orderId = ?";
+        String query = "UPDATE Orders SET orderStatus = ? WHERE orderId = ? "
+                + "AND NOT ((orderStatus = 'Shipping' AND ? NOT IN ('Shipping', 'Delivered')) "
+                + "OR (orderStatus = 'Delivered' AND ? <> 'Delivered'))";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderStatus);
             ps.setString(2, orderId);
+            ps.setString(3, orderStatus);
+            ps.setString(4, orderStatus);
 
             return ps.executeUpdate() > 0;
 
@@ -604,7 +647,9 @@ public class OrderDAO extends DBContext {
                 + "shippingAddress = ?, "
                 + "phone = ?, "
                 + "totalAmount = ? "
-                + "WHERE orderId = ?";
+                + "WHERE orderId = ? "
+                + "AND NOT ((orderStatus = 'Shipping' AND ? NOT IN ('Shipping', 'Delivered')) "
+                + "OR (orderStatus = 'Delivered' AND ? <> 'Delivered'))";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderStatus);
@@ -612,6 +657,8 @@ public class OrderDAO extends DBContext {
             ps.setString(3, phone);
             ps.setBigDecimal(4, totalAmount);
             ps.setString(5, orderId);
+            ps.setString(6, orderStatus);
+            ps.setString(7, orderStatus);
 
             return ps.executeUpdate() > 0;
 

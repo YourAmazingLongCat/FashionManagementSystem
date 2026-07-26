@@ -194,11 +194,12 @@ public class PaymentService {
             + (existingPayment != null ? existingPayment.getPaymentId() + "/" + existingPayment.getPaymentType() + "/" + existingPayment.getPaymentMethod() + "/" + existingPayment.getPaymentStatus() : "null"));
         
         if (existingPayment != null) {
-            // Only skip COD creation if there's already a PURCHASE payment (regardless of status)
-            // or if the existing payment is already completed/paid
-            if (PaymentType.PURCHASE.equals(existingPayment.getPaymentType())) {
+            if (PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
                 syncBillSafely(existingPayment);
                 return true;
+            }
+            if (PaymentStatus.PENDING.equals(existingPayment.getPaymentStatus())) {
+                return PaymentMethod.COD.equals(existingPayment.getPaymentMethod());
             }
         }
 
@@ -514,6 +515,61 @@ public class PaymentService {
         }
 
         return completed;
+    }
+
+    public boolean cancelOrderPaymentIfNeeded(String orderId) {
+        if (isEmpty(orderId)) {
+            return false;
+        }
+
+        Payment payment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
+        if (payment == null) {
+            return true;
+        }
+
+        if (PaymentStatus.REFUNDED.equals(payment.getPaymentStatus())
+                || PaymentStatus.CANCELLED.equals(payment.getPaymentStatus())
+                || PaymentStatus.FAILED.equals(payment.getPaymentStatus())) {
+            syncBillSafely(payment);
+            return true;
+        }
+
+        if (PaymentMethod.WALLET.equals(payment.getPaymentMethod())
+                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            return refundWalletPaymentIfNeeded(orderId);
+        }
+
+        if (PaymentMethod.VNPAY.equals(payment.getPaymentMethod())) {
+            if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+                return refundVNPayPaymentIfNeeded(orderId);
+            }
+
+            if (PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+                boolean cancelled = paymentDAO.markVNPayPaymentUnsuccessful(
+                        payment.getPaymentId(), payment.getAmount(),
+                        PaymentStatus.CANCELLED,
+                        "VNPay payment cancelled because order " + orderId.trim() + " was cancelled");
+                if (cancelled) {
+                    syncBillSafely(orderId.trim(), PaymentMethod.VNPAY,
+                            PaymentStatus.CANCELLED, payment.getAmount());
+                }
+                return cancelled;
+            }
+        }
+
+        if (isCashOnDeliveryMethod(payment.getPaymentMethod())) {
+            if (PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+                boolean cancelled = paymentDAO.cancelCashPayment(orderId.trim());
+                if (cancelled) {
+                    syncBillSafely(orderId.trim(), PaymentMethod.COD,
+                            PaymentStatus.CANCELLED, payment.getAmount());
+                }
+                return cancelled;
+            }
+            return PaymentStatus.PAID.equals(payment.getPaymentStatus());
+        }
+
+        return true;
     }
 
     public boolean cancelCashPaymentIfNeeded(String orderId) {

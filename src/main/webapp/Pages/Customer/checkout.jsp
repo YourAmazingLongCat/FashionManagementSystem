@@ -1,155 +1,110 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-<c:if test="${empty requestScope.contentPage}">
-    <c:redirect url="${pageContext.request.contextPath}/customer/checkout" />
-</c:if>
+<c:set var="checkoutItems" value="${not empty sessionScope.checkoutCart ? sessionScope.checkoutCart : sessionScope.cart}" />
+<c:set var="checkoutTotalValue" value="${0}" />
+<c:forEach var="item" items="${checkoutItems}">
+    <c:set var="checkoutTotalValue" value="${checkoutTotalValue + (item.unitPrice * item.quantity)}" />
+</c:forEach>
 
-<div class="content-page order-page">
-    <div class="order-container">
-        <section class="order-hero">
+<section class="customer-order-page">
+    <div class="co-container">
+        <div class="co-page-head">
             <div>
-                <p class="order-eyebrow">Customer / Checkout</p>
-                <h1 class="order-title">Complete Order</h1>
-                <p class="order-subtitle">
-                    Confirm your shipping information, choose a payment method, and review your cart before placing the order.
-                </p>
-            </div>
-            <div class="order-actions-row">
-                <a class="order-btn" href="${pageContext.request.contextPath}/cart">
-                    <span class="material-symbols-outlined">shopping_bag</span>
+                <a class="co-back-link" href="${pageContext.request.contextPath}/cart">
+                    <span class="material-symbols-outlined">arrow_back</span>
                     Back to cart
                 </a>
+                <p class="co-eyebrow">Checkout</p>
+                <h1 class="co-page-title">Delivery Information</h1>
+                <p class="co-page-subtitle">Enter delivery details and review the products selected from your cart.</p>
             </div>
-        </section>
-
-        <c:set var="checkoutTotal" value="${not empty sessionScope.checkoutTotal ? sessionScope.checkoutTotal : 0}" />
-
-        <div class="order-grid order-grid-2">
-            <section class="order-panel order-panel-padding">
-                <div class="order-panel-header">
-                    <h2 class="order-section-title">Checkout Information</h2>
-                    <span class="order-muted">Required</span>
-                </div>
-
-                <form action="${pageContext.request.contextPath}/customer/checkout" method="post">
-                    <input type="hidden" name="action" value="placeOrder">
-                    <div class="order-form-group">
-                        <label class="order-label" for="shippingAddress">Shipping address</label>
-                        <textarea id="shippingAddress" name="shippingAddress" class="order-textarea" placeholder="Enter your full address..." required><c:out value="${not empty shippingAddress ? shippingAddress : sessionScope.USER.address}" default="" /></textarea>
-                    </div>
-
-                    <div class="order-form-group">
-                        <label class="order-label" for="phone">Phone number</label>
-                        <input id="phone" name="phone" class="order-input" type="tel" value="<c:out value='${not empty phone ? phone : sessionScope.USER.phone}' default='' />" placeholder="0912345678" pattern="0[0-9]{9}" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)" required />
-                    </div>
-
-                    <div class="wallet-deposit-card wallet-checkout-payment-box" style="box-shadow: none; margin: 18px 0;">
-                        <div class="wallet-form-head">
-                            <span class="material-symbols-outlined">payments</span>
-                            <div>
-                                <h2>Payment Method</h2>
-                                <p>Choose VNPay, Wallet or Cash On Delivery.</p>
-                            </div>
-                        </div>
-
-                        <label class="wallet-label" for="paymentMethod">Payment Method</label>
-                        <select class="wallet-input" id="paymentMethod" name="paymentMethod">
-                            <option value="VNPay" ${paymentMethod == 'VNPay' ? 'selected' : ''}>VNPay</option>
-                            <option value="Wallet" ${paymentMethod == 'Wallet' ? 'selected' : ''}>Wallet</option>
-                            <option value="COD" ${paymentMethod == 'COD' || empty paymentMethod ? 'selected' : ''}>Cash On Delivery</option>
-                        </select>
-
-                        <div class="wallet-info-list">
-                            <div>
-                                <span>Wallet Balance</span>
-                                <strong>
-                                    <c:choose>
-                                        <c:when test="${not empty wallet}">
-                                            <fmt:formatNumber value="${wallet.balance}" type="number" groupingUsed="true" /> VND
-                                        </c:when>
-                                        <c:otherwise>0 VND</c:otherwise>
-                                    </c:choose>
-                                </strong>
-                            </div>
-                            <div>
-                                <span>Order Total</span>
-                                <strong><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> VND</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button class="order-btn order-btn-primary" type="submit" style="width: 100%;" <c:if test="${empty sessionScope.checkoutCart}">disabled</c:if>>
-                        <span class="material-symbols-outlined">lock</span>
-                        Place order
-                    </button>
-                </form>
-            </section>
-
-            <aside class="order-panel order-panel-padding">
-                <div class="order-panel-header">
-                    <h2 class="order-section-title">Order Summary</h2>
-                    <span class="order-muted">${empty sessionScope.checkoutCart ? 0 : sessionScope.checkoutCart.size()} items</span>
-                </div>
-
-                <c:choose>
-                    <c:when test="${empty sessionScope.checkoutCart}">
-                        <div class="order-empty" style="padding: 40px 10px;">
-                            <span class="material-symbols-outlined">remove_shopping_cart</span>
-                            <h3>No items selected</h3>
-                            <p>Go back to cart and select products.</p>
-                            <a class="order-btn order-btn-primary" href="${pageContext.request.contextPath}/cart">Back to Cart</a>
-                        </div>
-                    </c:when>
-                    <c:otherwise>
-                        <div class="order-summary-list">
-                            <c:forEach var="item" items="${sessionScope.checkoutCart}">
-                                <c:set var="lineTotal" value="${item.unitPrice * item.quantity}" />
-
-                                <div class="order-summary-item">
-                                    <div class="order-thumb">
-                                        <c:choose>
-                                            <c:when test="${not empty item.productImageUrl}">
-                                                <img src="${pageContext.request.contextPath}${item.productImageUrl}" alt="${item.productName}" />
-                                            </c:when>
-                                            <c:otherwise>PR</c:otherwise>
-                                        </c:choose>
-                                    </div>
-                                    <div>
-                                        <div class="order-item-name">
-                                            <c:choose>
-                                                <c:when test="${not empty item.productName}">${item.productName}</c:when>
-                                                <c:otherwise>Variant ${item.variantId}</c:otherwise>
-                                            </c:choose>
-                                        </div>
-                                        <div class="order-muted">
-                                            ${item.sizeName}<c:if test="${not empty item.colorName}"> / ${item.colorName}</c:if>
-                                            · Qty ${item.quantity} × <fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND
-                                        </div>
-                                    </div>
-                                    <div class="order-price"><fmt:formatNumber value="${lineTotal}" type="number" groupingUsed="true" /> VND</div>
-                                </div>
-                            </c:forEach>
-                        </div>
-
-                        <div class="order-total-box">
-                            <div class="order-total-row">
-                                <span>Subtotal</span>
-                                <strong><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> VND</strong>
-                            </div>
-                            <div class="order-total-row">
-                                <span>Shipping</span>
-                                <strong>Free</strong>
-                            </div>
-                            <div class="order-total-row final">
-                                <span>Total</span>
-                                <span><fmt:formatNumber value="${checkoutTotal}" type="number" groupingUsed="true" /> VND</span>
-                            </div>
-                        </div>
-                    </c:otherwise>
-                </c:choose>
-            </aside>
+            <a class="co-secondary-btn" href="${pageContext.request.contextPath}/customer/order-history">
+                <span class="material-symbols-outlined">receipt_long</span>
+                My Orders
+            </a>
         </div>
+
+        <c:choose>
+            <c:when test="${empty checkoutItems}">
+                <div class="co-empty-card">
+                    <span class="material-symbols-outlined">remove_shopping_cart</span>
+                    <h2>No products selected</h2>
+                    <p>Select one or more products from the cart before checkout.</p>
+                    <a class="co-primary-btn" href="${pageContext.request.contextPath}/cart">Return to cart</a>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="co-detail-grid">
+                    <div class="co-detail-main">
+                        <section class="co-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Shipping information</h2>
+                                    <p>These details will be used for delivery.</p>
+                                </div>
+                                <span class="material-symbols-outlined co-card-head-icon">local_shipping</span>
+                            </div>
+
+                            <form class="co-form" action="${pageContext.request.contextPath}/customer/order-review" method="post">
+                                <div class="co-form-group">
+                                    <label for="shippingAddress">Shipping address</label>
+                                    <textarea id="shippingAddress"
+                                              name="shippingAddress"
+                                              class="co-input co-textarea"
+                                              placeholder="Enter your full delivery address"
+                                              required><c:out value="${not empty param.shippingAddress ? param.shippingAddress : shippingAddress}" /></textarea>
+                                </div>
+
+                                <div class="co-form-group">
+                                    <label for="phone">Phone number</label>
+                                    <input id="phone"
+                                           name="phone"
+                                           class="co-input"
+                                           type="tel"
+                                           value="<c:out value='${not empty param.phone ? param.phone : phone}' />"
+                                           placeholder="Example: 0912345678"
+                                           required />
+                                </div>
+
+                                <button class="co-primary-btn co-full-btn" type="submit">
+                                    Review order
+                                    <span class="material-symbols-outlined">arrow_forward</span>
+                                </button>
+                            </form>
+                        </section>
+                    </div>
+
+                    <aside class="co-detail-side">
+                        <section class="co-card co-sticky-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Order summary</h2>
+                                    <p>${fn:length(checkoutItems)} product(s)</p>
+                                </div>
+                                <span class="material-symbols-outlined co-card-head-icon">shopping_bag</span>
+                            </div>
+
+                            <div class="co-form">
+                                <div class="co-payment-summary">
+                                    <c:forEach var="item" items="${checkoutItems}">
+                                        <div>
+                                            <span><c:out value="${item.productName}" /> × ${item.quantity}</span>
+                                            <strong><fmt:formatNumber value="${item.unitPrice * item.quantity}" type="number" groupingUsed="true" /> VND</strong>
+                                        </div>
+                                    </c:forEach>
+                                    <div>
+                                        <span>Total</span>
+                                        <strong><fmt:formatNumber value="${checkoutTotalValue}" type="number" groupingUsed="true" /> VND</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
+            </c:otherwise>
+        </c:choose>
     </div>
-</div>
+</section>

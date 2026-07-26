@@ -45,7 +45,7 @@
                 <div class="cw-card-head">
                     <div>
                         <h2>Add money</h2>
-                        <p>Create a Manual deposit request for your wallet.</p>
+                        <p>Add money securely through VNPay Sandbox.</p>
                     </div>
                     <span class="material-symbols-outlined cw-card-icon">add_card</span>
                 </div>
@@ -66,13 +66,14 @@
                     </div>
 
                     <div class="cw-form-group">
-                        <label>Deposit method</label>
-                        <div class="cw-static-value">Manual deposit</div>
-                        <input type="hidden" name="paymentMethod" value="Manual" />
+                        <label for="paymentMethod">Payment method</label>
+                        <select id="paymentMethod" name="paymentMethod">
+                            <option value="VNPay">VNPay</option>
+                        </select>
                     </div>
 
                     <button class="cw-primary-btn cw-full-btn" type="submit">
-                        Create deposit request
+                        Pay with VNPay
                         <span class="material-symbols-outlined">arrow_forward</span>
                     </button>
                 </form>
@@ -119,7 +120,6 @@
                                         <td>
                                             <c:choose>
                                                 <c:when test="${payment.paymentMethod eq 'COD'}">Cash On Delivery</c:when>
-                                                <c:when test="${payment.paymentType eq 'Deposit'}">Manual deposit</c:when>
                                                 <c:otherwise>${payment.paymentMethod}</c:otherwise>
                                             </c:choose>
                                         </td>

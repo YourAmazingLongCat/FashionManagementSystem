@@ -1,195 +1,140 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@page import="Models.Order"%>
-<%@page import="Models.CartItem"%>
-<%@page import="java.util.List"%>
-<%@page import="java.math.BigDecimal"%>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-<%
-    Order orderPreview = (Order) request.getAttribute("orderPreview");
-    List<CartItem> cart = (List<CartItem>) request.getAttribute("cart");
-    String errorMessage = (String) request.getAttribute("errorMessage");
-%>
-
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Order Review</title>
-        <link rel="stylesheet" href="<%= request.getContextPath() %>/Pages/Customer/checkout.css">
-    </head>
-
-    <body>
-        <div class="page-wrapper">
-
-            <header class="top-header">
-                <div class="logo-box">
-                    <div class="logo-mark">S</div>
-                    <div>
-                        <h2>Shop</h2>
-                        <p>Online store</p>
-                    </div>
-                </div>
-
-                <nav class="nav-menu">
-                    <a href="<%= request.getContextPath() %>/home">Home</a>
-                    <a href="<%= request.getContextPath() %>/shop">Shop</a>
-                    <a href="<%= request.getContextPath() %>/cart">Cart</a>
-                    <a class="active" href="<%= request.getContextPath() %>/customer/checkout">Checkout</a>
-                    <a href="<%= request.getContextPath() %>/customer/order-history">Order History</a>
-                </nav>
-            </header>
-
-            <section class="hero-section">
-                <div class="title-slash">
-                    <h1>Order Review</h1>
-                    <p>Please check your order before placing it.</p>
-                </div>
-
-                <div class="order-tabs">
-                    <span class="tab">Checkout</span>
-                    <span class="tab active-tab">Order Review</span>
-                    <span class="tab">Order Detail</span>
-                </div>
-            </section>
-
-            <% if (errorMessage != null) { %>
-                <div class="error-box">
-                    <%= errorMessage %>
-                </div>
-            <% } %>
-
-            <% if (orderPreview != null) { %>
-
-                <main class="checkout-container">
-
-                    <section class="checkout-panel form-panel">
-                        <div class="panel-title">
-                            <span>Shipping Information</span>
-                        </div>
-
-                        <div class="detail-info-box">
-                            <div class="detail-line">
-                                <span>Customer ID</span>
-                                <strong><%= orderPreview.getCustomerId() %></strong>
-                            </div>
-
-                            <div class="detail-line">
-                                <span>Phone</span>
-                                <strong><%= orderPreview.getPhone() %></strong>
-                            </div>
-
-                            <div class="detail-line address-line">
-                                <span>Shipping Address</span>
-                                <strong><%= orderPreview.getShippingAddress() %></strong>
-                            </div>
-
-                            <div class="detail-line">
-                                <span>Status</span>
-                                <strong>
-                                    <span class="status-badge status-pending">
-                                        <%= orderPreview.getOrderStatus() %>
-                                    </span>
-                                </strong>
-                            </div>
-                        </div>
-
-                        <a class="place-order-btn link-btn"
-                           href="<%= request.getContextPath() %>/customer/checkout">
-                            Edit Information
-                        </a>
-                    </section>
-
-                    <section class="checkout-panel item-panel">
-                        <div class="panel-title">
-                            <span>Review Items</span>
-                        </div>
-
-                        <div class="item-table">
-                            <div class="item-row item-header">
-                                <div>Item</div>
-                                <div>Qty</div>
-                                <div>Unit Price</div>
-                                <div>Total</div>
-                            </div>
-
-                            <% if (cart != null && !cart.isEmpty()) { %>
-                                <% for (CartItem item : cart) { %>
-                                    <%
-                                        BigDecimal subTotal = item.getUnitPrice()
-                                                .multiply(BigDecimal.valueOf(item.getQuantity()));
-                                    %>
-
-                                    <div class="item-row">
-                                        <div class="item-info">
-                                            <div class="item-image">
-                                                <span>ITEM</span>
-                                            </div>
-
-                                            <div>
-                                                <h4><%= item.getVariantId() %></h4>
-                                                <p>Variant ID: <%= item.getVariantId() %></p>
-                                            </div>
-                                        </div>
-
-                                        <div class="item-qty">
-                                            <%= item.getQuantity() %>
-                                        </div>
-
-                                        <div>
-                                            <%= item.getUnitPrice() %>
-                                        </div>
-
-                                        <div class="item-total">
-                                            <%= subTotal %>
-                                        </div>
-                                    </div>
-                                <% } %>
-                            <% } else { %>
-                                <div class="empty-cart">
-                                    Your cart is empty.
-                                </div>
-                            <% } %>
-                        </div>
-                    </section>
-
-                    <aside class="summary-panel">
-                        <div class="summary-title">
-                            Order Summary
-                        </div>
-
-                        <div class="summary-line">
-                            <span>Items</span>
-                            <strong><%= cart == null ? 0 : cart.size() %></strong>
-                        </div>
-
-                        <div class="summary-line">
-                            <span>Status</span>
-                            <strong><%= orderPreview.getOrderStatus() %></strong>
-                        </div>
-
-                        <div class="summary-divider"></div>
-
-                        <div class="summary-total">
-                            <span>Total</span>
-                            <strong><%= orderPreview.getTotalAmount() %></strong>
-                        </div>
-
-                        <form action="<%= request.getContextPath() %>/customer/checkout" method="post">
-                            <input type="hidden" name="shippingAddress" value="<%= orderPreview.getShippingAddress() %>">
-                            <input type="hidden" name="phone" value="<%= orderPreview.getPhone() %>">
-
-                            <button type="submit" class="place-order-btn">
-                                Place Order
-                            </button>
-                        </form>
-
-                        <p class="secure-text">Please confirm your order information.</p>
-                    </aside>
-
-                </main>
-
-            <% } %>
-
+<section class="customer-order-page">
+    <div class="co-container">
+        <div class="co-page-head">
+            <div>
+                <a class="co-back-link" href="${pageContext.request.contextPath}/cart">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Back to cart
+                </a>
+                <p class="co-eyebrow">Checkout</p>
+                <h1 class="co-page-title">Order Review</h1>
+                <p class="co-page-subtitle">Review delivery information and selected products before continuing.</p>
+            </div>
+            <a class="co-secondary-btn" href="${pageContext.request.contextPath}/customer/order-history">
+                <span class="material-symbols-outlined">receipt_long</span>
+                My Orders
+            </a>
         </div>
-    </body>
-</html>
+
+        <c:choose>
+            <c:when test="${empty orderPreview}">
+                <div class="co-empty-card">
+                    <span class="material-symbols-outlined">error</span>
+                    <h2>Review information unavailable</h2>
+                    <p>Return to the cart and restart checkout.</p>
+                    <a class="co-primary-btn" href="${pageContext.request.contextPath}/cart">Return to cart</a>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="co-detail-grid">
+                    <div class="co-detail-main">
+                        <section class="co-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Delivery information</h2>
+                                    <p>Information used to deliver this order.</p>
+                                </div>
+                                <span class="material-symbols-outlined co-card-head-icon">local_shipping</span>
+                            </div>
+                            <div class="co-summary-grid" style="padding: 22px;">
+                                <div class="co-summary-item">
+                                    <span>Phone number</span>
+                                    <strong><c:out value="${orderPreview.phone}" /></strong>
+                                </div>
+                                <div class="co-summary-item co-summary-address">
+                                    <span>Shipping address</span>
+                                    <strong><c:out value="${orderPreview.shippingAddress}" /></strong>
+                                </div>
+                                <div class="co-summary-item co-summary-total">
+                                    <span>Order total</span>
+                                    <strong><fmt:formatNumber value="${orderPreview.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="co-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Selected products</h2>
+                                    <p>${fn:length(cart)} product(s)</p>
+                                </div>
+                            </div>
+                            <div class="co-table-wrap">
+                                <table class="co-table co-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Variant</th>
+                                            <th>Quantity</th>
+                                            <th>Unit price</th>
+                                            <th>Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <c:forEach var="item" items="${cart}">
+                                            <tr>
+                                                <td>
+                                                    <div class="co-product-cell">
+                                                        <span class="co-product-icon material-symbols-outlined">checkroom</span>
+                                                        <div>
+                                                            <strong><c:out value="${item.productName}" /></strong>
+                                                            <span>${item.sizeName}<c:if test="${not empty item.colorName}"> / ${item.colorName}</c:if></span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>${item.variantId}</td>
+                                                <td>${item.quantity}</td>
+                                                <td><fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND</td>
+                                                <td>
+                                                    <strong class="co-money">
+                                                        <fmt:formatNumber value="${item.unitPrice * item.quantity}" type="number" groupingUsed="true" /> VND
+                                                    </strong>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+
+                    <aside class="co-detail-side">
+                        <section class="co-card co-sticky-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Order summary</h2>
+                                    <p>Pending order preview</p>
+                                </div>
+                                <span class="material-symbols-outlined co-card-head-icon">fact_check</span>
+                            </div>
+                            <div class="co-form">
+                                <div class="co-payment-summary">
+                                    <div>
+                                        <span>Products</span>
+                                        <strong>${fn:length(cart)}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Status</span>
+                                        <strong>${orderPreview.orderStatus}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Total</span>
+                                        <strong><fmt:formatNumber value="${orderPreview.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                                    </div>
+                                </div>
+                                <a class="co-primary-btn co-full-btn" href="${pageContext.request.contextPath}/cart">
+                                    Continue from cart
+                                </a>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </div>
+</section>

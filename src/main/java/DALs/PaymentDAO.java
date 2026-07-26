@@ -73,12 +73,14 @@ public class PaymentDAO extends DBContext {
 
     public Payment getPaymentByIdAndAccountId(String paymentId, String accountId) {
         String query = "SELECT p.* FROM Payments p "
-                + "INNER JOIN Wallets w ON p.walletId = w.walletId "
-                + "WHERE p.paymentId = ? AND w.accountId = ?";
+                + "LEFT JOIN Wallets w ON p.walletId = w.walletId "
+                + "LEFT JOIN Orders o ON p.orderId = o.orderId "
+                + "WHERE p.paymentId = ? AND (w.accountId = ? OR o.customerId = ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, paymentId);
             ps.setString(2, accountId);
+            ps.setString(3, accountId);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -95,7 +97,7 @@ public class PaymentDAO extends DBContext {
     public Payment getLatestPaymentByOrderId(String orderId) {
         String query = "SELECT TOP 1 * FROM Payments "
                 + "WHERE orderId = ? AND paymentType <> ? "
-                + "ORDER BY createdAt DESC";
+                + "ORDER BY createdAt DESC, paymentId DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -134,13 +136,15 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getPaymentsByAccountId(String accountId) {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT p.* FROM Payments p "
-                + "INNER JOIN Wallets w ON p.walletId = w.walletId "
-                + "WHERE w.accountId = ? "
+        String query = "SELECT DISTINCT p.* FROM Payments p "
+                + "LEFT JOIN Wallets w ON p.walletId = w.walletId "
+                + "LEFT JOIN Orders o ON p.orderId = o.orderId "
+                + "WHERE w.accountId = ? OR o.customerId = ? "
                 + "ORDER BY p.createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, accountId);
+            ps.setString(2, accountId);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -222,6 +226,88 @@ public class PaymentDAO extends DBContext {
         }
 
         return payments;
+    }
+
+    /**
+     * Creates a Pending order payment only when the order belongs to the account
+     * and no other active Purchase payment exists. The order row and payment
+     * range are locked in one transaction to avoid concurrent payment methods.
+     */
+    public boolean createOrderPayment(Payment payment, String accountId) {
+        if (payment == null || accountId == null || accountId.trim().isEmpty()
+                || payment.getOrderId() == null || payment.getOrderId().trim().isEmpty()
+                || !PaymentType.PURCHASE.equals(payment.getPaymentType())
+                || !PaymentStatus.PENDING.equals(payment.getPaymentStatus())
+                || (!PaymentMethod.COD.equals(payment.getPaymentMethod())
+                && !PaymentMethod.VNPAY.equals(payment.getPaymentMethod()))
+                || payment.getAmount() == null) {
+            return false;
+        }
+
+        String lockOrderQuery = "SELECT totalAmount, orderStatus FROM Orders "
+                + "WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND customerId = ?";
+        String activePaymentQuery = "SELECT TOP 1 paymentId FROM Payments "
+                + "WITH (UPDLOCK, HOLDLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? "
+                + "AND paymentStatus IN (?, ?) "
+                + "ORDER BY createdAt DESC, paymentId DESC";
+        String insertQuery = "INSERT INTO Payments "
+                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
+                + "amount, description, createdAt, paidAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try {
+            connection.setAutoCommit(false);
+
+            BigDecimal orderAmount = null;
+            String orderStatus = null;
+            try (PreparedStatement ps = connection.prepareStatement(lockOrderQuery)) {
+                ps.setString(1, payment.getOrderId().trim());
+                ps.setString(2, accountId.trim());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        orderAmount = rs.getBigDecimal("totalAmount");
+                        orderStatus = rs.getString("orderStatus");
+                    }
+                }
+            }
+
+            if (orderAmount == null || orderAmount.compareTo(payment.getAmount()) != 0
+                    || "Cancelled".equals(orderStatus) || "Delivered".equals(orderStatus)) {
+                connection.rollback();
+                return false;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(activePaymentQuery)) {
+                ps.setString(1, payment.getOrderId().trim());
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentStatus.PENDING);
+                ps.setString(4, PaymentStatus.PAID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(insertQuery)) {
+                setPaymentParameters(ps, payment);
+                if (ps.executeUpdate() != 1) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback("createOrderPayment", e);
+            return false;
+        } finally {
+            restoreAutoCommit("createOrderPayment");
+        }
     }
 
     public boolean completeDeposit(String paymentId) {
@@ -306,6 +392,14 @@ public class PaymentDAO extends DBContext {
 
     public boolean payOrderWithWallet(String paymentId, String accountId, String orderId,
             BigDecimal amount, String description) {
+        String orderQuery = "SELECT totalAmount, orderStatus FROM Orders "
+                + "WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND customerId = ?";
+        String activePaymentQuery = "SELECT TOP 1 paymentStatus FROM Payments "
+                + "WITH (UPDLOCK, HOLDLOCK) "
+                + "WHERE orderId = ? AND paymentType = ? "
+                + "AND paymentStatus IN (?, ?) "
+                + "ORDER BY createdAt DESC, paymentId DESC";
         String walletQuery = "SELECT * FROM Wallets WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE accountId = ?";
         String updateWalletQuery = "UPDATE Wallets "
@@ -318,6 +412,38 @@ public class PaymentDAO extends DBContext {
 
         try {
             connection.setAutoCommit(false);
+
+            BigDecimal orderAmount = null;
+            String orderStatus = null;
+            try (PreparedStatement ps = connection.prepareStatement(orderQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, accountId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        orderAmount = rs.getBigDecimal("totalAmount");
+                        orderStatus = rs.getString("orderStatus");
+                    }
+                }
+            }
+
+            if (orderAmount == null || orderAmount.compareTo(amount) != 0
+                    || "Cancelled".equals(orderStatus) || "Delivered".equals(orderStatus)) {
+                connection.rollback();
+                return false;
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(activePaymentQuery)) {
+                ps.setString(1, orderId);
+                ps.setString(2, PaymentType.PURCHASE);
+                ps.setString(3, PaymentStatus.PENDING);
+                ps.setString(4, PaymentStatus.PAID);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+            }
 
             Wallet wallet = null;
             try (PreparedStatement ps = connection.prepareStatement(walletQuery)) {
@@ -391,7 +517,7 @@ public class PaymentDAO extends DBContext {
             ps.setString(4, PaymentStatus.PENDING);
             ps.setString(5, PaymentMethod.COD);
 
-            return ps.executeUpdate() >= 0;
+            return ps.executeUpdate() == 1;
         } catch (SQLException e) {
             System.out.println("completeCashPayment error: " + e);
         }
@@ -414,7 +540,7 @@ public class PaymentDAO extends DBContext {
             ps.setString(4, PaymentStatus.PENDING);
             ps.setString(5, PaymentMethod.COD);
 
-            return ps.executeUpdate() >= 0;
+            return ps.executeUpdate() == 1;
         } catch (SQLException e) {
             System.out.println("cancelCashPayment error: " + e);
         }
@@ -422,51 +548,60 @@ public class PaymentDAO extends DBContext {
         return false;
     }
 
-    public boolean completeVNPayPurchase(String paymentId, BigDecimal amount, String description) {
+    public boolean completeVNPayPurchase(String paymentId, BigDecimal amount,
+            String description) {
         String query = "UPDATE Payments "
-                + "SET paymentStatus = ?, paidAt = GETDATE(), description = ? "
-                + "WHERE paymentId = ? AND paymentMethod = ? AND paymentStatus = ?";
+                + "SET paymentStatus = ?, paidAt = GETDATE(), "
+                + "description = COALESCE(NULLIF(?, ''), description) "
+                + "WHERE paymentId = ? AND paymentType = ? "
+                + "AND paymentMethod = ? AND paymentStatus = ? AND amount = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, PaymentStatus.PAID);
             ps.setString(2, description);
             ps.setString(3, paymentId);
-            ps.setString(4, PaymentMethod.VNPAY);
-            ps.setString(5, PaymentStatus.PENDING);
-
-            return ps.executeUpdate() > 0;
+            ps.setString(4, PaymentType.PURCHASE);
+            ps.setString(5, PaymentMethod.VNPAY);
+            ps.setString(6, PaymentStatus.PENDING);
+            ps.setBigDecimal(7, amount);
+            return ps.executeUpdate() == 1;
         } catch (SQLException e) {
             System.out.println("completeVNPayPurchase error: " + e);
+            return false;
         }
-
-        return false;
     }
 
     public boolean markVNPayPaymentUnsuccessful(String paymentId, BigDecimal amount,
-            String status, String description) {
+            String newStatus, String description) {
+        if (!PaymentStatus.FAILED.equals(newStatus)
+                && !PaymentStatus.CANCELLED.equals(newStatus)) {
+            return false;
+        }
+
         String query = "UPDATE Payments "
-                + "SET paymentStatus = ?, description = ? "
-                + "WHERE paymentId = ? AND paymentMethod = ? AND paymentStatus = ?";
+                + "SET paymentStatus = ?, paidAt = NULL, "
+                + "description = COALESCE(NULLIF(?, ''), description) "
+                + "WHERE paymentId = ? AND paymentMethod = ? "
+                + "AND paymentStatus = ? AND amount = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, status);
+            ps.setString(1, newStatus);
             ps.setString(2, description);
             ps.setString(3, paymentId);
             ps.setString(4, PaymentMethod.VNPAY);
             ps.setString(5, PaymentStatus.PENDING);
-
-            return ps.executeUpdate() > 0;
+            ps.setBigDecimal(6, amount);
+            return ps.executeUpdate() == 1;
         } catch (SQLException e) {
             System.out.println("markVNPayPaymentUnsuccessful error: " + e);
+            return false;
         }
-
-        return false;
     }
 
     public boolean refundWalletPaymentIfNeeded(String orderId, String refundPaymentId) {
         String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
-                + "ORDER BY createdAt DESC";
+                + "ORDER BY createdAt DESC, paymentId DESC";
         String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
         String updateWalletQuery = "UPDATE Wallets SET balance = balance + ?, updatedAt = GETDATE() WHERE walletId = ?";
         String insertRefundQuery = "INSERT INTO Payments "
@@ -589,7 +724,7 @@ public class PaymentDAO extends DBContext {
 
         String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
                 + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
-                + "ORDER BY createdAt DESC";
+                + "ORDER BY createdAt DESC, paymentId DESC";
         String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
         String insertRefundQuery = "INSERT INTO Payments "
                 + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "

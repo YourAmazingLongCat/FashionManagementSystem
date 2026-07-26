@@ -43,7 +43,7 @@ public class ChangeShipStatusServlet extends HttpServlet {
         session.setAttribute(updated ? "successMessage" : "errorMessage",
                 updated
                         ? "Order status updated successfully."
-                        : "Order status was not changed. The customer may not have pressed Place order yet, the transition may be invalid, or Wallet/VNPay payment may not be Paid.");
+                        : "Order status was not changed. Shipping/Delivered orders cannot move backward; otherwise the customer may not have placed the order, the transition may be invalid, or Wallet/VNPay payment may not be Paid.");
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }

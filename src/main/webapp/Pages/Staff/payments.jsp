@@ -3,187 +3,262 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
-<style>
-.wallet-pagination { display: flex; justify-content: center; margin-top: 24px; }
-.pagination { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0; }
-.page-item { }
-.page-link { display: flex; align-items: center; justify-content: center; min-width: 38px; height: 38px; padding: 0 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fff; color: #334155; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: all 0.2s; }
-.page-link:hover { background: #f1f5f9; border-color: #4338ca; color: #4338ca; }
-.page-item.active .page-link { background: #4338ca; border-color: #4338ca; color: #fff; }
-.page-item.disabled .page-link { color: #94a3b8; cursor: not-allowed; pointer-events: none; }
-</style>
+<div class="content-page order-page staff-ops-page">
+    <div class="order-container">
+        <c:set var="pagePaidPayments" value="${0}" />
+        <c:set var="pagePendingPayments" value="${0}" />
+        <c:forEach var="payment" items="${payments}">
+            <c:if test="${payment.paymentStatus eq 'Paid'}">
+                <c:set var="pagePaidPayments" value="${pagePaidPayments + 1}" />
+            </c:if>
+            <c:if test="${payment.paymentStatus eq 'Pending'}">
+                <c:set var="pagePendingPayments" value="${pagePendingPayments + 1}" />
+            </c:if>
+        </c:forEach>
 
-<section class="wallet-page">
-    <div class="wallet-hero">
-        <div>
-            <p class="wallet-breadcrumb">Staff / Payments</p>
-            <h1 class="wallet-title">Payment Management</h1>
-            <p class="wallet-subtitle">
-                Review wallet deposits, wallet payments, COD records and refunds.
-            </p>
+        <section class="order-hero staff-ops-hero">
+            <div>
+                <p class="order-eyebrow">Staff Operations</p>
+                <h1 class="order-title">Payment Management</h1>
+                <p class="order-subtitle">
+                    Approve wallet deposits and review purchase, refund, COD, wallet, and VNPay transactions.
+                </p>
+            </div>
+            <div class="order-actions-row">
+                <a class="order-btn" href="${pageContext.request.contextPath}/staff/dashboard">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </a>
+            </div>
+        </section>
+
+        <nav class="staff-module-tabs" aria-label="Order and payment management">
+            <a class="staff-module-tab" href="${pageContext.request.contextPath}/staff/orders">
+                <span class="material-symbols-outlined">receipt_long</span>
+                Orders
+            </a>
+            <a class="staff-module-tab active" href="${pageContext.request.contextPath}/staff/payments">
+                <span class="material-symbols-outlined">payments</span>
+                Payments
+            </a>
+        </nav>
+
+        <div class="order-grid order-grid-4 staff-stat-grid">
+            <div class="order-stat-card">
+                <span class="order-stat-label">Total records</span>
+                <span class="order-stat-value">${empty totalPayments ? fn:length(payments) : totalPayments}</span>
+            </div>
+            <div class="order-stat-card">
+                <span class="order-stat-label">Pending deposits</span>
+                <span class="order-stat-value">${fn:length(pendingDeposits)}</span>
+            </div>
+            <div class="order-stat-card">
+                <span class="order-stat-label">Paid on page</span>
+                <span class="order-stat-value">${pagePaidPayments}</span>
+            </div>
+            <div class="order-stat-card">
+                <span class="order-stat-label">Pending on page</span>
+                <span class="order-stat-value">${pagePendingPayments}</span>
+            </div>
         </div>
-        <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/staff/products">
-            <span class="material-symbols-outlined">inventory_2</span>
-            Back to Product Management
-        </a>
-    </div>
 
-    <div class="wallet-history-card">
-        <div class="wallet-section-head">
-            <h2>Pending Deposit Requests</h2>
-            <span>${fn:length(pendingDeposits)} pending</span>
-        </div>
-
-        <c:choose>
-            <c:when test="${empty pendingDeposits}">
-                <div class="wallet-empty wallet-empty-small">
-                    <span class="material-symbols-outlined">task_alt</span>
-                    <h3>No pending deposit</h3>
-                    <p>All deposit requests have been handled.</p>
+        <section class="order-panel order-panel-padding staff-list-panel staff-priority-panel">
+            <div class="order-panel-header staff-list-header">
+                <div>
+                    <h2 class="order-section-title">Pending Deposit Requests</h2>
+                    <p class="order-muted">Complete a request only after the deposit has been verified.</p>
                 </div>
-            </c:when>
-            <c:otherwise>
-                <div class="wallet-table-wrap">
-                    <table class="wallet-table">
-                        <thead>
-                            <tr>
-                                <th>Payment ID</th>
-                                <th>Wallet</th>
-                                <th>Method</th>
-                                <th>Amount</th>
-                                <th>Created At</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <c:forEach var="payment" items="${pendingDeposits}">
+                <span class="order-status status-pending">${fn:length(pendingDeposits)} Pending</span>
+            </div>
+
+            <c:choose>
+                <c:when test="${empty pendingDeposits}">
+                    <div class="order-empty staff-panel-empty staff-panel-empty-compact">
+                        <span class="material-symbols-outlined">task_alt</span>
+                        <h3>No pending deposit</h3>
+                        <p>All wallet deposit requests have been handled.</p>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="order-table-wrap staff-table-wrap">
+                        <table class="order-table staff-data-table">
+                            <thead>
                                 <tr>
-                                    <td><strong>${payment.paymentId}</strong></td>
-                                    <td>${payment.walletId}</td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${payment.paymentType eq 'Deposit'}">Manual deposit</c:when>
-                                            <c:otherwise>${payment.paymentMethod}</c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td class="wallet-money"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</td>
-                                    <td>${payment.createdAt}</td>
-                                    <td>
-                                        <form method="post" action="${pageContext.request.contextPath}/staff/complete-deposit" onsubmit="return confirm('Confirm this deposit and add balance to the wallet?');">
-                                            <input type="hidden" name="paymentId" value="${payment.paymentId}" />
-                                            <button class="wallet-primary-btn" type="submit" style="min-height: 38px; padding: 0 12px;">
-                                                Complete
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th>Payment</th>
+                                    <th>Wallet</th>
+                                    <th>Method</th>
+                                    <th>Amount</th>
+                                    <th>Created At</th>
+                                    <th class="staff-action-column">Action</th>
                                 </tr>
-                            </c:forEach>
-                        </tbody>
-                    </table>
-                </div>
-            </c:otherwise>
-        </c:choose>
-    </div>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="payment" items="${pendingDeposits}">
+                                    <tr>
+                                        <td><div class="order-code">${payment.paymentId}</div></td>
+                                        <td>${payment.walletId}</td>
+                                        <td><span class="staff-method-badge">${payment.paymentMethod}</span></td>
+                                        <td class="order-price"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty payment.createdAt}">
+                                                    ${fn:replace(payment.createdAt, 'T', ' ')}
+                                                </c:when>
+                                                <c:otherwise>-</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td class="staff-action-column">
+                                            <form method="post" action="${pageContext.request.contextPath}/staff/complete-deposit"
+                                                  onsubmit="return confirm('Confirm this deposit and add balance to the wallet?');">
+                                                <input type="hidden" name="paymentId" value="${payment.paymentId}" />
+                                                <button class="order-btn order-btn-success staff-table-action" type="submit">
+                                                    <span class="material-symbols-outlined">check_circle</span>
+                                                    Complete
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                </c:otherwise>
+            </c:choose>
+        </section>
 
-    <div class="wallet-history-card">
-        <div class="wallet-section-head">
-            <h2>All Payments</h2>
-            <span>${fn:length(payments)} records</span>
-        </div>
-
-        <c:choose>
-            <c:when test="${empty payments}">
-                <div class="wallet-empty">
-                    <span class="material-symbols-outlined">payments</span>
-                    <h3>No payment record</h3>
-                    <p>Payment records will appear here.</p>
+        <section class="order-panel order-panel-padding staff-list-panel">
+            <div class="order-panel-header staff-list-header">
+                <div>
+                    <h2 class="order-section-title">All Payment Records</h2>
+                    <p class="order-muted">Showing ${fn:length(payments)} record(s) on page ${empty currentPage ? 1 : currentPage}.</p>
                 </div>
-            </c:when>
-            <c:otherwise>
-                <div class="wallet-table-wrap">
-                    <table class="wallet-table">
-                        <thead>
-                            <tr>
-                                <th>Payment ID</th>
-                                <th>Type</th>
-                                <th>Method</th>
-                                <th>Status</th>
-                                <th>Amount</th>
-                                <th>Order</th>
-                                <th>Created At</th>
-                                <th>Paid At</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <c:forEach var="payment" items="${payments}">
+                <form class="staff-inline-page-size" method="get" action="${pageContext.request.contextPath}/staff/payments">
+                    <label>
+                        <span>Rows</span>
+                        <select name="pageSize" onchange="this.form.submit()">
+                            <option value="5" ${pageSize == 5 ? 'selected' : ''}>5</option>
+                            <option value="10" ${empty pageSize or pageSize == 10 ? 'selected' : ''}>10</option>
+                            <option value="20" ${pageSize == 20 ? 'selected' : ''}>20</option>
+                            <option value="50" ${pageSize == 50 ? 'selected' : ''}>50</option>
+                        </select>
+                    </label>
+                </form>
+            </div>
+
+            <c:choose>
+                <c:when test="${empty payments}">
+                    <div class="order-empty staff-panel-empty">
+                        <span class="material-symbols-outlined">payments</span>
+                        <h3>No payment record</h3>
+                        <p>Payment records will appear here after customers place orders or request wallet deposits.</p>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="order-table-wrap staff-table-wrap">
+                        <table class="order-table staff-data-table staff-payment-table">
+                            <thead>
                                 <tr>
-                                    <td><strong>${payment.paymentId}</strong></td>
-                                    <td>${payment.paymentType}</td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${payment.paymentType eq 'Deposit'}">Manual deposit</c:when>
-                                            <c:otherwise>${payment.paymentMethod}</c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>
-                                        <span class="payment-status payment-status-${fn:toLowerCase(payment.paymentStatus)}">
-                                            ${payment.paymentStatus}
-                                        </span>
-                                    </td>
-                                    <td class="wallet-money"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${not empty payment.orderId}">
-                                                <a class="wallet-table-link" href="${pageContext.request.contextPath}/staff/order-detail?orderId=${payment.orderId}">
-                                                    ${payment.orderId}
-                                                </a>
-                                            </c:when>
-                                            <c:otherwise>-</c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>${payment.createdAt}</td>
-                                    <td><c:choose><c:when test="${empty payment.paidAt}">-</c:when><c:otherwise>${payment.paidAt}</c:otherwise></c:choose></td>
+                                    <th>Payment</th>
+                                    <th>Type</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Order</th>
+                                    <th>Created At</th>
+                                    <th>Paid At</th>
                                 </tr>
-                            </c:forEach>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="payment" items="${payments}">
+                                    <tr>
+                                        <td><div class="order-code">${payment.paymentId}</div></td>
+                                        <td>${payment.paymentType}</td>
+                                        <td><span class="staff-method-badge">${payment.paymentMethod}</span></td>
+                                        <td>
+                                            <span class="order-status status-${fn:toLowerCase(payment.paymentStatus)}">
+                                                ${payment.paymentStatus}
+                                            </span>
+                                        </td>
+                                        <td class="order-price"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty payment.orderId}">
+                                                    <a class="staff-record-link" href="${pageContext.request.contextPath}/staff/order-detail?orderId=${payment.orderId}">
+                                                        ${payment.orderId}
+                                                        <span class="material-symbols-outlined">open_in_new</span>
+                                                    </a>
+                                                </c:when>
+                                                <c:otherwise>-</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty payment.createdAt}">
+                                                    ${fn:replace(payment.createdAt, 'T', ' ')}
+                                                </c:when>
+                                                <c:otherwise>-</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty payment.paidAt}">
+                                                    ${fn:replace(payment.paidAt, 'T', ' ')}
+                                                </c:when>
+                                                <c:otherwise>-</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                </c:otherwise>
+            </c:choose>
 
-                    <c:if test="${totalPages > 1}">
-                        <div class="wallet-pagination">
-                            <nav>
-                                <ul class="pagination">
-                                    <c:if test="${currentPage > 1}">
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=${currentPage - 1}">‹</a>
-                                        </li>
-                                    </c:if>
-                                    <c:forEach var="i" begin="1" end="${totalPages}">
-                                        <c:choose>
-                                            <c:when test="${i == currentPage}">
-                                                <li class="page-item active"><span class="page-link">${i}</span></li>
-                                            </c:when>
-                                            <c:when test="${i <= 3 || i > totalPages - 3 || (i >= currentPage - 1 && i <= currentPage + 1)}">
-                                                <li class="page-item"><a class="page-link" href="?page=${i}">${i}</a></li>
-                                            </c:when>
-                                            <c:when test="${i == 4 && currentPage > 5}">
-                                                <li class="page-item disabled"><span class="page-link">...</span></li>
-                                            </c:when>
-                                            <c:when test="${i == totalPages - 3 && currentPage < totalPages - 4}">
-                                                <li class="page-item disabled"><span class="page-link">...</span></li>
-                                            </c:when>
-                                        </c:choose>
-                                    </c:forEach>
-                                    <c:if test="${currentPage < totalPages}">
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=${currentPage + 1}">›</a>
-                                        </li>
-                                    </c:if>
-                                </ul>
-                            </nav>
-                        </div>
-                    </c:if>
+            <c:if test="${not empty totalPages and totalPages > 1}">
+                <div class="staff-pagination">
+                    <c:url var="previousPageUrl" value="/staff/payments">
+                        <c:param name="page" value="${currentPage - 1}" />
+                        <c:param name="pageSize" value="${pageSize}" />
+                    </c:url>
+                    <c:url var="nextPageUrl" value="/staff/payments">
+                        <c:param name="page" value="${currentPage + 1}" />
+                        <c:param name="pageSize" value="${pageSize}" />
+                    </c:url>
+
+                    <c:choose>
+                        <c:when test="${currentPage > 1}">
+                            <a class="staff-page-button" href="${previousPageUrl}">
+                                <span class="material-symbols-outlined">chevron_left</span>
+                                Previous
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="staff-page-button disabled">
+                                <span class="material-symbols-outlined">chevron_left</span>
+                                Previous
+                            </span>
+                        </c:otherwise>
+                    </c:choose>
+
+                    <span class="staff-page-summary">Page ${currentPage} of ${totalPages}</span>
+
+                    <c:choose>
+                        <c:when test="${currentPage < totalPages}">
+                            <a class="staff-page-button" href="${nextPageUrl}">
+                                Next
+                                <span class="material-symbols-outlined">chevron_right</span>
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="staff-page-button disabled">
+                                Next
+                                <span class="material-symbols-outlined">chevron_right</span>
+                            </span>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
-            </c:otherwise>
-        </c:choose>
+            </c:if>
+        </section>
     </div>
-</section>
+</div>

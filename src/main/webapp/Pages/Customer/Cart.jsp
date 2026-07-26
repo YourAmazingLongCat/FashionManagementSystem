@@ -128,7 +128,7 @@
 
         <c:otherwise>
 
-            <form id="checkoutForm" action="${pageContext.request.contextPath}/customer/checkout" method="post">
+            <form id="checkoutForm" action="${pageContext.request.contextPath}/cart/checkout" method="post">
                 <!-- Hidden fields for selected items -->
                 <input type="hidden" name="selectedItemsList" id="selectedItemsList" value="">
 

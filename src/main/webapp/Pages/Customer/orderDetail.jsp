@@ -1,3 +1,4 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
@@ -6,537 +7,466 @@
     <c:redirect url="${pageContext.request.contextPath}/customer/order-history" />
 </c:if>
 
-<style>
-    .review-modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-    }
-    .review-modal-overlay.active {
-        display: flex;
-    }
-    .review-modal {
-        background: white;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 450px;
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: 24px;
-        position: relative;
-    }
-    .review-modal-close {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #666;
-    }
-    .review-modal h3 {
-        margin: 0 0 16px 0;
-        color: #333;
-    }
-    .review-product-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        background: #f5f5f5;
-        border-radius: 8px;
-        margin-bottom: 16px;
-    }
-    .review-product-info img {
-        width: 50px;
-        height: 50px;
-        object-fit: cover;
-        border-radius: 4px;
-    }
-    .review-product-info .product-name {
-        font-weight: 500;
-        color: #333;
-    }
-    .review-product-info .variant-info {
-        font-size: 12px;
-        color: #666;
-    }
-    .review-stars {
-        display: flex;
-        gap: 4px;
-        margin-bottom: 16px;
-    }
-    .review-stars .star {
-        font-size: 32px;
-        color: #ddd;
-        cursor: pointer;
-        transition: color 0.2s;
-    }
-    .review-stars .star.active,
-    .review-stars .star:hover {
-        color: #ffc107;
-    }
-    .review-form-group {
-        margin-bottom: 16px;
-    }
-    .review-form-group label {
-        display: block;
-        margin-bottom: 4px;
-        font-weight: 500;
-        color: #333;
-    }
-    .review-form-group textarea {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        resize: vertical;
-        min-height: 80px;
-        font-family: inherit;
-    }
-    .review-form-group textarea:focus {
-        outline: none;
-        border-color: #1976d2;
-    }
-    .review-btn {
-        background: #1976d2;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: background 0.2s;
-        width: 100%;
-    }
-    .review-btn:hover {
-        background: #1565c0;
-    }
-    .review-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-    }
-    .review-status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-    .review-status-badge.can-review {
-        background: #e3f2fd;
-        color: #1976d2;
-        cursor: pointer;
-    }
-    .review-status-badge.can-review:hover {
-        background: #bbdefb;
-    }
-    .review-status-badge.reviewed {
-        background: #e8f5e9;
-        color: #2e7d32;
-    }
-    .review-status-badge.not-eligible {
-        background: #fafafa;
-        color: #9e9e9e;
-    }
-    .review-eligibility-msg {
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 16px;
-        text-align: center;
-    }
-    .review-eligibility-msg.error {
-        background: #ffebee;
-        color: #c62828;
-    }
-    .review-eligibility-msg.success {
-        background: #e8f5e9;
-        color: #2e7d32;
-    }
-    .review-success {
-        text-align: center;
-        padding: 20px;
-    }
-    .review-success .material-symbols-outlined {
-        font-size: 48px;
-        color: #4caf50;
-    }
-    .review-success h4 {
-        margin: 12px 0 8px 0;
-        color: #333;
-    }
-    .review-success p {
-        color: #666;
-        margin: 0;
-    }
-</style>
-
-<section class="wallet-page">
-    <div class="wallet-hero">
-        <div>
-            <p class="wallet-breadcrumb">Customer / Order Detail</p>
-            <h1 class="wallet-title">Order Detail</h1>
-            <p class="wallet-subtitle">Review your order and shipping progress.</p>
-        </div>
-        <a class="wallet-outline-btn" href="${pageContext.request.contextPath}/customer/order-history">
-            <span class="material-symbols-outlined">arrow_back</span>
-            Back to orders
-        </a>
-    </div>
-
-    <c:choose>
-        <c:when test="${empty order}">
-            <div class="wallet-empty">
-                <span class="material-symbols-outlined">error</span>
-                <h3>Order not found</h3>
-                <p>${errorMessage}</p>
-            </div>
-        </c:when>
-        <c:otherwise>
-            <div class="wallet-order-grid">
-                <div class="wallet-history-card">
-                    <div class="wallet-section-head">
-                        <h2>${order.orderId}</h2>
-                        <span class="payment-status payment-status-${fn:toLowerCase(order.orderStatus)}">${order.orderStatus}</span>
-                    </div>
-
-                    <div class="wallet-info-list">
-                        <div><span>Shipping Address</span><strong>${order.shippingAddress}</strong></div>
-                        <div><span>Phone</span><strong>${order.phone}</strong></div>
-                        <div><span>Placed At</span><strong>${order.placedAt}</strong></div>
-                        <div>
-                            <span>Total Amount</span>
-                            <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
-                        </div>
-                    </div>
-
-                    <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed'}">
-                        <form method="post" action="${pageContext.request.contextPath}/customer/cancel-order"
-                              onsubmit="return confirm('Are you sure you want to cancel this order?');"
-                              style="margin-top: 16px;">
-                            <input type="hidden" name="orderId" value="${order.orderId}" />
-                            <button type="submit" class="wallet-btn" style="background: #dc3545; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                <span class="material-symbols-outlined">cancel</span>
-                                Cancel Order
-                            </button>
-                        </form>
-                    </c:if>
-
-                    <div class="wallet-table-wrap wallet-table-space">
-                        <table class="wallet-table">
-                            <thead>
-                                <tr>
-                                    <th>Variant</th>
-                                    <th>Quantity</th>
-                                    <th>Unit Price</th>
-                                    <th>Discount</th>
-                                    <th>Subtotal</th>
-                                    <th>Review</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <c:forEach var="item" items="${orderItems}">
-                                    <tr data-order-item-id="${item.orderItemId}">
-                                        <td><strong>${item.variantId}</strong></td>
-                                        <td>${item.quantity}</td>
-                                        <td><fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND</td>
-                                        <td><fmt:formatNumber value="${item.discountAmount}" type="number" groupingUsed="true" /> VND</td>
-                                        <td class="wallet-money"><fmt:formatNumber value="${item.subTotal}" type="number" groupingUsed="true" /> VND</td>
-                                        <td>
-                                            <c:choose>
-                                                <c:when test="${order.orderStatus eq 'Delivered'}">
-                                                    <span class="review-status-badge can-review"
-                                                          onclick="openReviewModal('${item.orderItemId}')">
-                                                        <span class="material-symbols-outlined" style="font-size: 14px;">star</span>
-                                                        Review
-                                                    </span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="review-status-badge not-eligible">
-                                                        <span class="material-symbols-outlined" style="font-size: 14px;">lock</span>
-                                                    </span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <aside class="wallet-payment-panel">
-                    <div class="wallet-form-head">
-                        <span class="material-symbols-outlined">payments</span>
-                        <div>
-                            <h2>Bill</h2>
-                            <p>Your order bill information.</p>
-                        </div>
-                    </div>
-
-                    <div class="wallet-payment-row">
-                        <span>Bill ID</span>
-                        <strong>
-                            <c:choose>
-                                <c:when test="${not empty bill}">${bill.billId}</c:when>
-                                <c:otherwise>-</c:otherwise>
-                            </c:choose>
-                        </strong>
-                    </div>
-
-                    <div class="wallet-payment-row">
-                        <span>Payment Method</span>
-                        <strong>
-                            <c:choose>
-                                <c:when test="${not empty bill}">${bill.paymentMethod}</c:when>
-                                <c:otherwise>COD (Cash on Delivery)</c:otherwise>
-                            </c:choose>
-                        </strong>
-                    </div>
-
-                    <div class="wallet-payment-row">
-                        <span>Payment Status</span>
-                        <c:choose>
-                            <c:when test="${not empty bill}">
-                                <strong class="payment-status payment-status-${fn:toLowerCase(bill.paymentStatus)}">${bill.paymentStatus}</strong>
-                            </c:when>
-                            <c:otherwise>
-                                <strong class="payment-status payment-status-pending">Pending</strong>
-                            </c:otherwise>
-                        </c:choose>
-                    </div>
-
-                    <div class="wallet-payment-row">
-                        <span>Amount</span>
-                        <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
-                    </div>
-
+<section class="customer-order-page">
+    <div class="co-container">
+        <div class="co-page-head co-detail-head">
+            <div>
+                <a class="co-back-link" href="${pageContext.request.contextPath}/customer/order-history">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    Back to my orders
+                </a>
+                <p class="co-eyebrow">Order details</p>
+                <h1 class="co-page-title">
                     <c:choose>
-                        <c:when test="${order.orderStatus eq 'Pending' && (empty bill || bill.paymentStatus eq 'Pending')}">
-                            <c:choose>
-                                <c:when test="${not empty bill && bill.paymentMethod eq 'VNPay' && bill.paymentStatus eq 'Pending'}">
-                                    <div class="wallet-alert wallet-alert-info" style="margin-top: 12px;">
-                                        Please complete VNPay payment to confirm your order.
-                                    </div>
-                                    <a href="${pageContext.request.contextPath}/customer/vnpay/start?orderId=${order.orderId}"
-                                       class="wallet-btn wallet-btn-primary" style="margin-top: 12px; text-align: center; display: block; text-decoration: none;">
-                                        <span class="material-symbols-outlined">payment</span>
-                                        Pay with VNPay
-                                    </a>
-                                </c:when>
-                                <c:when test="${not empty bill && bill.paymentMethod eq 'COD' && bill.paymentStatus eq 'Pending'}">
-                                    <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                                        COD selected. Please pay when the order is delivered.
-                                    </div>
-                                </c:when>
-                                <c:when test="${not empty bill && bill.paymentMethod eq 'Wallet' && bill.paymentStatus eq 'Pending'}">
-                                    <div class="wallet-alert wallet-alert-info" style="margin-top: 12px;">
-                                        Order paid with wallet.
-                                    </div>
-                                </c:when>
-                            </c:choose>
+                        <c:when test="${not empty order and not orderPlaced and order.orderStatus eq 'Pending'}">Complete your order</c:when>
+                        <c:otherwise>Order #${order.orderId}</c:otherwise>
+                    </c:choose>
+                </h1>
+                <p class="co-page-subtitle">
+                    <c:choose>
+                        <c:when test="${not empty order and not orderPlaced and order.orderStatus eq 'Pending'}">
+                            Add delivery details and choose how you would like to pay.
                         </c:when>
+                        <c:otherwise>
+                            Review your order, payment and delivery information.
+                        </c:otherwise>
+                    </c:choose>
+                </p>
+            </div>
+
+            <c:if test="${not empty order}">
+                <span class="co-status co-status-large co-status-${fn:toLowerCase(order.orderStatus)}">
+                    ${order.orderStatus}
+                </span>
+            </c:if>
+        </div>
+
+        <c:choose>
+            <c:when test="${empty order}">
+                <div class="co-empty-card">
+                    <span class="material-symbols-outlined">error</span>
+                    <h2>Order not found</h2>
+                    <p><c:out value="${errorMessage}" /></p>
+                    <a class="co-primary-btn" href="${pageContext.request.contextPath}/customer/order-history">Back to orders</a>
+                </div>
+            </c:when>
+
+            <c:otherwise>
+                <c:if test="${not orderPlaced and order.orderStatus eq 'Pending'}">
+                    <div class="co-notice co-notice-warning">
+                        <div class="co-notice-icon">
+                            <span class="material-symbols-outlined">schedule</span>
+                        </div>
+                        <div class="co-notice-content">
+                            <strong>Complete your order within</strong>
+                            <span id="order-confirmation-countdown"
+                                  class="co-notice-countdown"
+                                  data-order-expiry="${order.confirmationExpiresAt}">Calculating...</span>
+                            <p>The order will be cancelled automatically when this time ends.</p>
+                        </div>
+                    </div>
+                </c:if>
+
+                <c:if test="${orderPlaced and order.orderStatus eq 'Pending'}">
+                    <div class="co-notice co-notice-info">
+                        <div class="co-notice-icon">
+                            <span class="material-symbols-outlined">hourglass_top</span>
+                        </div>
+                        <div class="co-notice-content">
+                            <c:choose>
+                                <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and payment.paymentStatus ne 'Paid'}">
+                                    <strong>Complete your VNPay payment</strong>
+                                    <p>Your order has been saved. Complete the payment so it can be confirmed.</p>
+                                </c:when>
+                                <c:otherwise>
+                                    <strong>Your order is waiting for confirmation</strong>
+                                    <p>We have received your order and will update its status after it is reviewed.</p>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+                    </div>
+                </c:if>
+
+                <div class="co-progress-card">
+                    <c:choose>
                         <c:when test="${order.orderStatus eq 'Cancelled'}">
-                            <div class="wallet-alert wallet-alert-error" style="margin-top: 12px;">
+                            <div class="co-cancelled-message">
+                                <span class="material-symbols-outlined">cancel</span>
                                 This order has been cancelled.
                             </div>
                         </c:when>
-                        <c:when test="${order.orderStatus eq 'Delivered'}">
-                            <div class="wallet-alert wallet-alert-success" style="margin-top: 12px;">
-                                Order has been delivered successfully!
+                        <c:otherwise>
+                            <div class="co-progress co-progress-${fn:toLowerCase(order.orderStatus)}">
+                                <div class="co-progress-step">
+                                    <span class="co-progress-icon"><span class="material-symbols-outlined">receipt_long</span></span>
+                                    <span>Pending</span>
+                                </div>
+                                <div class="co-progress-line"></div>
+                                <div class="co-progress-step">
+                                    <span class="co-progress-icon"><span class="material-symbols-outlined">task_alt</span></span>
+                                    <span>Confirmed</span>
+                                </div>
+                                <div class="co-progress-line"></div>
+                                <div class="co-progress-step">
+                                    <span class="co-progress-icon"><span class="material-symbols-outlined">inventory_2</span></span>
+                                    <span>Processing</span>
+                                </div>
+                                <div class="co-progress-line"></div>
+                                <div class="co-progress-step">
+                                    <span class="co-progress-icon"><span class="material-symbols-outlined">local_shipping</span></span>
+                                    <span>Shipping</span>
+                                </div>
+                                <div class="co-progress-line"></div>
+                                <div class="co-progress-step">
+                                    <span class="co-progress-icon"><span class="material-symbols-outlined">home</span></span>
+                                    <span>Delivered</span>
+                                </div>
                             </div>
-                        </c:when>
+                        </c:otherwise>
                     </c:choose>
-                </aside>
-            </div>
-        </c:otherwise>
-    </c:choose>
+                </div>
+
+                <div class="co-detail-grid">
+                    <div class="co-detail-main">
+                        <div class="co-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Order summary</h2>
+                                    <p>Order #${order.orderId}</p>
+                                </div>
+                                <span class="co-date-chip">
+                                    <span class="material-symbols-outlined">calendar_today</span>
+                                    ${order.placedAt}
+                                </span>
+                            </div>
+
+                            <div class="co-summary-grid">
+                                <div class="co-summary-item">
+                                    <span>Phone number</span>
+                                    <strong>
+                                        <c:choose>
+                                            <c:when test="${not empty order.phone}"><c:out value="${order.phone}" /></c:when>
+                                            <c:otherwise>Not provided</c:otherwise>
+                                        </c:choose>
+                                    </strong>
+                                </div>
+                                <div class="co-summary-item co-summary-address">
+                                    <span>Shipping address</span>
+                                    <strong>
+                                        <c:choose>
+                                            <c:when test="${not empty order.shippingAddress}"><c:out value="${order.shippingAddress}" /></c:when>
+                                            <c:otherwise>Not provided</c:otherwise>
+                                        </c:choose>
+                                    </strong>
+                                </div>
+                                <div class="co-summary-item co-summary-total">
+                                    <span>Order total</span>
+                                    <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="co-card">
+                            <div class="co-card-head">
+                                <div>
+                                    <h2>Items</h2>
+                                    <p>${fn:length(orderItems)} product(s)</p>
+                                </div>
+                            </div>
+
+                            <c:choose>
+                                <c:when test="${empty orderItems}">
+                                    <div class="co-inline-empty">
+                                        <span class="material-symbols-outlined">inventory_2</span>
+                                        <p>No products were found for this order.</p>
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="co-table-wrap co-items-table-wrap">
+                                        <table class="co-table co-items-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product variant</th>
+                                                    <th>Quantity</th>
+                                                    <th>Unit price</th>
+                                                    <th>Discount</th>
+                                                    <th>Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="item" items="${orderItems}">
+                                                    <tr>
+                                                        <td>
+                                                            <div class="co-product-cell">
+                                                                <span class="co-product-icon material-symbols-outlined">devices</span>
+                                                                <div>
+                                                                    <strong>${item.variantId}</strong>
+                                                                    <span>Product variant</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>${item.quantity}</td>
+                                                        <td><fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND</td>
+                                                        <td><fmt:formatNumber value="${item.discountAmount}" type="number" groupingUsed="true" /> VND</td>
+                                                        <td><strong class="co-money"><fmt:formatNumber value="${item.subTotal}" type="number" groupingUsed="true" /> VND</strong></td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+                    </div>
+
+                    <aside class="co-detail-side">
+                        <c:choose>
+                            <c:when test="${not orderPlaced and order.orderStatus eq 'Pending'}">
+                                <div class="co-card co-sticky-card">
+                                    <div class="co-card-head">
+                                        <div>
+                                            <h2>Place order</h2>
+                                            <p>Complete your delivery and payment information.</p>
+                                        </div>
+                                        <span class="material-symbols-outlined co-card-head-icon">shopping_bag</span>
+                                    </div>
+
+                                    <form class="co-form" action="${pageContext.request.contextPath}/customer/order-detail" method="post">
+                                        <input type="hidden" name="action" value="placeOrder" />
+                                        <input type="hidden" name="orderId" value="${order.orderId}" />
+
+                                        <div class="co-form-group">
+                                            <label for="shippingAddress">Shipping address</label>
+                                            <textarea id="shippingAddress"
+                                                      name="shippingAddress"
+                                                      class="co-input co-textarea"
+                                                      placeholder="Enter your full delivery address"
+                                                      required><c:out value="${order.shippingAddress}" /></textarea>
+                                        </div>
+
+                                        <div class="co-form-group">
+                                            <label for="phone">Phone number</label>
+                                            <input id="phone"
+                                                   name="phone"
+                                                   class="co-input"
+                                                   type="tel"
+                                                   value="<c:out value='${order.phone}' />"
+                                                   placeholder="Example: 0912345678"
+                                                   required />
+                                        </div>
+
+                                        <div class="co-form-group">
+                                            <label for="paymentMethod">Payment method</label>
+                                            <select id="paymentMethod" name="paymentMethod" class="co-input co-select">
+                                                <option value="COD" selected>Cash On Delivery</option>
+                                                <option value="Wallet">Wallet</option>
+                                                <option value="VNPay">VNPay</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="co-payment-summary">
+                                            <div>
+                                                <span>Order amount</span>
+                                                <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                                            </div>
+                                            <div>
+                                                <span>Wallet balance</span>
+                                                <strong>
+                                                    <c:choose>
+                                                        <c:when test="${not empty wallet}"><fmt:formatNumber value="${wallet.balance}" type="number" groupingUsed="true" /> VND</c:when>
+                                                        <c:otherwise>0 VND</c:otherwise>
+                                                    </c:choose>
+                                                </strong>
+                                            </div>
+                                        </div>
+
+                                        <button class="co-primary-btn co-full-btn" type="submit">
+                                            Place order
+                                            <span class="material-symbols-outlined">arrow_forward</span>
+                                        </button>
+                                    </form>
+
+                                    <a class="co-secondary-btn co-full-btn" href="${pageContext.request.contextPath}/customer/wallet">
+                                        <span class="material-symbols-outlined">account_balance_wallet</span>
+                                        Add money to wallet
+                                    </a>
+                                </div>
+                            </c:when>
+
+                            <c:otherwise>
+                                <div class="co-card co-sticky-card">
+                                    <div class="co-card-head">
+                                        <div>
+                                            <h2>Payment</h2>
+                                            <p>Payment information for this order.</p>
+                                        </div>
+                                        <span class="material-symbols-outlined co-card-head-icon">payments</span>
+                                    </div>
+
+                                    <div class="co-info-list">
+                                        <div>
+                                            <span>Payment method</span>
+                                            <strong>
+                                                <c:choose>
+                                                    <c:when test="${not empty payment and payment.paymentMethod eq 'COD'}">Cash On Delivery</c:when>
+                                                    <c:when test="${not empty payment}">${payment.paymentMethod}</c:when>
+                                                    <c:otherwise>Not selected</c:otherwise>
+                                                </c:choose>
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span>Payment status</span>
+                                            <strong>
+                                                <c:choose>
+                                                    <c:when test="${not empty payment}">
+                                                        <span class="co-payment-status co-payment-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="co-payment-status co-payment-pending">Unpaid</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span>Amount</span>
+                                            <strong>
+                                                <c:choose>
+                                                    <c:when test="${not empty payment}"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> VND</c:when>
+                                                    <c:otherwise><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</c:otherwise>
+                                                </c:choose>
+                                            </strong>
+                                        </div>
+                                    </div>
+
+                                    <c:choose>
+                                        <c:when test="${not empty payment and payment.paymentStatus eq 'Paid'}">
+                                            <div class="co-mini-message co-mini-success">Payment completed successfully.</div>
+                                        </c:when>
+                                        <c:when test="${not empty payment and payment.paymentMethod eq 'COD'}">
+                                            <div class="co-mini-message co-mini-info">Payment will be collected when your order is delivered.</div>
+                                        </c:when>
+                                        <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and payment.paymentStatus eq 'Pending'}">
+                                            <div class="co-mini-message co-mini-info">Continue to VNPay Sandbox to complete your payment.</div>
+                                            <form action="${pageContext.request.contextPath}/customer/vnpay/start" method="post">
+                                                <input type="hidden" name="paymentId" value="${payment.paymentId}" />
+                                                <button class="co-primary-btn co-full-btn" type="submit">
+                                                    Pay with VNPay
+                                                    <span class="material-symbols-outlined">open_in_new</span>
+                                                </button>
+                                            </form>
+                                        </c:when>
+                                        <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and (payment.paymentStatus eq 'Failed' or payment.paymentStatus eq 'Cancelled')}">
+                                            <div class="co-mini-message co-mini-info">The previous VNPay payment was not completed.</div>
+                                            <form action="${pageContext.request.contextPath}/customer/vnpay/start" method="post">
+                                                <input type="hidden" name="orderId" value="${order.orderId}" />
+                                                <button class="co-primary-btn co-full-btn" type="submit">
+                                                    Try VNPay again
+                                                    <span class="material-symbols-outlined">refresh</span>
+                                                </button>
+                                            </form>
+                                        </c:when>
+                                    </c:choose>
+                                </div>
+
+                                <div class="co-card">
+                                    <div class="co-card-head">
+                                        <div>
+                                            <h2>Delivery information</h2>
+                                            <p>
+                                                <c:choose>
+                                                    <c:when test="${canEditDelivery}">You can update this before the order is shipped.</c:when>
+                                                    <c:otherwise>This information can no longer be changed.</c:otherwise>
+                                                </c:choose>
+                                            </p>
+                                        </div>
+                                        <span class="material-symbols-outlined co-card-head-icon">local_shipping</span>
+                                    </div>
+
+                                    <c:choose>
+                                        <c:when test="${canEditDelivery}">
+                                            <form class="co-form" action="${pageContext.request.contextPath}/customer/order-detail" method="post">
+                                                <input type="hidden" name="action" value="updateShipping" />
+                                                <input type="hidden" name="orderId" value="${order.orderId}" />
+
+                                                <div class="co-form-group">
+                                                    <label for="updateShippingAddress">Shipping address</label>
+                                                    <textarea id="updateShippingAddress"
+                                                              name="shippingAddress"
+                                                              class="co-input co-textarea"
+                                                              required><c:out value="${order.shippingAddress}" /></textarea>
+                                                </div>
+
+                                                <div class="co-form-group">
+                                                    <label for="updatePhone">Phone number</label>
+                                                    <input id="updatePhone"
+                                                           name="phone"
+                                                           class="co-input"
+                                                           type="tel"
+                                                           value="<c:out value='${order.phone}' />"
+                                                           required />
+                                                </div>
+
+                                                <button class="co-secondary-btn co-full-btn" type="submit">
+                                                    <span class="material-symbols-outlined">save</span>
+                                                    Save changes
+                                                </button>
+                                            </form>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <div class="co-info-list">
+                                                <div>
+                                                    <span>Shipping address</span>
+                                                    <strong><c:out value="${order.shippingAddress}" /></strong>
+                                                </div>
+                                                <div>
+                                                    <span>Phone number</span>
+                                                    <strong><c:out value="${order.phone}" /></strong>
+                                                </div>
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </aside>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </div>
 </section>
 
-<!-- Review Modal -->
-<div class="review-modal-overlay" id="reviewModal">
-    <div class="review-modal">
-        <button class="review-modal-close" onclick="closeReviewModal()">&times;</button>
-        <div id="reviewModalContent">
-            <!-- Dynamic content -->
-        </div>
-    </div>
-</div>
-
 <script>
-    let currentRating = 0;
-    let currentOrderItemId = '';
-
-    function openReviewModal(orderItemId) {
-        currentOrderItemId = orderItemId;
-        currentRating = 0;
-        document.getElementById('reviewModal').classList.add('active');
-
-        // Check eligibility via AJAX
-        fetch('${pageContext.request.contextPath}/comment-data?action=checkOrderItem&orderItemId=' + orderItemId)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    displayMessage(data.error, 'error');
-                } else {
-                    displayReviewForm(data);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                displayMessage('An error occurred. Please try again.', 'error');
-            });
+(function () {
+    var countdown = document.getElementById('order-confirmation-countdown');
+    if (!countdown) {
+        return;
     }
 
-    function displayReviewForm(data) {
-        const modal = document.getElementById('reviewModalContent');
+    function updateCountdown() {
+        var expiryText = countdown.getAttribute('data-order-expiry');
+        var expiryTime = new Date(expiryText).getTime();
+        var remaining = expiryTime - Date.now();
 
-        if (!data.eligible) {
-            let message = data.reason || 'You cannot review this product.';
-            if (data.alreadyReviewed) {
-                message = 'You have already reviewed this product.';
-            } else if (data.windowExpired) {
-                message = 'Review window has expired (7 days after order placement).';
-            }
-            displayMessage(message, 'error');
+        if (isNaN(expiryTime)) {
+            countdown.textContent = 'Time unavailable';
             return;
         }
 
-        modal.innerHTML = `
-            <h3>Rate this product</h3>
-            <p style="color: #666; font-size: 14px; margin-bottom: 16px;">
-                You have ${data.remainingDays} day(s) left to review
-            </p>
-            <div class="review-stars" id="reviewStars">
-                <span class="star" data-value="1" onclick="setRating(1)">&#9733;</span>
-                <span class="star" data-value="2" onclick="setRating(2)">&#9733;</span>
-                <span class="star" data-value="3" onclick="setRating(3)">&#9733;</span>
-                <span class="star" data-value="4" onclick="setRating(4)">&#9733;</span>
-                <span class="star" data-value="5" onclick="setRating(5)">&#9733;</span>
-            </div>
-            <div class="review-form-group">
-                <label>Your review (optional)</label>
-                <textarea id="reviewComment" placeholder="Share your experience..." maxlength="1000"></textarea>
-            </div>
-            <button class="review-btn" onclick="submitReview()" id="submitBtn">Submit Review</button>
-        `;
-    }
-
-    function displayMessage(message, type) {
-        const modal = document.getElementById('reviewModalContent');
-        modal.innerHTML = `
-            <h3>Review Product</h3>
-            <div class="review-eligibility-msg ${type}">
-                ${message}
-            </div>
-            <button class="review-btn" onclick="closeReviewModal()">Close</button>
-        `;
-    }
-
-    function setRating(rating) {
-        currentRating = rating;
-        const stars = document.querySelectorAll('.review-stars .star');
-        stars.forEach((star, index) => {
-            if (index < rating) {
-                star.classList.add('active');
-            } else {
-                star.classList.remove('active');
-            }
-        });
-    }
-
-    function submitReview() {
-        if (currentRating === 0) {
-            alert('Please select a star rating.');
+        if (remaining <= 0) {
+            countdown.textContent = 'Expired';
             return;
         }
 
-        const btn = document.getElementById('submitBtn');
-        const comment = document.getElementById('reviewComment').value.trim();
+        var totalSeconds = Math.floor(remaining / 1000);
+        var days = Math.floor(totalSeconds / 86400);
+        var hours = Math.floor((totalSeconds % 86400) / 3600);
+        var minutes = Math.floor((totalSeconds % 3600) / 60);
+        var seconds = totalSeconds % 60;
 
-        btn.disabled = true;
-        btn.textContent = 'Submitting...';
-
-        const formData = new URLSearchParams();
-        formData.append('action', 'addFromOrder');
-        formData.append('orderItemId', currentOrderItemId);
-        formData.append('rating', currentRating);
-        formData.append('content', comment);
-
-        fetch('${pageContext.request.contextPath}/comment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayReviewSuccess();
-                updateReviewStatus(currentOrderItemId, 'reviewed');
-            } else {
-                alert(data.message || 'Failed to submit review');
-                btn.disabled = false;
-                btn.textContent = 'Submit Review';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-            btn.disabled = false;
-            btn.textContent = 'Submit Review';
-        });
+        countdown.textContent = days + 'd ' + hours + 'h ' + minutes + 'm ' + seconds + 's';
     }
 
-    function displayReviewSuccess() {
-        const modal = document.getElementById('reviewModalContent');
-        modal.innerHTML = `
-            <div class="review-success">
-                <span class="material-symbols-outlined">check_circle</span>
-                <h4>Thank you!</h4>
-                <p>Your review has been submitted.</p>
-                <button class="review-btn" onclick="closeReviewModal()" style="margin-top: 16px;">Close</button>
-            </div>
-        `;
-    }
-
-    function updateReviewStatus(orderItemId, status) {
-        const row = document.querySelector('tr[data-order-item-id="${item.orderItemId}"]');
-        if (row) {
-            const badge = row.querySelector('.review-status-badge');
-            if (badge && status === 'reviewed') {
-                badge.className = 'review-status-badge reviewed';
-                badge.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">check</span> Reviewed';
-                badge.onclick = null;
-                badge.style.cursor = 'default';
-            }
-        }
-    }
-
-    function closeReviewModal() {
-        document.getElementById('reviewModal').classList.remove('active');
-    }
-
-    // Close modal on overlay click
-    document.getElementById('reviewModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeReviewModal();
-        }
-    });
-
-    // Close modal on ESC key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeReviewModal();
-        }
-    });
+    updateCountdown();
+    window.setInterval(updateCountdown, 1000);
+})();
 </script>
