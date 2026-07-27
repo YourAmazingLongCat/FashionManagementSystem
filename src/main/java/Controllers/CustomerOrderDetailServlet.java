@@ -223,6 +223,7 @@ public class CustomerOrderDetailServlet extends HttpServlet {
         request.setAttribute("orderPlaced", payment != null);
         request.setAttribute("canEditDelivery",
                 orderService.canEditDeliveryInformation(order));
+        request.setAttribute("canCancel", order.isCancellable());
     }
 
     private void forwardLayout(HttpServletRequest request,

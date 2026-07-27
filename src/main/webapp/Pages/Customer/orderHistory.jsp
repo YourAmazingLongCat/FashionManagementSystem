@@ -115,6 +115,15 @@
                                                 </c:choose>
                                                 <span class="material-symbols-outlined">arrow_forward</span>
                                             </a>
+                                            <c:if test="${order.cancellable}">
+                                                <form action="${pageContext.request.contextPath}/customer/cancel-order" method="post" onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                                                    <input type="hidden" name="orderId" value="${order.orderId}" />
+                                                    <button type="submit" class="co-cancel-btn co-cancel-btn-sm">
+                                                        <span class="material-symbols-outlined">cancel</span>
+                                                        Cancel
+                                                    </button>
+                                                </form>
+                                            </c:if>
                                         </td>
                                     </tr>
                                 </c:forEach>

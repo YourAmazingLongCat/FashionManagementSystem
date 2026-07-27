@@ -105,4 +105,14 @@ public class Order {
         return "Pending".equalsIgnoreCase(orderStatus) && !orderPlaced;
     }
 
+    public boolean isCancellable() {
+        if (orderStatus == null || !orderPlaced) {
+            return false;
+        }
+        String status = orderStatus.toLowerCase().trim();
+        return "pending".equals(status) 
+                || "confirmed".equals(status) 
+                || "processing".equals(status);
+    }
+
 }
