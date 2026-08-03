@@ -380,10 +380,23 @@
                     <div class="card-body">
                         <form method="get" action="${pageContext.request.contextPath}/Admin" class="mb-3">
                             <input type="hidden" name="section" value="accounts"/>
-                            <div class="input-group">
-                                <input type="text" name="searchAccount" class="form-control" placeholder="Search by email or phone..." value="${fn:escapeXml(param.searchAccount)}"/>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
-                                <a href="${pageContext.request.contextPath}/Admin?section=accounts" class="btn btn-outline-secondary"><i class="fas fa-times"></i> Clear</a>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <input type="text" name="searchAccount" class="form-control" placeholder="Search by email, phone, or name..." value="${fn:escapeXml(param.searchAccount)}"/>
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select name="statusFilter" class="form-select" onchange="this.form.submit()">
+                                        <option value="all" ${empty param.statusFilter || param.statusFilter == 'all' ? 'selected' : ''}>All Status</option>
+                                        <option value="Active" ${param.statusFilter == 'Active' ? 'selected' : ''}>Active</option>
+                                        <option value="Inactive" ${param.statusFilter == 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="${pageContext.request.contextPath}/Admin?section=accounts" class="btn btn-outline-secondary w-100"><i class="fas fa-times"></i> Clear Filter</a>
+                                </div>
                             </div>
                         </form>
                         <div class="table-responsive">
@@ -422,12 +435,12 @@
                                                                 <input type="hidden" name="accountId" value="${acc.accountId}"/>
                                                                 <select name="status" class="form-select form-select-sm d-inline w-auto" onchange="this.form.submit()">
                                                                     <option value="Active" ${acc.status == 'Active' ? 'selected' : ''}>Active</option>
-                                                                    <option value="Banned" ${acc.status == 'Banned' ? 'selected' : ''}>Banned</option>
+                                                                    <option value="Inactive" ${acc.status == 'Inactive' ? 'selected' : ''}>Inactive</option>
                                                                 </select>
                                                             </form>
                                                         </c:if>
                                                         <c:if test="${acc.role == 'Admin'}">
-                                                            <span class="badge ${acc.status == 'Active' ? 'bg-success' : 'bg-danger'}">${acc.status}</span>
+                                                            <span class="badge ${acc.status == 'Active' ? 'bg-success' : 'bg-secondary'}">${acc.status}</span>
                                                         </c:if>
                                                     </td>
                                                 </tr>
@@ -443,17 +456,17 @@
                             <nav aria-label="Account pagination">
                                 <ul class="pagination justify-content-center flex-wrap mb-0 pagination-sm">
                                     <li class="page-item ${accountPage == 1 ? 'disabled' : ''}">
-                                        <a class="page-link" href="?section=accounts&page=${accountPage - 1}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if>">
+                                        <a class="page-link" href="?section=accounts&page=${accountPage - 1}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if><c:if test="${not empty param.statusFilter && param.statusFilter != 'all'}">&statusFilter=${fn:escapeXml(param.statusFilter)}</c:if>">
                                             <i class="fas fa-chevron-left"></i>
                                         </a>
                                     </li>
                                     <c:forEach var="i" begin="1" end="${accountTotalPages}">
                                         <li class="page-item ${i == accountPage ? 'active' : ''}">
-                                            <a class="page-link" href="?section=accounts&page=${i}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if>">${i}</a>
+                                            <a class="page-link" href="?section=accounts&page=${i}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if><c:if test="${not empty param.statusFilter && param.statusFilter != 'all'}">&statusFilter=${fn:escapeXml(param.statusFilter)}</c:if>">${i}</a>
                                         </li>
                                     </c:forEach>
                                     <li class="page-item ${accountPage == accountTotalPages ? 'disabled' : ''}">
-                                        <a class="page-link" href="?section=accounts&page=${accountPage + 1}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if>">
+                                        <a class="page-link" href="?section=accounts&page=${accountPage + 1}<c:if test="${not empty param.searchAccount}">&searchAccount=${fn:escapeXml(param.searchAccount)}</c:if><c:if test="${not empty param.statusFilter && param.statusFilter != 'all'}">&statusFilter=${fn:escapeXml(param.statusFilter)}</c:if>">
                                             <i class="fas fa-chevron-right"></i>
                                         </a>
                                     </li>

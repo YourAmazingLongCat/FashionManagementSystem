@@ -2,10 +2,7 @@ package Models;
 
 import java.math.BigDecimal;
 
-/**
- * Model đại diện cho 1 điểm dữ liệu trên biểu đồ "Số lượng hàng bán được"
- * (theo sản phẩm), gom theo mốc thời gian (ngày/tuần/tháng/năm).
- */
+
 public class ProductSaleStat {
 
     private String periodLabel;

@@ -180,13 +180,21 @@ public class AccountDAO {
         }
     }
 
-    public boolean updateStatus(String accountId, String status) {
-        String query = "UPDATE Accounts SET status = ? WHERE accountId = ?";
+    private static final java.util.Set<String> VALID_STATUSES = java.util.Set.of("Active", "Inactive");
 
+    public boolean updateStatus(String accountId, String status) {
+        // Normalize: map "Banned" or other UI labels to a valid DB status
+        String dbStatus = mapToValidStatus(status);
+        if (dbStatus == null) {
+            System.out.println("AccountDAO.updateStatus: invalid status '" + status + "'");
+            return false;
+        }
+
+        String query = "UPDATE Accounts SET status = ? WHERE accountId = ?";
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
 
-            ps.setString(1, status);
+            ps.setString(1, dbStatus);
             ps.setString(2, accountId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -194,6 +202,23 @@ public class AccountDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private String mapToValidStatus(String status) {
+        if (status == null) return null;
+        String normalized = status.trim();
+        if (VALID_STATUSES.contains(normalized)) return normalized;
+        if (normalized.equalsIgnoreCase("Banned")
+                || normalized.equalsIgnoreCase("Locked")
+                || normalized.equalsIgnoreCase("Suspended")
+                || normalized.equalsIgnoreCase("Disabled")) {
+            return "Inactive";
+        }
+        return null;
+    }
+
+    public boolean isValidStatus(String status) {
+        return mapToValidStatus(status) != null;
     }
 
     public boolean createAccount(Account account, String rawPassword) {
@@ -307,29 +332,6 @@ public class AccountDAO {
         return "ACC00001";
     }
 
-    public List<Account> searchAccounts(String keyword) {
-        List<Account> list = new ArrayList<>();
-        String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                     + "address, avatar, salary, createdAt "
-                     + "FROM Accounts WHERE email LIKE ? OR phone LIKE ? OR fullName LIKE ? ORDER BY accountId";
-        try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            String kw = "%" + (keyword != null ? keyword : "") + "%";
-            ps.setString(1, kw);
-            ps.setString(2, kw);
-            ps.setString(3, kw);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(mapAccount(rs));
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println("Lỗi SQL tại AccountDAO.searchAccounts: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return list;
-    }
-
     public boolean deleteAccount(String accountId) {
         String query = "DELETE FROM Accounts WHERE accountId = ?";
         try (Connection connection = new DBContext().getConnection();
@@ -343,17 +345,63 @@ public class AccountDAO {
         }
     }
 
-    public int getTotalAccounts(String keyword) {
-        String query = keyword != null && !keyword.trim().isEmpty()
-                ? "SELECT COUNT(*) FROM Accounts WHERE email LIKE ? OR phone LIKE ? OR fullName LIKE ?"
-                : "SELECT COUNT(*) FROM Accounts";
+    public List<Account> searchAccounts(String keyword, String status) {
+        List<Account> list = new ArrayList<>();
+        StringBuilder query = new StringBuilder(
+                "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
+              + "address, avatar, salary, createdAt FROM Accounts WHERE 1=1");
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            query.append(" AND (email LIKE ? OR phone LIKE ? OR fullName LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status.trim())) {
+            query.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        query.append(" ORDER BY accountId");
+
         try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                String kw = "%" + keyword.trim() + "%";
-                ps.setString(1, kw);
-                ps.setString(2, kw);
-                ps.setString(3, kw);
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapAccount(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.searchAccounts: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int getTotalAccounts(String keyword, String status) {
+        StringBuilder query = new StringBuilder("SELECT COUNT(*) FROM Accounts WHERE 1=1");
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            query.append(" AND (email LIKE ? OR phone LIKE ? OR fullName LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status.trim())) {
+            query.append(" AND status = ?");
+            params.add(status.trim());
+        }
+
+        try (Connection connection = new DBContext().getConnection();
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -367,29 +415,34 @@ public class AccountDAO {
         return 0;
     }
 
-    public List<Account> getAccountsPaged(int page, int pageSize, String keyword) {
+    public List<Account> getAccountsPaged(int page, int pageSize, String keyword, String status) {
         List<Account> list = new ArrayList<>();
         int offset = (page - 1) * pageSize;
-        String baseQuery = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                         + "address, avatar, salary, createdAt FROM Accounts";
-        String query;
+
+        StringBuilder query = new StringBuilder(
+                "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
+              + "address, avatar, salary, createdAt FROM Accounts WHERE 1=1");
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
         if (keyword != null && !keyword.trim().isEmpty()) {
-            query = baseQuery + " WHERE email LIKE ? OR phone LIKE ? OR fullName LIKE ? ORDER BY accountId OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
-        } else {
-            query = baseQuery + " ORDER BY accountId OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+            query.append(" AND (email LIKE ? OR phone LIKE ? OR fullName LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
         }
+        if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status.trim())) {
+            query.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        query.append(" ORDER BY accountId OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        params.add(offset);
+        params.add(pageSize);
+
         try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                String kw = "%" + keyword.trim() + "%";
-                ps.setString(1, kw);
-                ps.setString(2, kw);
-                ps.setString(3, kw);
-                ps.setInt(4, offset);
-                ps.setInt(5, pageSize);
-            } else {
-                ps.setInt(1, offset);
-                ps.setInt(2, pageSize);
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {

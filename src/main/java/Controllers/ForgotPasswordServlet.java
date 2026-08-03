@@ -32,42 +32,42 @@ public class ForgotPasswordServlet extends HttpServlet {
         HttpSession session = request.getSession();
 
         if (email == null || email.trim().isEmpty()) {
-            request.setAttribute("errorMessage", "Vui lòng nhập địa chỉ email!");
+            request.setAttribute("errorMessage", "Please enter your email address!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
             return;
         }
 
         email = email.trim().toLowerCase();
 
-        // Kiểm tra email có tồn tại trong hệ thống không
+        // Check if email exists in system
         AccountDAO accountDAO = new AccountDAO();
         Account account = accountDAO.getAccountByEmail(email);
 
         if (account == null) {
-            // Không tiết lộ email có tồn tại hay không vì lý do bảo mật
-            // Vẫn hiển thị thông báo thành công để tránh email enumeration
-            request.setAttribute("successMessage", "Nếu email tồn tại trong hệ thống, mã OTP đã được gửi!");
+            // Don't reveal if email exists (security: prevent email enumeration).
+            // Still show success message to avoid leaking info.
+            request.setAttribute("successMessage", "If the email exists, an OTP has been sent!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
             return;
         }
 
-        // Tạo OTP mới
+        // Generate new OTP
         String otpCode = generateOTP();
         long expiryTime = System.currentTimeMillis() + (OTP_EXPIRY_MINUTES * 60 * 1000);
 
-        // Lưu OTP và thông tin vào session
+        // Save OTP and email to session
         session.setAttribute("forgotPasswordOTP", otpCode);
         session.setAttribute("forgotPasswordEmail", email);
         session.setAttribute("forgotPasswordOTPExpiry", expiryTime);
 
-        // Gửi email OTP
+        // Send OTP email
         boolean emailSent = EmailUtils.sendOTPForPasswordReset(email, otpCode, OTP_EXPIRY_MINUTES);
 
         if (emailSent) {
-            // Chuyển hướng đến trang nhập OTP
+            // Redirect to OTP input page
             response.sendRedirect(request.getContextPath() + "/auth/verify-otp?mode=forgot");
         } else {
-            request.setAttribute("errorMessage", "Không thể gửi email. Vui lòng thử lại sau!");
+            request.setAttribute("errorMessage", "Cannot send email. Please try again later!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
         }
     }

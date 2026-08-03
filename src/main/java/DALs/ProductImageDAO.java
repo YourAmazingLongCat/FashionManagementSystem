@@ -45,6 +45,37 @@ public class ProductImageDAO extends DBContext {
         return null;
     }
 
+    /**
+     * Delete image file in upload folder (external dir or webapps fallback).
+     * Used when staff uploads new image or deletes a product.
+     */
+    public void deleteImageFile(String imageUrl) {
+        try {
+            String fileName = getImageFileNameByUrl(imageUrl);
+            if (fileName == null) return;
+
+            Path externalDir = Controllers.ProductManagementServlet.getExternalUploadDirectory();
+            Path externalPath = externalDir.resolve(fileName).normalize();
+            if (Files.exists(externalPath) && Files.isRegularFile(externalPath)) {
+                Files.delete(externalPath);
+                return;
+            }
+
+            try {
+                Path webappsDir = Paths.get(System.getProperty("catalina.base"),
+                        "webapps", "FashionManagementSystem-1.0-SNAPSHOT",
+                        "Assets", "Images", "Product");
+                Path legacyPath = webappsDir.resolve(fileName).normalize();
+                if (Files.exists(legacyPath) && Files.isRegularFile(legacyPath)) {
+                    Files.delete(legacyPath);
+                }
+            } catch (Exception ignore) {
+            }
+        } catch (Exception e) {
+            System.out.println("[ProductImageDAO] deleteImageFile error: " + e.getMessage());
+        }
+    }
+
     public boolean upsertPrimaryImage(String productId, String imageUrl) {
         if (connection == null || productId == null || productId.isBlank() || imageUrl == null || imageUrl.isBlank()) {
             return false;

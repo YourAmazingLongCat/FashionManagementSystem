@@ -4,15 +4,15 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 /**
- * Model đại diện cho bảng Bills.
- * Ngoài các cột gốc của bảng, class này còn chứa một số field "join"
+ * Model for the Bills table.
+ * Besides raw table columns, this class also has joined fields
  * (customerName, customerPhone, shippingAddress, orderStatus, orderId...)
- * được lấy kèm từ Orders/Accounts để tiện hiển thị ở màn hình danh sách
- * mà không cần load thêm object Order/Account riêng.
+ * fetched from Orders/Accounts to display in the list view
+ * without loading separate Order/Account objects.
  */
 public class Bill {
 
-    // ==== Cột gốc của bảng Bills ====
+    // ==== Original Bills columns ====
     private String billId;
     private String orderId;
     private String paymentMethod;
@@ -20,7 +20,7 @@ public class Bill {
     private Timestamp issuedDate;
     private BigDecimal totalAmount;
 
-    // ==== Thông tin join thêm (không có trong bảng Bills) ====
+    // ==== Joined info (not in Bills table) ====
     private String customerId;
     private String customerName;
     private String customerPhone;

@@ -1,5 +1,8 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" isErrorPage="false" %>
+<%@ page import="java.util.List" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html>
     <head>
@@ -27,8 +30,13 @@
             .page-header { margin-bottom: 24px; }
             .page-header h2 { margin: 0 0 6px; font-size: 1.8rem; }
             .page-header p { margin: 0; color: #64748b; font-size: 0.95rem; }
-            .table-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; }
-            .table-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; }
+            .alert { padding: 14px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 20px; }
+            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
+            .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
+            .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+            .warning-box p { margin: 0; color: #92400e; font-size: 0.9rem; }
+            .table-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; margin-bottom: 24px; }
+            .table-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
             .table-header h3 { margin: 0; font-size: 1.1rem; }
             .table-wrapper { overflow-x: auto; }
             table { width: 100%; border-collapse: collapse; }
@@ -38,16 +46,37 @@
             .stock-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 60px; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 0.8rem; }
             .stock-high { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
             .stock-low { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
-            .reserved-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 50px; padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 0.8rem; background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
-            .alert { padding: 14px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 20px; }
-            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
-            .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
-            .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-            .warning-box p { margin: 0; color: #92400e; font-size: 0.9rem; }
             .btn { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-            .btn-danger { background: #dc2626; color: #ffffff; }
-            .btn-danger:hover { background: #b91c1c; }
-            .btn-danger:disabled { background: #d1d5db; cursor: not-allowed; }
+            .btn-primary { background: #dc2626; color: #ffffff; }
+            .btn-primary:hover { background: #b91c1c; }
+            .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; }
+            .reset-btn { padding: 9px 16px; background: #fff; color: #64748b; border: 1px solid #dbe3f0; border-radius: 10px; font-size: 0.88rem; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; }
+            .reset-btn:hover { background: #f1f5f9; }
+            .export-form { display: flex; gap: 8px; align-items: center; }
+            .export-form input[type="number"] { width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0; }
+            .export-row.selected td { background: rgba(220, 38, 38, 0.04); }
+            .history-section { margin-top: 24px; }
+            .empty-state { padding: 32px; text-align: center; color: #64748b; }
+            .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+            .filter-bar .filter-group { display: flex; align-items: center; gap: 6px; }
+            .filter-bar .filter-group label { font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap; }
+            .filter-bar select, .filter-bar input[type="text"] {
+                padding: 6px 10px; border: 1px solid #dbe3f0; border-radius: 8px;
+                font-size: 0.85rem; outline: none; background: #ffffff; min-width: 130px;
+            }
+            .filter-bar select:focus, .filter-bar input[type="text"]:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,0.1); }
+            .filter-bar .btn-filter { padding: 6px 14px; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+            .filter-bar .btn-filter:hover { background: #b91c1c; }
+            .filter-bar .btn-clear { padding: 6px 12px; background: #fff; color: #64748b; border: 1px solid #dbe3f0; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+            .filter-bar .btn-clear:hover { background: #f1f5f9; }
+            .page-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid #dbe3f0; background: #fff; color: #334155; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; }
+            .page-btn:hover { background: #f1f5f9; border-color: #dc2626; color: #dc2626; }
+            .page-btn.active { background: #dc2626; border-color: #dc2626; color: #fff; }
+            .reason-select { padding: 8px 10px; border-radius: 8px; border: 1px solid #dbe3f0; background: #fff; min-width: 150px; font-size: 0.85rem; }
+            .qty-decrease { display: inline-flex; align-items: center; gap: 4px; }
+            .qty-decrease button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #dbe3f0; background: #fff; cursor: pointer; font-weight: 700; }
+            .qty-decrease button:hover { background: #fef2f2; border-color: #dc2626; color: #dc2626; }
+            .qty-decrease input { text-align: center; }
             @media (max-width: 1024px) { .warehouse-shell { grid-template-columns: 1fr; } }
             @media (max-width: 768px) { .warehouse-shell { width: min(100% - 20px, 100%); margin: 16px auto; } }
         </style>
@@ -61,15 +90,15 @@
                     <p class="sidebar-text">Inventory management, stock in/out</p>
                 </div>
                 <div class="sidebar-tabs">
-                    <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
+                    <a class="sidebar-tab ${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
                         <span class="icon">&#128203;</span>
                         <span>Inventory</span>
                     </a>
-                    <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/warehouse/import">
+                    <a class="sidebar-tab ${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">
                         <span class="icon">&#10133;</span>
                         <span>Stock In</span>
                     </a>
-                    <a class="sidebar-tab active" href="${pageContext.request.contextPath}/staff/warehouse/export">
+                    <a class="sidebar-tab ${activeTab eq 'export' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/export">
                         <span class="icon">&#10134;</span>
                         <span>Stock Out</span>
                     </a>
@@ -90,57 +119,350 @@
                 </c:if>
 
                 <div class="warning-box">
-                    <p>&#9888; Stock out only works when available >= quantity. Completed orders auto deduct stock.</p>
+                    <p>&#9888; Stock out only works when available &ge; quantity. Completed orders auto deduct stock.</p>
                 </div>
 
-                <div class="table-panel">
+                <!-- Filter & Search Bar -->
+                <form method="get" action="${pageContext.request.contextPath}/staff/warehouse/export" class="filter-bar" id="inventoryFilterForm">
+                    <div class="filter-group">
+                        <label><i class="fas fa-search"></i></label>
+                        <input type="text" name="keyword" placeholder="Search SKU / product..." value="${fn:escapeXml(currentKeyword)}"/>
+                    </div>
+                    <div class="filter-group">
+                        <label>Product:</label>
+                        <select name="productFilter">
+                            <option value="">All Products</option>
+                            <c:forEach var="p" items="${products}">
+                                <option value="${p.productId}" ${currentProductFilter eq p.productId ? 'selected' : ''}>${p.productName}</option>
+                            </c:forEach>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Color:</label>
+                        <select name="colorFilter">
+                            <option value="">All Colors</option>
+                            <c:forEach var="c" items="${allColors}">
+                                <option value="${c[0]}" ${currentColorFilter eq c[0] ? 'selected' : ''}>${c[1]}</option>
+                            </c:forEach>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-filter"><i class="fas fa-filter"></i> Filter</button>
+                    <a href="${pageContext.request.contextPath}/staff/warehouse/export" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
+                </form>
+
+                <form method="post" action="${pageContext.request.contextPath}/staff/warehouse/export" id="batchExportForm" onsubmit="return validateBatchForm()">
+                    <input type="hidden" name="action" value="export">
+                    <div class="filter-bar" style="background: #fff; border-bottom: 0; padding-top: 0;">
+                        <div class="filter-group">
+                            <label>Reason:</label>
+                            <select name="reason" class="reason-select">
+                                <option value="Manual Adjustment">Manual Adjustment</option>
+                                <option value="Damaged">Damaged</option>
+                                <option value="Return">Return</option>
+                                <option value="Restock">Restock</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-panel">
+                        <div class="table-header">
+                            <h3>Variant List</h3>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span id="selectedCount" style="font-size: 0.85rem; color: #64748b; font-weight: 600;">0 selected</span>
+                                <button type="button" class="btn" style="background:#fff; color:#64748b; border:1px solid #dbe3f0;" id="selectAllBtn">Select all</button>
+                                <button type="button" class="btn" style="background:#fff; color:#64748b; border:1px solid #dbe3f0;" id="clearAllBtn">Clear</button>
+                                <button type="submit" class="btn btn-primary" id="batchSubmitBtn">- Reduce selected</button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 44px;"><input type="checkbox" id="selectAllCheckbox"></th>
+                                        <th>SKU</th>
+                                        <th>Product</th>
+                                        <th>Size / Color</th>
+                                        <th class="text-end">Physical</th>
+                                        <th class="text-end">Reserved</th>
+                                        <th class="text-end">Available</th>
+                                        <th>Reduce Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody">
+                                    <c:choose>
+                                        <c:when test="${empty inventory}">
+                                            <tr>
+                                                <td colspan="8">
+                                                    <div class="empty-state">No product variants found. Check that Products and ProductVariants tables have data.</div>
+                                                </td>
+                                            </tr>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <c:forEach var="item" items="${inventory}">
+                                                <c:set var="physical" value="${item[8]}" />
+                                                <c:set var="reserved" value="${item[9]}" />
+                                                <c:set var="available" value="${physical - reserved}" />
+                                                <tr class="export-row" data-variant-id="${item[0]}" data-available="${available}">
+                                                    <td><input type="checkbox" class="row-check" name="selectedVariants" value="${item[0]}"></td>
+                                                    <td><code>${item[7]}</code></td>
+                                                    <td><strong>${item[2]}</strong></td>
+                                                    <td>${item[4]} / ${item[6]}</td>
+                                                    <td class="text-end"><strong>${physical}</strong></td>
+                                                    <td class="text-end">${reserved}</td>
+                                                    <td class="text-end">
+                                                        <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="export-form">
+                                                            <input type="hidden" name="variantId" value="${item[0]}" disabled>
+                                                            <div class="qty-decrease">
+                                                                <button type="button" class="qty-dec" ${available <= 0 ? 'disabled' : ''}>-</button>
+                                                                <input type="number" name="quantity" min="1" max="${available}" placeholder="Qty" class="qty-input" disabled>
+                                                                <button type="button" class="qty-inc" ${available <= 0 ? 'disabled' : ''}>+</button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                        <c:if test="${expTotalPages > 1}">
+                            <div class="pagination-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding: 0 4px;">
+                                <span style="font-size: 0.85rem; color: #64748b;">
+                                    Showing ${inventory.size()} of ${expTotalRecords} variants
+                                </span>
+                                <div class="pagination" style="display: flex; gap: 4px;">
+                                    <c:if test="${expPage > 1}">
+                                        <a href="?keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&expPage=${expPage - 1}&exportProductFilter=${exportProductFilter}&exportExporterFilter=${exportExporterFilter}&exportDateFrom=${exportDateFrom}&exportDateTo=${exportDateTo}&exportSearch=${fn:escapeXml(exportSearch)}&exportPage=${exportHistoryPage}"
+                                           class="page-btn">&laquo; Prev</a>
+                                    </c:if>
+                                    <c:forEach begin="1" end="${expTotalPages > 5 ? 5 : expTotalPages}" var="i">
+                                        <c:set var="expStart" value="${expTotalPages > 5 ? (expPage > 3 ? expPage - 2 : 1) : 1}"/>
+                                        <a href="?keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&expPage=${expStart + i - 1}&exportProductFilter=${exportProductFilter}&exportExporterFilter=${exportExporterFilter}&exportDateFrom=${exportDateFrom}&exportDateTo=${exportDateTo}&exportSearch=${fn:escapeXml(exportSearch)}&exportPage=${exportHistoryPage}"
+                                           class="page-btn ${(expStart + i - 1) == expPage ? 'active' : ''}">${expStart + i - 1}</a>
+                                    </c:forEach>
+                                    <c:if test="${expPage < expTotalPages}">
+                                        <a href="?keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&expPage=${expPage + 1}&exportProductFilter=${exportProductFilter}&exportExporterFilter=${exportExporterFilter}&exportDateFrom=${exportDateFrom}&exportDateTo=${exportDateTo}&exportSearch=${fn:escapeXml(exportSearch)}&exportPage=${exportHistoryPage}"
+                                           class="page-btn">Next &raquo;</a>
+                                    </c:if>
+                                </div>
+                            </div>
+                        </c:if>
+                    </div>
+                </form>
+
+                <!-- Recent Exports History -->
+                <div class="table-panel history-section">
                     <div class="table-header">
-                        <h3>Variant List</h3>
+                        <h3>Recent Stock Out</h3>
+                    </div>
+                    <div class="filter-bar" style="margin-bottom: 16px;">
+                        <form method="get" action="${pageContext.request.contextPath}/staff/warehouse/export" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <input type="hidden" name="keyword" value="${currentKeyword}">
+                            <input type="hidden" name="productFilter" value="${currentProductFilter}">
+                            <input type="hidden" name="colorFilter" value="${currentColorFilter}">
+
+                            <input type="text" name="exportSearch" value="${exportSearch}" placeholder="Search product, exporter..." style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem; min-width: 200px; outline: none;"/>
+
+                            <select name="exportProductFilter" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem; min-width: 160px;">
+                                <option value="">All Products</option>
+                                <c:forEach var="p" items="${products}">
+                                    <option value="${p.productId}" ${exportProductFilter eq p.productId ? 'selected' : ''}>${p.name}</option>
+                                </c:forEach>
+                            </select>
+
+                            <select name="exportExporterFilter" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem; min-width: 150px;">
+                                <option value="">All Exporters</option>
+                                <c:forEach var="exp" items="${exporters}">
+                                    <option value="${exp[0]}" ${exportExporterFilter eq exp[0] ? 'selected' : ''}>${exp[1]}</option>
+                                </c:forEach>
+                            </select>
+
+                            <input type="date" name="exportDateFrom" value="${exportDateFrom}" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem;"/>
+                            <span style="color: #94a3b8;">—</span>
+                            <input type="date" name="exportDateTo" value="${exportDateTo}" style="padding: 9px 14px; border-radius: 10px; border: 1px solid #dbe3f0; font-size: 0.88rem;"/>
+
+                            <button type="submit" class="btn btn-primary" style="padding: 9px 18px; font-size: 0.88rem;">Filter</button>
+                            <a href="?exportProductFilter=&exportExporterFilter=&exportDateFrom=&exportDateTo=&exportSearch=&keyword=${currentKeyword}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}" class="reset-btn" style="padding: 9px 16px; font-size: 0.88rem; text-decoration: none;">Reset</a>
+                        </form>
                     </div>
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>SKU</th>
+                                    <th>Export ID</th>
                                     <th>Product</th>
                                     <th>Size / Color</th>
-                                    <th class="text-end">Physical</th>
-                                    <th class="text-end">Reserved</th>
-                                    <th class="text-end">Available</th>
-                                    <th>Reduce Quantity</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th>Reason</th>
+                                    <th>Exported By</th>
+                                    <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <c:forEach var="item" items="${inventory}">
-                                    <c:set var="physical" value="${item[8]}" />
-                                    <c:set var="reserved" value="${item[9]}" />
-                                    <c:set var="available" value="${physical - reserved}" />
-                                    <tr>
-                                        <td><code>${item[7]}</code></td>
-                                        <td><strong>${item[2]}</strong></td>
-                                        <td>${item[4]} / ${item[6]}</td>
-                                        <td class="text-end">${physical}</td>
-                                        <td class="text-end"><span class="reserved-badge">${reserved}</span></td>
-                                        <td class="text-end">
-                                            <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
-                                        </td>
-                                        <td>
-                                            <form method="post" action="${pageContext.request.contextPath}/staff/warehouse/export">
-                                                <input type="hidden" name="action" value="export">
-                                                <input type="hidden" name="variantId" value="${item[0]}">
-                                                <div style="display: flex; gap: 8px; align-items: center;">
-                                                    <input type="number" name="quantity" min="1" max="${available}" value="1" required style="width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0;">
-                                                    <button type="submit" class="btn btn-danger" ${available <= 0 ? 'disabled' : ''}>- Reduce</button>
-                                                </div>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
+                                <c:choose>
+                                    <c:when test="${empty recentExports}">
+                                        <tr>
+                                            <td colspan="7">
+                                                <div class="empty-state">No export records found</div>
+                                            </td>
+                                        </tr>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <c:forEach var="exp" items="${recentExports}">
+                                            <tr>
+                                                <td><code>${exp[0]}</code></td>
+                                                <td><strong>${exp[7]}</strong></td>
+                                                <td>${exp[8]} / ${exp[9]}</td>
+                                                <td class="text-end" style="color: #dc2626;"><strong>-${exp[2]}</strong></td>
+                                                <td><span style="font-size: 0.85rem; color: #475569;">${exp[11]}</span></td>
+                                                <td>${exp[6]}</td>
+                                                <td><fmt:formatDate value="${exp[5]}" pattern="dd/MM/yyyy HH:mm"/></td>
+                                            </tr>
+                                        </c:forEach>
+                                    </c:otherwise>
+                                </c:choose>
                             </tbody>
                         </table>
+
+                        <c:if test="${exportHistoryTotalPages > 1}">
+                            <div class="pagination-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding: 0 4px;">
+                                <span style="font-size: 0.85rem; color: #64748b;">
+                                    Showing ${recentExports.size()} of ${exportHistoryTotalRecords} records
+                                </span>
+                                <div class="pagination" style="display: flex; gap: 4px;">
+                                    <c:if test="${exportHistoryPage > 1}">
+                                        <a href="?expPage=${expPage}&exportPage=${exportHistoryPage - 1}&exportProductFilter=${exportProductFilter}&exportExporterFilter=${exportExporterFilter}&exportDateFrom=${exportDateFrom}&exportDateTo=${exportDateTo}&exportSearch=${exportSearch}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}"
+                                           class="page-btn">&laquo; Prev</a>
+                                    </c:if>
+                                    <c:forEach begin="1" end="${exportHistoryTotalPages > 5 ? 5 : exportHistoryTotalPages}" var="i">
+                                        <c:set var="startPage" value="${exportHistoryTotalPages > 5 ? (exportHistoryPage > 3 ? exportHistoryPage - 2 : 1) : 1}"/>
+                                        <a href="?expPage=${expPage}&exportPage=${startPage + i - 1}&exportProductFilter=${exportProductFilter}&exportExporterFilter=${exportExporterFilter}&exportDateFrom=${exportDateFrom}&exportDateTo=${exportDateTo}&exportSearch=${exportSearch}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}"
+                                           class="page-btn ${(startPage + i - 1) == exportHistoryPage ? 'active' : ''}">${startPage + i - 1}</a>
+                                    </c:forEach>
+                                    <c:if test="${exportHistoryPage < exportHistoryTotalPages}">
+                                        <a href="?expPage=${expPage}&exportPage=${exportHistoryPage + 1}&exportProductFilter=${exportProductFilter}&exportExporterFilter=${exportExporterFilter}&exportDateFrom=${exportDateFrom}&exportDateTo=${exportDateTo}&exportSearch=${exportSearch}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}"
+                                           class="page-btn">Next &raquo;</a>
+                                    </c:if>
+                                </div>
+                            </div>
+                        </c:if>
                     </div>
                 </div>
             </main>
         </div>
     </body>
+    <script>
+    (function() {
+        const form = document.getElementById('batchExportForm');
+        const tableBody = document.getElementById('inventoryTableBody');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const selectedCountEl = document.getElementById('selectedCount');
+        const submitBtn = document.getElementById('batchSubmitBtn');
+
+        function updateRowEnabled(row, enabled) {
+            row.querySelectorAll('input[name="variantId"], input[name="quantity"]').forEach(function(inp) {
+                inp.disabled = !enabled;
+            });
+            row.querySelectorAll('.qty-dec, .qty-inc').forEach(function(btn) {
+                btn.disabled = !enabled || row.dataset.available <= 0;
+            });
+        }
+
+        function refreshCount() {
+            const checks = tableBody.querySelectorAll('.row-check');
+            let count = 0;
+            checks.forEach(function(c) { if (c.checked) count++; });
+            selectedCountEl.textContent = count + ' selected';
+            submitBtn.disabled = count === 0;
+            submitBtn.style.opacity = count === 0 ? '0.5' : '1';
+        }
+
+        tableBody.addEventListener('change', function(e) {
+            if (e.target.classList.contains('row-check')) {
+                const row = e.target.closest('tr');
+                updateRowEnabled(row, e.target.checked);
+                if (e.target.checked) {
+                    const qty = row.querySelector('input[name="quantity"]');
+                    if (qty && !qty.value) {
+                        qty.value = 1;
+                        qty.focus();
+                        qty.select();
+                    }
+                }
+                refreshCount();
+            }
+        });
+
+        // Quantity +/- buttons
+        tableBody.addEventListener('click', function(e) {
+            if (e.target.classList.contains('qty-inc') || e.target.classList.contains('qty-dec')) {
+                const row = e.target.closest('tr');
+                const qty = row.querySelector('input[name="quantity"]');
+                const max = parseInt(qty.max) || 1;
+                let v = parseInt(qty.value) || 0;
+                if (e.target.classList.contains('qty-inc')) {
+                    v = Math.min(max, v + 1);
+                } else {
+                    v = Math.max(1, v - 1);
+                }
+                qty.value = v;
+            }
+        });
+
+        selectAllCheckbox.addEventListener('change', function() {
+            const checks = tableBody.querySelectorAll('.row-check');
+            checks.forEach(function(c) {
+                c.checked = selectAllCheckbox.checked;
+                updateRowEnabled(c.closest('tr'), selectAllCheckbox.checked);
+            });
+            refreshCount();
+        });
+
+        selectAllBtn.addEventListener('click', function() {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.dispatchEvent(new Event('change'));
+        });
+
+        clearAllBtn.addEventListener('click', function() {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.dispatchEvent(new Event('change'));
+        });
+
+        window.validateBatchForm = function() {
+            const checks = tableBody.querySelectorAll('.row-check:checked');
+            if (checks.length === 0) {
+                alert('Please select at least one variant.');
+                return false;
+            }
+            let invalid = 0;
+            checks.forEach(function(c) {
+                const row = c.closest('tr');
+                const qty = row.querySelector('input[name="quantity"]');
+                const max = parseInt(qty.max) || 0;
+                const val = parseInt(qty.value);
+                if (!val || val <= 0 || val > max) {
+                    qty.style.borderColor = '#dc2626';
+                    invalid++;
+                } else {
+                    qty.style.borderColor = '';
+                }
+            });
+            if (invalid > 0) {
+                alert('Each selected variant needs a quantity between 1 and its available stock.');
+                return false;
+            }
+            submitBtn.textContent = 'Reducing...';
+            submitBtn.disabled = true;
+            return true;
+        };
+
+        refreshCount();
+    })();
+    </script>
 </html>

@@ -19,7 +19,7 @@ public class ResetPasswordServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
         
-        // Kiểm tra đã xác thực OTP chưa
+        // Check OTP verification status
         if (session == null) {
             response.sendRedirect(request.getContextPath() + "/auth/forgot-password");
             return;
@@ -43,9 +43,9 @@ public class ResetPasswordServlet extends HttpServlet {
         
         HttpSession session = request.getSession(false);
         
-        // Kiểm tra đã xác thực OTP chưa
+        // Check OTP verification status
         if (session == null) {
-            request.setAttribute("errorMessage", "Phiên làm việc không hợp lệ. Vui lòng bắt đầu lại!");
+            request.setAttribute("errorMessage", "Invalid session. Please start again!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
             return;
         }
@@ -54,7 +54,7 @@ public class ResetPasswordServlet extends HttpServlet {
         String email = (String) session.getAttribute("forgotPasswordEmail");
         
         if (otpVerified == null || !otpVerified || email == null) {
-            request.setAttribute("errorMessage", "Phiên làm việc không hợp lệ. Vui lòng bắt đầu lại!");
+            request.setAttribute("errorMessage", "Invalid session. Please start again!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
             return;
         }
@@ -64,52 +64,52 @@ public class ResetPasswordServlet extends HttpServlet {
 
         // Validation
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            request.setAttribute("errorMessage", "Vui lòng nhập mật khẩu mới!");
+            request.setAttribute("errorMessage", "Please enter a new password!");
             request.setAttribute("email", email);
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
             return;
         }
 
         if (newPassword.length() < 8) {
-            request.setAttribute("errorMessage", "Mật khẩu phải có ít nhất 8 ký tự!");
+            request.setAttribute("errorMessage", "Password must be at least 8 characters!");
             request.setAttribute("email", email);
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
             return;
         }
 
         if (!newPassword.equals(confirmPassword)) {
-            request.setAttribute("errorMessage", "Mật khẩu xác nhận không khớp!");
+            request.setAttribute("errorMessage", "Passwords do not match!");
             request.setAttribute("email", email);
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
             return;
         }
 
-        // Cập nhật password
+        // Update password
         AccountDAO accountDAO = new AccountDAO();
         String hashedPassword = passwordUtil.hashPassword(newPassword);
-        
-        // Lấy accountId từ email
+
+        // Get accountId from email
         Account account = accountDAO.getAccountByEmail(email);
         if (account == null) {
-            request.setAttribute("errorMessage", "Tài khoản không tồn tại!");
+            request.setAttribute("errorMessage", "Account does not exist!");
             request.setAttribute("email", email);
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
             return;
         }
-        
+
         boolean updated = accountDAO.updatePassword(account.getAccountId(), hashedPassword);
 
         if (updated) {
-            // Dọn dẹp session
+            // Cleanup session
             session.removeAttribute("forgotPasswordOTP");
             session.removeAttribute("forgotPasswordEmail");
             session.removeAttribute("forgotPasswordOTPExpiry");
             session.removeAttribute("forgotPasswordOTPVerified");
-            
-            request.setAttribute("successMessage", "Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.");
+
+            request.setAttribute("successMessage", "Password reset successful! Please log in with your new password.");
             request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
         } else {
-            request.setAttribute("errorMessage", "Không thể cập nhật mật khẩu. Vui lòng thử lại!");
+            request.setAttribute("errorMessage", "Cannot update password. Please try again!");
             request.setAttribute("email", email);
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
         }

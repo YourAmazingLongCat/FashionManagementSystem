@@ -21,34 +21,34 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DAL cho chức năng Bill Management.
+ * DAL for Bill Management.
  *
- * GHI CHÚ:
- * - DBContext.getConnection() là method INSTANCE (không static), nên mỗi
- *   lần truy vấn phải tạo mới new DBContext() để mở 1 connection riêng,
- *   rồi để try-with-resources tự đóng connection đó sau khi dùng xong.
- * - Doanh thu (revenue) chỉ tính trên các Bill có paymentStatus = 'Paid',
- *   vì Bill 'Pending'/'Failed' chưa thực sự thu được tiền.
+ * NOTES:
+ * - DBContext.getConnection() is INSTANCE (not static), so each query must
+ *   create new DBContext() to open a connection, then let try-with-resources
+ *   close it after use.
+ * - Revenue only counts Bills with paymentStatus = 'Paid'
+ *   (Pending/Failed bills haven't actually been collected yet).
  */
 public class BillDAO {
 
     // ================= VIEW / SEARCH / FILTER BILL =================
 
     /**
-     * Lấy toàn bộ hóa đơn (không filter), mới nhất trước.
+     * Get all bills (no filter), newest first.
      */
     public List<Bill> getAllBills() {
         return searchBills(null, null, null, null, null);
     }
 
     /**
-     * Tìm kiếm + lọc hóa đơn.
+     * Search + filter bills.
      *
-     * @param keyword       tìm theo billId, orderId, tên khách hàng, sđt (có thể null/rỗng)
-     * @param paymentStatus lọc theo trạng thái thanh toán (có thể null = tất cả)
-     * @param orderStatus   lọc theo trạng thái đơn hàng (có thể null = tất cả)
-     * @param fromDate      lọc issuedDate >= fromDate (có thể null)
-     * @param toDate        lọc issuedDate <= toDate 23:59:59 (có thể null)
+     * @param keyword       search by billId, orderId, customer name, phone (nullable/empty)
+     * @param paymentStatus filter by payment status (nullable = all)
+     * @param orderStatus   filter by order status (nullable = all)
+     * @param fromDate      issuedDate >= fromDate (nullable)
+     * @param toDate        issuedDate <= toDate 23:59:59 (nullable)
      */
     public List<Bill> searchBills(String keyword, String paymentStatus, String orderStatus,
                                    java.sql.Date fromDate, java.sql.Date toDate) {
@@ -91,7 +91,7 @@ public class BillDAO {
         }
 
         if (toDate != null) {
-            // cộng thêm gần 1 ngày để bao trọn ngày toDate
+            // add ~1 day to cover the whole toDate day
             sql.append("AND b.issuedDate < DATEADD(day, 1, ?) ");
             params.add(new Timestamp(toDate.getTime()));
         }
@@ -119,7 +119,7 @@ public class BillDAO {
     }
 
     /**
-     * Đếm tổng số bills thỏa điều kiện filter (không filter theo ngày vì Bills không có ngày).
+     * Count total bills matching the filter (no date filter since Bills have no date).
      */
     public int countBills(String keyword, String paymentStatus, String orderStatus) {
         StringBuilder sql = new StringBuilder(
@@ -170,7 +170,7 @@ public class BillDAO {
     }
 
     /**
-     * Tìm kiếm + lọc hóa đơn có phân trang (không filter theo ngày vì Bills không có ngày).
+     * Search + filter bills with pagination (no date filter since Bills have no date).
      */
     public List<Bill> searchBillsPaginated(String keyword, String paymentStatus, String orderStatus,
                                             int offset, int limit) {
@@ -234,7 +234,7 @@ public class BillDAO {
     }
 
     /**
-     * Lấy 1 hóa đơn theo billId, kèm thông tin khách hàng / đơn hàng.
+     * Get 1 bill by billId, with customer / order info.
      */
     public Bill getBillById(String billId) {
         String sql = "SELECT b.billId, b.orderId, b.paymentMethod, b.paymentStatus, b.issuedDate, b.totalAmount, "
@@ -283,18 +283,17 @@ public class BillDAO {
     // ================= VIEW / SEARCH BILL DETAIL =================
 
     /**
-     * Lấy danh sách sản phẩm (chi tiết) thuộc 1 hóa đơn, dựa trên orderId
-     * liên kết với hóa đơn đó.
+     * Get bill line items (products) for a bill via its orderId.
      */
     public List<BillOrderItem> getBillDetails(String billId) {
         return searchBillDetails(billId, null);
     }
 
     /**
-     * Tìm kiếm chi tiết hóa đơn theo tên sản phẩm / sku, trong phạm vi 1 hóa đơn.
+     * Search bill details by product name / sku within a bill.
      *
-     * @param billId  hóa đơn cần xem chi tiết
-     * @param keyword tên sản phẩm hoặc sku (có thể null/rỗng = lấy hết)
+     * @param billId  bill to view
+     * @param keyword product name or sku (nullable/empty = all)
      */
     public List<BillOrderItem> searchBillDetails(String billId, String keyword) {
         List<BillOrderItem> list = new ArrayList<>();
@@ -359,27 +358,27 @@ public class BillDAO {
         return list;
     }
 
-    // ================= REVENUE CHART (biểu đồ doanh thu) =================
+    // ================= REVENUE CHART =================
 
     /**
-     * Thống kê tổng doanh thu theo mốc thời gian (ngày/tuần/tháng/năm)
-     * để vẽ biểu đồ đường (line chart). Chỉ tính các bill paymentStatus = 'Paid'.
+     * Sum revenue by period (day/week/month/year) for the line chart.
+     * Only counts bills with paymentStatus = 'Paid'.
      *
-     * @param periodType "day" | "week" | "month" | "year" (đã validate ở Servlet)
-     * @param fromDate   có thể null
-     * @param toDate     có thể null
+     * @param periodType "day" | "week" | "month" | "year" (already validated at Servlet)
+     * @param fromDate   nullable
+     * @param toDate     nullable
      */
     public List<RevenueStat> getRevenueStats(String periodType, java.sql.Date fromDate, java.sql.Date toDate) {
         List<RevenueStat> list = new ArrayList<>();
 
-        // groupExpr/labelExpr được chọn từ danh sách cố định (whitelist),
-        // KHÔNG lấy trực tiếp từ input người dùng -> tránh SQL Injection.
+        // groupExpr/labelExpr are picked from a fixed whitelist,
+        // NOT from user input directly -> avoids SQL Injection.
         String groupExpr;
         String labelExpr;
 
         switch (periodType) {
             case "week":
-                // Gom theo năm + số tuần trong năm
+                // Group by year + week number
                 groupExpr = "DATEPART(year, b.issuedDate), DATEPART(week, b.issuedDate)";
                 labelExpr = "CAST(DATEPART(year, b.issuedDate) AS VARCHAR) + '-W' + "
                           + "RIGHT('0' + CAST(DATEPART(week, b.issuedDate) AS VARCHAR), 2)";
@@ -446,11 +445,10 @@ public class BillDAO {
         return list;
     }
 
-    // ================= PRODUCT SALES (thống kê theo sản phẩm) =================
+    // ================= PRODUCT SALES =================
 
     /**
-     * Lấy danh sách sản phẩm (id + tên) để đổ vào dropdown lọc theo sản phẩm
-     * ở màn hình thống kê "Theo sản phẩm".
+     * Get products (id + name) for the product dropdown filter.
      */
     public List<ProductOption> getAllProductOptions() {
         List<ProductOption> list = new ArrayList<>();
@@ -472,12 +470,9 @@ public class BillDAO {
     }
 
     /**
-     * Thống kê số lượng bán ra + doanh thu đã thu (Paid) theo mốc thời gian
-     * (ngày/tuần/tháng/năm), dùng cho biểu đồ "Số lượng hàng bán được".
-     * Có thể lọc theo 1 sản phẩm cụ thể (productId) hoặc null/rỗng = tất cả
-     * sản phẩm. Số lượng bán ra được tính trên TẤT CẢ đơn hàng đã lập hóa
-     * đơn (không phân biệt trạng thái thanh toán), còn doanh thu chỉ tính
-     * phần đã thu (Paid).
+     * Sales qty + paid revenue by period (day/week/month/year) for the "Products sold" chart.
+     * Filter by productId or null/empty = all products.
+     * Qty counts ALL orders with bills (any payment status); revenue only counts Paid.
      */
     public List<ProductSaleStat> getProductSalesChart(String periodType, java.sql.Date fromDate,
                                                         java.sql.Date toDate, String productId) {
@@ -563,10 +558,9 @@ public class BillDAO {
     }
 
     /**
-     * Danh sách chi tiết theo từng sản phẩm trong khoảng thời gian đang lọc:
-     * tổng số lượng bán ra, tổng tiền đã thu (Paid), tổng tiền còn thiếu
-     * (các bill có paymentStatus khác 'Paid'). Có thể lọc theo 1 sản phẩm cụ
-     * thể hoặc null/rỗng = tất cả sản phẩm.
+     * Per-product summary in current date range:
+     * total qty sold, total paid, total remaining (bills != 'Paid').
+     * Filter by productId or null/empty = all products.
      */
     public List<ProductSalesRow> getProductSalesSummary(java.sql.Date fromDate, java.sql.Date toDate,
                                                           String productId) {
@@ -638,12 +632,11 @@ public class BillDAO {
     }
 
     /**
-     * Đếm số lượng hóa đơn (bill) đã thanh toán (Paid) và chưa thanh toán
-     * (khác Paid) có chứa ít nhất 1 sản phẩm khớp bộ lọc hiện tại (productId
-     * null/rỗng = tất cả sản phẩm), trong khoảng thời gian đang lọc.
-     * Đếm DISTINCT theo billId vì 1 bill có thể có nhiều dòng OrderItems.
+     * Count Paid vs Unpaid bills containing at least 1 product matching the filter
+     * (productId null/empty = all), in the current date range.
+     * DISTINCT by billId (one bill can have many OrderItems).
      *
-     * @return mảng 2 phần tử: [0] = số đơn đã thanh toán, [1] = số đơn chưa thanh toán
+     * @return array of 2: [0] = paid count, [1] = unpaid count
      */
     public int[] getProductOrderCounts(java.sql.Date fromDate, java.sql.Date toDate, String productId) {
         int[] result = new int[]{0, 0};
@@ -852,7 +845,7 @@ public class BillDAO {
     }
 
     /**
-     * Danh sách chi tiết theo từng sản phẩm với filter Paid/Unpaid và sort.
+     * Per-product detail list with Paid/Unpaid filter and sort.
      */
     public List<ProductSalesRow> getProductSalesSummaryByFilter(String paidFilter, String productId, String sortBy) {
         List<ProductSalesRow> list = new ArrayList<>();

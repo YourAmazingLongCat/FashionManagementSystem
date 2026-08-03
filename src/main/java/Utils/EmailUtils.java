@@ -16,7 +16,7 @@ import jakarta.mail.internet.MimeMessage;
 
 public class EmailUtils {
 
-    // QUAN TRỌNG: Hãy điền đúng Gmail và Mật khẩu ứng dụng 16 ký tự (VIẾT LIỀN, KHÔNG CÓ KHOẢNG TRẮNG)
+    // IMPORTANT: Use your Gmail + 16-char App Password (no spaces)
     private static final String FROM_EMAIL = "nhanpth.ce191725@gmail.com"; 
     private static final String APP_PASSWORD = "vgcngfzhdhdpfyqh"; 
 

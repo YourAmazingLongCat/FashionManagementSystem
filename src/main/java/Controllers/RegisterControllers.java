@@ -30,41 +30,38 @@ public class RegisterControllers extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
-        // 1. Lấy dữ liệu từ Form
+        // 1. Read form data
         String fullName = request.getParameter("name");
         String email = request.getParameter("email");
-        String phone = request.getParameter("phoneNumber"); 
+        String phone = request.getParameter("phoneNumber");
         String password = request.getParameter("password");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        // 2. Kiểm tra mật khẩu khớp
+        // 2. Check confirm password match
         if (password != null && !password.equals(confirmPassword)) {
-            request.setAttribute("errorMessage", "Mật khẩu xác nhận không khớp!");
+            request.setAttribute("errorMessage", "Passwords do not match!");
             request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
             return;
         }
 
-        // =========================================================================
-        // 👉 ĐÃ THÊM: Kiểm tra độ mạnh của mật khẩu (Chữ hoa đầu, có số, có ký tự ĐB)
-        // =========================================================================
+        // Check password strength: starts with uppercase, has digit and special char
         String passwordPattern = "^[A-Z](?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).+$";
-        
+
         if (password == null || !password.matches(passwordPattern)) {
-            request.setAttribute("errorMessage", "Mật khẩu phải bắt đầu bằng chữ cái viết hoa, có ít nhất 1 chữ số và 1 ký tự đặc biệt!");
+            request.setAttribute("errorMessage", "Password must start with uppercase letter and contain at least 1 digit and 1 special character!");
             request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
             return;
         }
-        // =========================================================================
 
-        Connection connection = null; 
+        Connection connection = null;
         PreparedStatement psCheck = null;
         ResultSet rs = null;
 
         try {
-            connection = new DBContext().getConnection(); 
+            connection = new DBContext().getConnection();
             System.out.println("Connection = " + connection);
-            
-            // 3. Kiểm tra trùng lặp (Email hoặc Phone)
+
+            // 3. Check duplicate (email or phone)
             String checkSQL = "SELECT email FROM Accounts WHERE email = ? OR phone = ?";
             psCheck = connection.prepareStatement(checkSQL);
             psCheck.setString(1, email);
@@ -72,37 +69,37 @@ public class RegisterControllers extends HttpServlet {
             rs = psCheck.executeQuery();
 
             if (rs.next()) {
-                request.setAttribute("errorMessage", "Email hoặc Số điện thoại đã được đăng ký!");
+                request.setAttribute("errorMessage", "Email or phone is already registered!");
                 request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
                 return;
             }
 
-            // 4. Sinh ngẫu nhiên mã OTP 6 chữ số
+            // 4. Generate random 6-digit OTP
             Random rand = new Random();
             String otpCode = String.format("%06d", rand.nextInt(999999));
 
-            // 5. Gửi email chứa OTP thông qua EmailUtils
+            // 5. Send OTP email via EmailUtils
             boolean mailSent = EmailUtils.sendOTP(email, otpCode);
-            
+
             if (mailSent) {
-                // Nếu gửi thành công, lưu dữ liệu tạm thời vào Session
+                // Save temp data in session for the OTP verify step
                 HttpSession session = request.getSession();
                 session.setAttribute("tempName", fullName);
                 session.setAttribute("tempEmail", email);
                 session.setAttribute("tempPhone", phone);
                 session.setAttribute("tempPassword", password);
                 session.setAttribute("generatedOTP", otpCode);
-                
-                // Chuyển hướng sang Servlet xử lý trang nhập OTP
+
+                // Redirect to OTP input page
                 response.sendRedirect(request.getContextPath() + "/auth/verify-otp");
             } else {
-                request.setAttribute("errorMessage", "Không thể gửi mã xác minh tới Email này. Vui lòng kiểm tra lại cấu hình SMTP hoặc mạng!");
+                request.setAttribute("errorMessage", "Cannot send OTP email. Please check SMTP config or network!");
                 request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("errorMessage", "Lỗi Hệ Thống: " + e.getMessage());
+            request.setAttribute("errorMessage", "System error: " + e.getMessage());
             request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
         } finally {
             try {
