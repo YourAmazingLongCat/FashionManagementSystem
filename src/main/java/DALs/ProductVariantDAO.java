@@ -58,23 +58,7 @@ public class ProductVariantDAO extends DBContext {
         return variants;
     }
 
-    /**
-     * Upsert variants for a product.
-     *
-     * Important: this method preserves existing variantIds whenever possible
-     * so that warehouse import history and order history stay linked to the
-     * same variant row. Behaviour:
-     *   - For each incoming variant:
-     *       * if its variantId exists in the DB  -> UPDATE fields, keep id.
-     *       * otherwise (no id, or id not found) -> INSERT with a new id.
-     *   - Old variants that are NOT present in the incoming list are removed,
-     *     along with FK-cleanup rows in CartItems, OrderItems and their
-     *     WarehouseImports history.
-     *
-     * This replaces the previous "wipe and re-insert" approach which lost
-     * every WarehouseImports row of an existing product the moment the staff
-     * re-saved the edit form.
-     */
+    
     public boolean replaceVariants(String productId, List<ProductVariant> variants) {
         if (productId == null || productId.isBlank()) return false;
 
@@ -128,14 +112,11 @@ public class ProductVariantDAO extends DBContext {
                 }
             }
 
-            // 4. Delete rows that reference removed variants. Order matters:
-            //    clean FK targets first, then the variants themselves.
+            // 4. Clean FK targets first, then the variants themselves.
             if (!removedIds.isEmpty()) {
                 deleteByVariantIds(conn,
                         "DELETE FROM CartItems WHERE variantId = ?",
                         removedIds);
-                // WarehouseImports is history; we still remove it for variants
-                // that are truly gone so the user doesn't see orphan imports.
                 deleteByVariantIds(conn,
                         "DELETE FROM WarehouseImports WHERE variantId = ?",
                         removedIds);
@@ -356,10 +337,6 @@ public class ProductVariantDAO extends DBContext {
     /**
      * Deduct physical stock for a single variant by a given quantity.
      * Used when staff confirms an order to reduce warehouse inventory.
-     *
-     * @param variantId the variant to deduct from
-     * @param quantity  the quantity to deduct
-     * @return true if successful
      */
     public boolean deductStock(String variantId, int quantity) {
         if (variantId == null || variantId.isBlank() || quantity <= 0) {

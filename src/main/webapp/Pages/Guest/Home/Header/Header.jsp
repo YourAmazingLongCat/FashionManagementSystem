@@ -18,7 +18,6 @@
 
         <c:if test="${not empty sessionScope.USER}">
             <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
-            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/wallet">WALLET</a>
         </c:if>
 
         <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">

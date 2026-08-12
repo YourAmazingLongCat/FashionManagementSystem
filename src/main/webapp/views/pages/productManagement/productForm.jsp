@@ -560,7 +560,7 @@
                 renumberVariantRows();
                 updateEmptyState();
 
-                // Validation đơn giản: kiểm tra SKU trùng lặp trên form
+                // kiểm tra SKU trùng lặp trên form
                 const productForm = document.getElementById('productForm');
                 if (productForm) {
                     productForm.addEventListener('submit', function (e) {

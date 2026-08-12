@@ -1,24 +1,20 @@
 package DALs;
 
-import Utils.DBContext;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.time.LocalDateTime;
+
+import Utils.DBContext;
 
 public class WarehouseDAO extends DBContext {
 
-    /**
-     * Monotonic counter for generateId() - guarantees uniqueness even when
-     * several ids are produced inside the same millisecond (e.g. batch
-     * imports). Starts above the largest millisecond timestamp seen so the
-     * sequence never collides with previously issued ids.
-     */
+   
     private static final AtomicLong ID_SEQ = new AtomicLong(System.currentTimeMillis());
 
     public WarehouseDAO() {
@@ -415,11 +411,7 @@ public class WarehouseDAO extends DBContext {
         }
     }
 
-    /**
-     * Stock-out (export) for a single variant. Records the transaction in
-     * WarehouseImports with transactionType='Export' so it shows up in the
-     * shared export history. Fails if available stock &lt; quantity.
-     */
+    
     public boolean exportStock(String variantId, int quantity, String exportedBy, String reason) {
         if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(exportedBy)) return false;
 

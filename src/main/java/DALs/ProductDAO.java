@@ -354,21 +354,7 @@ public class ProductDAO extends DBContext {
         return false;
     }
 
-    /**
-     * Delete product. Staff can delete any product.
-     * Wrapped in a transaction: any FK violation rolls back ALL deletes so the
-     * product row, variants and image rows stay intact (avoids losing image
-     * file when DB delete fails).
-     *
-     * Pending orders are blocked at the service layer (ProductService) before
-     * we get here. For other order states (Confirmed, Processing, Shipping,
-     * Delivered, Cancelled) we still need to clear OrderItems rows because
-     * OrderItems.variantId is a hard FK to ProductVariants.
-     *
-     * WarehouseImports (stock-in history) referencing the variants are also
-     * removed - per business rule the import history travels with the
-     * product, so deleting the product clears those records too.
-     */
+    
     public boolean deleteProduct(String productId) {
         if (!isDatabaseReady() || productId == null || productId.isBlank()) return false;
 
