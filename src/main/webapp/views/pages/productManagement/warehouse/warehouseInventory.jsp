@@ -84,6 +84,10 @@
                         <span class="icon">&#10133;</span>
                         <span>Stock In</span>
                     </a>
+                    <a class="sidebar-tab ${activeTab eq 'export' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/export">
+                        <span class="icon">&#10134;</span>
+                        <span>Stock Out</span>
+                    </a>
                 </div>
                 <a class="back-link" href="${pageContext.request.contextPath}/staff/products">
                     &#8592; Back to Product Management

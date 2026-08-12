@@ -117,13 +117,13 @@ a {
 
 .btn-submit:hover {
     background-color: #333333;
-    /* Nhấc nhẹ nút lên khi rê chuột */
+    /* Lift button on hover */
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
 
 .btn-submit:active {
-    /* Nút lún xuống khi click tạo cảm giác vật lý */
+    /* Press down on click */
     transform: translateY(1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
@@ -141,7 +141,7 @@ a {
     position: relative;
 }
 
-/* Hiệu ứng gạch chân chạy từ trái sang phải cho chữ (Cực kỳ Luxury) */
+/* Animated underline (left to right on hover) */
 .forgot-link::after, .register-link::after {
     content: '';
     position: absolute;
@@ -242,13 +242,13 @@ a {
     }
 }
 
-/* ================= SCROLLING TICKER (DÒNG CHỮ CHẠY BÊN DƯỚI) ================= */
+/* ================= SCROLLING TICKER ================= */
 .scrolling-ticker {
-    position: fixed; /* Cố định nó dính chặt vào đáy màn hình */
+    position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #000000; /* Nền đen tuyền */
+    background-color: #000000;
     padding: 10px 0;
     overflow: hidden;
     white-space: nowrap;
@@ -268,7 +268,7 @@ a {
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 800;
     font-size: 0.85rem;
-    color: #00ff66; /* Chữ màu xanh neon */
+    color: #00ff66;
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-right: 50px;

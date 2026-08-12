@@ -1,5 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%-- version: 2026-07-29-v8-cache-bust --%>
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -14,14 +15,12 @@
         
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
         
-        <style>
-            <%@ include file="/Pages/Guest/Home/Layout/Layout.css" %>
-            <%@ include file="/Pages/Guest/Home/Header/Header.css" %>
-            <%@ include file="/Pages/Guest/Home/Content/Content.css" %>
-            <%@ include file="/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css" %>
-            <%@ include file="/Pages/Guest/Home/Order/Order.css" %>
-            <%@ include file="/Pages/Guest/Home/Payment/WalletPayment.css" %>
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Layout/Layout.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Header/Header.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Content/Content.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css?v=20260729v10-4col">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Order/Order.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Payment/WalletPayment.css">
     </head>
     <body>
         <c:set var="displaySuccessMessage" value="${not empty successMessage ? successMessage : sessionScope.successMessage}" />

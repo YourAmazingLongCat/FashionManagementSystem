@@ -52,6 +52,7 @@
             .import-form { display: flex; gap: 8px; align-items: center; }
             .import-form input[type="number"] { width: 80px; padding: 8px; border-radius: 8px; border: 1px solid #dbe3f0; }
             .import-form input[type="number"].price-input { width: 100px; }
+            .import-row.selected td { background: rgba(22, 163, 74, 0.04); }
             .history-section { margin-top: 24px; }
             .empty-state { padding: 32px; text-align: center; color: #64748b; }
             .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
@@ -89,6 +90,10 @@
                     <a class="sidebar-tab ${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">
                         <span class="icon">&#10133;</span>
                         <span>Stock In</span>
+                    </a>
+                    <a class="sidebar-tab ${activeTab eq 'export' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/export">
+                        <span class="icon">&#10134;</span>
+                        <span>Stock Out</span>
                     </a>
                 </div>
                 <a class="back-link" href="${pageContext.request.contextPath}/staff/products">
@@ -134,62 +139,70 @@
                     <a href="${pageContext.request.contextPath}/staff/warehouse/import" class="btn-clear"><i class="fas fa-times"></i> Clear</a>
                 </form>
 
-                <div class="table-panel">
-                    <div class="table-header">
-                        <h3>Variant List</h3>
-                    </div>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>SKU</th>
-                                    <th>Product</th>
-                                    <th>Size / Color</th>
-                                    <th class="text-end">Physical</th>
-                                    <th class="text-end">Reserved</th>
-                                    <th class="text-end">Available</th>
-                                    <th>Add Stock</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventoryTableBody">
-                                <c:choose>
-                                    <c:when test="${empty inventory}">
-                                        <tr>
-                                            <td colspan="7">
-                                                <div class="empty-state">No product variants found. Check that Products and ProductVariants tables have data.</div>
-                                            </td>
-                                        </tr>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <c:forEach var="item" items="${inventory}">
-                                            <c:set var="physical" value="${item[8]}" />
-                                            <c:set var="reserved" value="${item[9]}" />
-                                            <c:set var="available" value="${physical - reserved}" />
+                <form method="post" action="${pageContext.request.contextPath}/staff/warehouse/import" id="batchImportForm" onsubmit="return validateBatchForm()">
+                    <input type="hidden" name="action" value="import">
+                    <div class="table-panel">
+                        <div class="table-header">
+                            <h3>Variant List</h3>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span id="selectedCount" style="font-size: 0.85rem; color: #64748b; font-weight: 600;">0 selected</span>
+                                <button type="button" class="btn" style="background:#fff; color:#64748b; border:1px solid #dbe3f0;" id="selectAllBtn">Select all</button>
+                                <button type="button" class="btn" style="background:#fff; color:#64748b; border:1px solid #dbe3f0;" id="clearAllBtn">Clear</button>
+                                <button type="submit" class="btn btn-primary" id="batchSubmitBtn">+ Add selected</button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 44px;"><input type="checkbox" id="selectAllCheckbox"></th>
+                                        <th>SKU</th>
+                                        <th>Product</th>
+                                        <th>Size / Color</th>
+                                        <th class="text-end">Physical</th>
+                                        <th class="text-end">Reserved</th>
+                                        <th class="text-end">Available</th>
+                                        <th>Add Stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody">
+                                    <c:choose>
+                                        <c:when test="${empty inventory}">
                                             <tr>
-                                                <td><code>${item[7]}</code></td>
-                                                <td><strong>${item[2]}</strong></td>
-                                                <td>${item[4]} / ${item[6]}</td>
-                                                <td class="text-end"><strong>${physical}</strong></td>
-                                                <td class="text-end">${reserved}</td>
-                                                <td class="text-end">
-                                                    <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
-                                                </td>
-                                                <td>
-                                                    <form class="import-form" method="post" action="${pageContext.request.contextPath}/staff/warehouse/import">
-                                                        <input type="hidden" name="action" value="import">
-                                                        <input type="hidden" name="variantId" value="${item[0]}">
-                                                        <input type="number" name="quantity" min="1" placeholder="Qty" required>
-                                                        <input type="number" name="importPrice" min="0" step="1000" placeholder="Price" required>
-                                                        <button type="submit" class="btn btn-primary">+ Add</button>
-                                                    </form>
+                                                <td colspan="8">
+                                                    <div class="empty-state">No product variants found. Check that Products and ProductVariants tables have data.</div>
                                                 </td>
                                             </tr>
-                                        </c:forEach>
-                                    </c:otherwise>
-                                </c:choose>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <c:forEach var="item" items="${inventory}">
+                                                <c:set var="physical" value="${item[8]}" />
+                                                <c:set var="reserved" value="${item[9]}" />
+                                                <c:set var="available" value="${physical - reserved}" />
+                                                <tr class="import-row" data-variant-id="${item[0]}">
+                                                    <td><input type="checkbox" class="row-check" name="selectedVariants" value="${item[0]}"></td>
+                                                    <td><code>${item[7]}</code></td>
+                                                    <td><strong>${item[2]}</strong></td>
+                                                    <td>${item[4]} / ${item[6]}</td>
+                                                    <td class="text-end"><strong>${physical}</strong></td>
+                                                    <td class="text-end">${reserved}</td>
+                                                    <td class="text-end">
+                                                        <span class="stock-badge ${available <= 10 ? 'stock-low' : 'stock-high'}">${available}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="import-form">
+                                                            <input type="hidden" name="variantId" value="${item[0]}" disabled>
+                                                            <input type="number" name="quantity" min="1" placeholder="Qty" class="qty-input" disabled>
+                                                            <input type="number" name="importPrice" min="0" step="1000" placeholder="Price" class="price-input" disabled>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
                     <c:if test="${invTotalPages > 1}">
                         <div class="pagination-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding: 0 4px;">
                             <span style="font-size: 0.85rem; color: #64748b;">
@@ -213,6 +226,7 @@
                         </div>
                     </c:if>
                 </div>
+                </form>
 
                 <!-- Recent Imports History -->
                 <div class="table-panel history-section">
@@ -317,15 +331,89 @@
         </div>
     </body>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.import-form').forEach(function(form) {
-            form.addEventListener('submit', function(e) {
-                var btn = form.querySelector('button[type="submit"]');
-                btn.textContent = 'Adding...';
-                btn.disabled = true;
-                // Allow normal form submission - it will handle redirect properly
+    (function() {
+        const form = document.getElementById('batchImportForm');
+        const tableBody = document.getElementById('inventoryTableBody');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const selectedCountEl = document.getElementById('selectedCount');
+        const submitBtn = document.getElementById('batchSubmitBtn');
+
+        function updateRowEnabled(row, enabled) {
+            row.querySelectorAll('input[name="variantId"], input[name="quantity"], input[name="importPrice"]').forEach(function(inp) {
+                inp.disabled = !enabled;
             });
+        }
+
+        function refreshCount() {
+            const checks = tableBody.querySelectorAll('.row-check');
+            let count = 0;
+            checks.forEach(function(c) { if (c.checked) count++; });
+            selectedCountEl.textContent = count + ' selected';
+            submitBtn.disabled = count === 0;
+            submitBtn.style.opacity = count === 0 ? '0.5' : '1';
+        }
+
+        tableBody.addEventListener('change', function(e) {
+            if (e.target.classList.contains('row-check')) {
+                const row = e.target.closest('tr');
+                updateRowEnabled(row, e.target.checked);
+                if (e.target.checked) {
+                    const qty = row.querySelector('input[name="quantity"]');
+                    if (qty && !qty.value) qty.focus();
+                }
+                refreshCount();
+            }
         });
-    });
+
+        selectAllCheckbox.addEventListener('change', function() {
+            const checks = tableBody.querySelectorAll('.row-check');
+            checks.forEach(function(c) {
+                c.checked = selectAllCheckbox.checked;
+                updateRowEnabled(c.closest('tr'), selectAllCheckbox.checked);
+            });
+            refreshCount();
+        });
+
+        selectAllBtn.addEventListener('click', function() {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.dispatchEvent(new Event('change'));
+        });
+
+        clearAllBtn.addEventListener('click', function() {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.dispatchEvent(new Event('change'));
+        });
+
+        // Pre-fill import price from current stock qty / heuristic - leave blank, staff enters
+        window.validateBatchForm = function() {
+            const checks = tableBody.querySelectorAll('.row-check:checked');
+            if (checks.length === 0) {
+                alert('Please select at least one variant.');
+                return false;
+            }
+            let invalid = 0;
+            checks.forEach(function(c) {
+                const row = c.closest('tr');
+                const qty = row.querySelector('input[name="quantity"]');
+                if (!qty.value || parseInt(qty.value) <= 0) {
+                    qty.style.borderColor = '#dc2626';
+                    invalid++;
+                } else {
+                    qty.style.borderColor = '';
+                }
+            });
+            if (invalid > 0) {
+                alert('Please enter a valid quantity (>0) for each selected variant.');
+                return false;
+            }
+            submitBtn.textContent = 'Adding...';
+            submitBtn.disabled = true;
+            return true;
+        };
+
+        refreshCount();
+    })();
     </script>
 </html>

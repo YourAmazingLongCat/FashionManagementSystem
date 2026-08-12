@@ -19,6 +19,7 @@
             .form-body { padding: 30px; display: grid; gap: 24px; }
             .alert { padding: 16px 18px; border-radius: 18px; font-weight: 600; }
             .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
+            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
             .product-form { display: grid; gap: 24px; }
             .form-section { background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%); border: 1px solid #e2e8f0; border-radius: 26px; padding: 24px; }
             .section-heading { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -41,7 +42,11 @@
             .variants-list { display: grid; gap: 16px; }
             .variant-row { border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; background: #ffffff; display: grid; gap: 16px; }
             .variant-row-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+            .variant-row-title-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
             .variant-row-title { font-weight: 800; color: #334155; }
+            .variant-stock-badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+            .variant-stock-badge.in-stock { background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.25); }
+            .variant-stock-badge.out-of-stock { background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: 1px solid rgba(220, 38, 38, 0.25); }
             .variant-row-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: end; }
             .variant-remove-btn, .variant-add-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
             .variant-add-btn { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 12px 24px rgba(124, 58, 237, 0.2); }
@@ -67,11 +72,14 @@
                 </div>
 
                 <div class="form-body">
+                    <c:if test="${not empty success}">
+                        <div class="alert alert-success">${success}</div>
+                    </c:if>
                     <c:if test="${not empty error}">
                         <div class="alert alert-error">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
+                    <form id="productForm" method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="${formAction}">
                         <input type="hidden" name="existingImageUrl" value="${product.primaryImageUrl}">
                         <c:if test="${formAction eq 'edit'}">
@@ -89,25 +97,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="categoryId">Category</label>
-                                    <c:choose>
-                                        <c:when test="${hasOrders}">
-                                            <select id="categoryId" name="categoryId" required disabled>
-                                                <c:forEach var="category" items="${categories}">
-                                                    <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
-                                                </c:forEach>
-                                            </select>
-                                            <input type="hidden" name="categoryId" value="${product.categoryId}">
-                                            <small style="color: #b45309; font-size: 0.8rem;">Category locked: product has existing orders</small>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <select id="categoryId" name="categoryId" required>
-                                                <option value="">-- Select category --</option>
-                                                <c:forEach var="category" items="${categories}">
-                                                    <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
-                                                </c:forEach>
-                                            </select>
-                                        </c:otherwise>
-                                    </c:choose>
+                                    <select id="categoryId" name="categoryId" required>
+                                        <option value="">-- Select category --</option>
+                                        <c:forEach var="category" items="${categories}">
+                                            <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
+                                        </c:forEach>
+                                    </select>
                                 </div>
                             </div>
                         </section>
@@ -120,8 +115,7 @@
                                 <div class="form-group">
                                     <label for="basePrice">Base price</label>
                                     <div class="price-input-wrap">
-                                        <input id="basePrice" name="basePrice" type="text" inputmode="numeric" value="${empty product.basePrice ? '' : product.basePrice.setScale(0, 0)}" placeholder="650.000" required>
-                                        <span class="price-suffix">đ</span>
+                                        <input id="basePrice" name="basePrice" type="text" inputmode="numeric" value="${empty product.basePrice ? '' : product.basePrice.setScale(0, 0)}" placeholder="650.000" required class="base-price-input">
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -141,20 +135,39 @@
                                     <h3>Product variants</h3>
                                     <p>Add each size/color option as a separate row. Stock quantity is managed through the Warehouse module.</p>
                                 </div>
-                                <c:choose>
-                                    <c:when test="${hasOrders}">
-                                        <span style="color: #b45309; font-size: 0.85rem; font-weight: 600;">Variants locked: product has existing orders</span>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
-                                    </c:otherwise>
-                                </c:choose>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <c:if test="${formAction eq 'edit'}">
+                                        <a class="variant-add-btn" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);" href="${pageContext.request.contextPath}/staff/warehouse/inventory?productFilter=${product.productId}">Manage stock</a>
+                                    </c:if>
+                                    <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
+                                </div>
                             </div>
 
                             <div id="variantsList" class="variants-list"></div>
                             <div id="variantsEmpty" class="variant-empty">No variants added yet. Click <strong>Add variant</strong> to create one.</div>
-                            <p class="inline-note">Each row represents one exact product option (Size + Color). Stock quantity will be managed through Warehouse after product creation.</p>
+                            <p class="inline-note">Each row represents one exact product option (Size + Color). The <strong>Stock</strong> badge shows current available quantity. Use <strong>Manage stock</strong> to import or export inventory.</p>
                         </section>
+
+                        <c:if test="${formAction eq 'edit'}">
+                            <section class="form-section">
+                                <div class="section-heading"><h3>Inventory summary</h3></div>
+                                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+                                    <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">Total variants</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.6rem;">${fn:length(product.variants)}</strong>
+                                    </div>
+                                    <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">In stock</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.6rem; color: #15803d;">${product.totalStockQty}</strong>
+                                    </div>
+                                    <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">Status</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.1rem;">${product.status}</strong>
+                                    </div>
+                                </div>
+                                <p class="inline-note" style="margin-top: 14px;">Stock quantity is the total physical units in warehouse. Use <strong>Manage stock</strong> above to import new inventory.</p>
+                            </section>
+                        </c:if>
 
                         <section class="form-section">
                             <div class="section-heading"><h3>Image</h3></div>
@@ -210,6 +223,9 @@
                                      data-size-id="${variant.sizeId}"
                                      data-color-id="${variant.colorId}"
                                      data-sku="${variant.sku}"
+                                     data-variant-id="${variant.variantId}"
+                                     data-stock-qty="${variant.stockQty}"
+                                     data-available-qty="${variant.availableQty}"
                                      data-price-override="${variant.priceOverride == null ? '' : variant.priceOverride.setScale(0, 0)}"></div>
                             </c:forEach>
                         </div>
@@ -344,9 +360,12 @@
                     name: node.dataset.colorName
                 }));
                 const existingVariants = Array.from(document.querySelectorAll('#existingVariantsData .variant-data')).map(node => ({
+                    variantId: node.dataset.variantId || '',
                     sizeId: node.dataset.sizeId || '',
                     colorId: node.dataset.colorId || '',
                     sku: node.dataset.sku || '',
+                    stockQty: Number(node.dataset.stockQty || '0'),
+                    availableQty: Number(node.dataset.availableQty || '0'),
                     priceOverride: node.dataset.priceOverride || ''
                 }));
                 let sizeOptions = [];
@@ -371,7 +390,30 @@
 
                 const refreshAllSizeSelects = () => {
                     Array.from(variantsList.querySelectorAll('select[name="variantSizeId"]')).forEach(select => {
-                        replaceSelectOptions(select, sizeOptions, select.value, '-- Select size --');
+                        if (sizeOptions.length > 0) {
+                            const currentVal = select.value;
+                            select.innerHTML = '';
+                            const placeholderOption = document.createElement('option');
+                            placeholderOption.value = '';
+                            placeholderOption.textContent = '-- Select size --';
+                            select.appendChild(placeholderOption);
+
+                            let hasSelectedValue = false;
+                            sizeOptions.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.id;
+                                option.textContent = item.name;
+                                if ((currentVal || '') === item.id) {
+                                    option.selected = true;
+                                    hasSelectedValue = true;
+                                }
+                                select.appendChild(option);
+                            });
+
+                            if (!hasSelectedValue) {
+                                select.value = '';
+                            }
+                        }
                         select.disabled = sizeOptions.length === 0;
                     });
                 };
@@ -380,68 +422,89 @@
                     const removeBtn = row.querySelector('.variant-remove-btn');
                     const priceInput = row.querySelector('input[name="variantPriceOverride"]');
                     const sizeSelect = row.querySelector('select[name="variantSizeId"]');
+                    const colorSelect = row.querySelector('select[name="variantColorId"]');
+
                     if (removeBtn) {
                         removeBtn.addEventListener('click', () => {
                             row.remove();
                             renumberVariantRows();
                             updateEmptyState();
                         });
-                        // Disable remove button if product has orders
-                        if (hasOrdersFlag) {
-                            removeBtn.disabled = true;
-                            removeBtn.style.opacity = '0.5';
-                            removeBtn.style.cursor = 'not-allowed';
-                            removeBtn.title = 'Cannot remove variant: product has existing orders';
-                        }
                     }
+
                     if (sizeSelect) {
-                        sizeSelect.disabled = sizeOptions.length === 0 || hasOrdersFlag;
+                        sizeSelect.disabled = sizeOptions.length === 0;
                     }
                     bindCurrencyInput(priceInput);
                 };
 
-                // Pass hasOrders flag from server to JavaScript
-                const hasOrdersFlag = ${hasOrders != null ? hasOrders : false};
-
                 const addVariantRow = (variant = {}) => {
                     const row = document.createElement('div');
                     row.className = 'variant-row';
+                    if (variant.variantId) row.dataset.variantId = variant.variantId;
 
                     const header = document.createElement('div');
                     header.className = 'variant-row-header';
 
+                    const titleWrap = document.createElement('div');
+                    titleWrap.className = 'variant-row-title-wrap';
                     const title = document.createElement('div');
                     title.className = 'variant-row-title';
                     title.textContent = 'Variant';
+                    titleWrap.appendChild(title);
+
+                    // Hiển thị stockQty hiện tại (chỉ khi edit - có variantId)
+                    if (variant.variantId) {
+                        const stockBadge = document.createElement('span');
+                        const stockNum = Number(variant.availableQty || 0);
+                        stockBadge.className = 'variant-stock-badge ' + (stockNum > 0 ? 'in-stock' : 'out-of-stock');
+                        stockBadge.textContent = 'Stock: ' + stockNum;
+                        stockBadge.title = 'Current available stock (managed in Warehouse module)';
+                        titleWrap.appendChild(stockBadge);
+                    }
 
                     const removeBtn = document.createElement('button');
                     removeBtn.type = 'button';
                     removeBtn.className = 'variant-remove-btn';
                     removeBtn.textContent = 'Remove';
 
-                    header.appendChild(title);
+                    header.appendChild(titleWrap);
                     header.appendChild(removeBtn);
 
                     const grid = document.createElement('div');
                     grid.className = 'variant-row-grid';
 
                     const sizeSelect = createSelect('variantSizeId', sizeOptions, variant.sizeId || '', '-- Select size --');
+                    const colorSelect = createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --');
                     sizeSelect.disabled = sizeOptions.length === 0;
 
                     grid.appendChild(createField('Size', sizeSelect));
-                    grid.appendChild(createField('Color', createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --')));
+                    grid.appendChild(createField('Color', colorSelect));
                     grid.appendChild(createField('SKU', createInput({ name: 'variantSku', value: variant.sku || '', placeholder: 'Required SKU' })));
                     grid.appendChild(createField('Price override', createInput({ name: 'variantPriceOverride', value: variant.priceOverride || '', placeholder: 'Optional', inputMode: 'numeric' })));
-                    // Stock is managed through Warehouse module, default to 0 on create
 
                     const enabledInput = document.createElement('input');
                     enabledInput.type = 'hidden';
                     enabledInput.name = 'variantEnabled';
                     enabledInput.value = 'true';
 
+                    // Preserve existing variantId so the server can UPDATE the
+                    // row instead of inserting a brand new one. Without this
+                    // hidden input the server would treat every save as a
+                    // fresh variant and wipe out any warehouse import history
+                    // (variantId changes -> FK references are lost).
+                    let variantIdInput = null;
+                    if (variant.variantId) {
+                        variantIdInput = document.createElement('input');
+                        variantIdInput.type = 'hidden';
+                        variantIdInput.name = 'variantId';
+                        variantIdInput.value = variant.variantId;
+                    }
+
                     row.appendChild(header);
                     row.appendChild(grid);
                     row.appendChild(enabledInput);
+                    if (variantIdInput) row.appendChild(variantIdInput);
 
                     variantsList.appendChild(row);
                     attachVariantRowEvents(row);
@@ -478,16 +541,10 @@
                 }
 
                 if (addVariantBtn) {
-                    addVariantBtn.disabled = hasOrdersFlag;
-                    if (hasOrdersFlag) {
-                        addVariantBtn.style.opacity = '0.5';
-                        addVariantBtn.style.cursor = 'not-allowed';
-                        addVariantBtn.title = 'Cannot add variant: product has existing orders';
-                    } else {
-                        addVariantBtn.addEventListener('click', () => addVariantRow());
-                    }
+                    addVariantBtn.addEventListener('click', () => addVariantRow());
                 }
 
+                // Load sizes BEFORE adding variant rows to ensure size values are preserved
                 loadSizesByCategory(categorySelect ? categorySelect.value : '');
 
                 if (existingVariants.length > 0) {
@@ -496,9 +553,33 @@
                     addVariantRow();
                 }
 
+                // Re-apply sizes after variants are added to ensure correct values are selected
+                loadSizesByCategory(categorySelect ? categorySelect.value : '');
+
                 setImagePreview(imagePreview && imagePreview.dataset.existingSrc ? ctx + imagePreview.dataset.existingSrc : '');
                 renumberVariantRows();
                 updateEmptyState();
+
+                // kiểm tra SKU trùng lặp trên form
+                const productForm = document.getElementById('productForm');
+                if (productForm) {
+                    productForm.addEventListener('submit', function (e) {
+                        const skuInputs = Array.from(variantsList.querySelectorAll('input[name="variantSku"]'));
+                        const skuValues = skuInputs
+                            .map(input => (input.value || '').trim().toUpperCase())
+                            .filter(sku => sku !== '');
+
+                        const seenSkus = new Set();
+                        for (const sku of skuValues) {
+                            if (seenSkus.has(sku)) {
+                                e.preventDefault();
+                                alert('Duplicate SKU: ' + sku + '. Each variant must have a unique SKU.');
+                                return false;
+                            }
+                            seenSkus.add(sku);
+                        }
+                    });
+                }
             })();
         </script>
     </body>

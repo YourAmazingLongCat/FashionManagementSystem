@@ -26,15 +26,15 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
- * Controller cho chức năng Bill Management.
+ * Controller for Bill Management.
  *
- * Các action (tham số "action" trên querystring):
- *  - (không truyền / "list")  -> xem + tìm kiếm + lọc danh sách hóa đơn
- *  - "detail"                 -> xem + tìm kiếm chi tiết 1 hóa đơn
- *  - "chartData"               -> trả JSON dữ liệu cho biểu đồ doanh thu (gọi bằng AJAX)
- *  - "productOptions"          -> trả JSON danh sách sản phẩm (đổ dropdown lọc)
- *  - "productChartData"        -> trả JSON dữ liệu biểu đồ số lượng bán theo sản phẩm
- *  - "productSummary"          -> trả JSON bảng + tổng hợp chi tiết theo sản phẩm
+ * Actions (via "action" query param):
+ *  - (none / "list")       -> view + search + filter bill list
+ *  - "detail"              -> view + search bill detail
+ *  - "chartData"           -> JSON for revenue chart (AJAX)
+ *  - "productOptions"      -> JSON for product dropdown filter
+ *  - "productChartData"    -> JSON for product sales chart
+ *  - "productSummary"      -> JSON for product summary table
  *
  * URL mapping: /BillServlet
  */
@@ -44,7 +44,7 @@ public class BillServlet extends HttpServlet {
     private final BillDAO billDAO = new BillDAO();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
-    // JSP nằm trong Web Pages/Pages/Staff/ theo cấu trúc project hiện tại
+    // JSP path under Web Pages/Pages/Staff/
     private static final String JSP_BILL_LIST = "/Pages/Staff/billList.jsp";
     private static final String JSP_BILL_DETAIL = "/Pages/Staff/billDetail.jsp";
 
@@ -84,8 +84,8 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * View bill + Search bill + lọc hóa đơn.
-     * NOTE: Bills do not have date field, so no date filtering for bill list.
+     * View + search + filter bills.
+     * NOTE: Bills do not have a date field, so no date filter here.
      */
     private void handleBillList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -113,7 +113,7 @@ public class BillServlet extends HttpServlet {
         int offset = (page - 1) * pageSize;
         List<Bill> bills = billDAO.searchBillsPaginated(keyword, paymentStatus, orderStatus, offset, pageSize);
 
-        // Tính tổng doanh thu của kết quả đang hiển thị (tiện cho người dùng xem nhanh)
+        // Sum revenue of the current result list (for quick view)
         BigDecimal totalOfList = BigDecimal.ZERO;
         for (Bill b : bills) {
             if (b.getTotalAmount() != null) {
@@ -128,7 +128,7 @@ public class BillServlet extends HttpServlet {
         request.setAttribute("pageSize", pageSize);
         request.setAttribute("totalBills", totalBills);
 
-        // Trả lại các giá trị filter để giữ nguyên trên form sau khi submit
+        // Echo filter values so the form keeps them after submit
         request.setAttribute("keyword", keyword);
         request.setAttribute("paymentStatus", paymentStatus);
         request.setAttribute("orderStatus", orderStatus);
@@ -153,7 +153,7 @@ public class BillServlet extends HttpServlet {
 
         Bill bill = billDAO.getBillById(billId);
         if (bill == null) {
-            request.setAttribute("errorMessage", "Không tìm thấy hóa đơn: " + billId);
+            request.setAttribute("errorMessage", "Bill not found: " + billId);
             request.getRequestDispatcher(JSP_BILL_LIST).forward(request, response);
             return;
         }
@@ -168,9 +168,9 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * Trả về JSON cho biểu đồ đường tăng trưởng doanh thu.
-     * Query params: periodType=day|week|month|year, fromDate, toDate
-     * Được gọi bằng fetch()/AJAX từ billList.jsp (giống pattern CommentDataServlet).
+     * Return JSON for the revenue growth line chart.
+     * Query params: periodType=day|week|month|year, fromDate, toDate.
+     * Called by fetch()/AJAX from billList.jsp (same pattern as CommentDataServlet).
      */
     private void handleChartData(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
@@ -179,7 +179,7 @@ public class BillServlet extends HttpServlet {
         if (periodType == null
                 || !(periodType.equals("day") || periodType.equals("week")
                      || periodType.equals("month") || periodType.equals("year"))) {
-            periodType = "day"; // whitelist, mặc định an toàn
+            periodType = "day"; // whitelist, safe default
         }
 
         Date fromDate = parseDate(request.getParameter("fromDate"));
@@ -194,8 +194,7 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * Trả JSON danh sách sản phẩm (id + tên) để đổ vào dropdown lọc theo
-     * sản phẩm ở màn hình thống kê "Theo sản phẩm".
+     * Return JSON of products (id + name) for the product dropdown filter.
      */
     private void handleProductOptions(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
@@ -221,9 +220,9 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * Trả JSON cho biểu đồ "Số lượng hàng bán được" theo sản phẩm.
+     * Return JSON for "Products sold quantity" chart.
      * Query params: periodType=day|week|month|year, fromDate, toDate,
-     * productId (bỏ trống/không truyền = tất cả sản phẩm).
+     * productId (empty = all products).
      */
     private void handleProductChartData(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
@@ -232,7 +231,7 @@ public class BillServlet extends HttpServlet {
         if (periodType == null
                 || !(periodType.equals("day") || periodType.equals("week")
                      || periodType.equals("month") || periodType.equals("year"))) {
-            periodType = "month"; // whitelist, mặc định an toàn
+            periodType = "month"; // whitelist, safe default
         }
 
         Date fromDate = parseDate(request.getParameter("fromDate"));
@@ -261,9 +260,8 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * Trả JSON bảng chi tiết + tổng hợp theo sản phẩm (tổng số lượng bán,
-     * tổng tiền đã thu Paid, tổng tiền còn thiếu) trong khoảng thời gian
-     * đang lọc. Query params: fromDate, toDate, productId (bỏ trống = tất cả).
+     * Return JSON summary table by product (qty sold, total paid, total remaining)
+     * in the current date range. Query: fromDate, toDate, productId (empty = all).
      */
     private void handleProductSummary(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
@@ -340,9 +338,8 @@ public class BillServlet extends HttpServlet {
     }
 
     /**
-     * Tự build JSON thủ công để không phụ thuộc thư viện ngoài (Gson/Jackson).
-     * Nếu project đã có Gson trong pom.xml, có thể thay hàm này bằng
-     * new Gson().toJson(stats) cho gọn.
+     * Build JSON manually to avoid external libs (Gson/Jackson).
+     * If the project already has Gson, replace with new Gson().toJson(stats).
      */
     private String toJson(List<RevenueStat> stats) {
         StringBuilder sb = new StringBuilder();

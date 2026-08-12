@@ -712,6 +712,66 @@
     color: var(--co-accent);
 }
 
+.co-cancel-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.co-cancel-warning {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin: 0 0 12px;
+    line-height: 1.5;
+}
+
+.co-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    border-radius: 6px;
+    padding: 8px 16px;
+    border: 1px solid #ef4444;
+    background: #ffffff;
+    color: #ef4444;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'Space Grotesk', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.co-cancel-btn:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+.co-cancel-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.co-cancel-btn-sm {
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    margin-top: 8px;
+}
+
+.co-cancel-btn-sm .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.co-action-cell {
+    white-space: nowrap;
+}
+
+.co-action-cell .co-view-btn {
+    margin-bottom: 4px;
+}
+
 .co-primary-btn .material-symbols-outlined,
 .co-secondary-btn .material-symbols-outlined,
 .co-view-btn .material-symbols-outlined {
@@ -1515,6 +1575,34 @@
 
 .staff-ops-hero {
     margin-bottom: 18px;
+}
+
+.back-nav-row {
+    margin-bottom: 20px;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--staff-card);
+    border: 1px solid var(--staff-border);
+    border-radius: 6px;
+    color: var(--staff-text);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.back-btn:hover {
+    background: var(--staff-soft);
+    border-color: var(--staff-muted);
+}
+
+.back-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .staff-module-tabs {

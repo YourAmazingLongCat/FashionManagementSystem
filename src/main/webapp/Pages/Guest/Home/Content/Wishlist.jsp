@@ -159,6 +159,12 @@
         transform: scale(0.8);
     }
 
+    .wishlist-container .favorite-btn .material-symbols-outlined {
+        font-size: 18px;
+        color: #ef4444;
+        font-variation-settings: 'FILL' 1;
+    }
+
     /* Pagination */
     .pagination {
         display: flex;

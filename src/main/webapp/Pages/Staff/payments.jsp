@@ -24,12 +24,6 @@
                     Approve wallet deposits and review purchase, refund, COD, wallet, and VNPay transactions.
                 </p>
             </div>
-            <div class="order-actions-row">
-                <a class="order-btn" href="${pageContext.request.contextPath}/staff/dashboard">
-                    <span class="material-symbols-outlined">dashboard</span>
-                    Dashboard
-                </a>
-            </div>
         </section>
 
         <nav class="staff-module-tabs" aria-label="Order and payment management">

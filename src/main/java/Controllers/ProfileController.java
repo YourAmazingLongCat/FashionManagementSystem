@@ -1,9 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package Controllers;
-
 
 import java.io.IOException;
 
@@ -18,7 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * Controller xử lý xem và cập nhật hồ sơ cá nhân
+ * Controller for viewing and updating user profile.
  */
 @WebServlet(name = "ProfileController", urlPatterns = {"/profile", "/profile/update"})
 public class ProfileController extends HttpServlet {
@@ -26,41 +21,41 @@ public class ProfileController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        // 1. Kiểm tra đăng nhập
+
+        // 1. Check login
         HttpSession session = request.getSession();
         Account user = (Account) session.getAttribute("USER");
-        
+
         if (user == null) {
-            // Chưa đăng nhập thì đá về trang login
+            // Not logged in: redirect to login
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
-        // 2. Lấy categories để Header.jsp hiển thị danh mục
+        // 2. Get categories for Header.jsp
         request.setAttribute("categories", new CategoryDAO().getAllCategories());
         request.setAttribute("contentPage", "/Pages/Customer/Profile.jsp");
 
-        // 3. Chuyển hướng qua layout chung
+        // 3. Forward to shared layout
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        // Cấu hình UTF-8 để nhận tiếng Việt không bị lỗi font
+
+        // Set UTF-8 for Vietnamese characters
         request.setCharacterEncoding("UTF-8");
-        
+
         HttpSession session = request.getSession();
         Account user = (Account) session.getAttribute("USER");
-        
+
         if (user == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
-        // 1. Lấy dữ liệu text từ form
+        // 1. Read form data
         String fullName = request.getParameter("fullName");
         String phone = request.getParameter("phone");
         String address = request.getParameter("address");
@@ -68,34 +63,33 @@ public class ProfileController extends HttpServlet {
         // 2. Validate
         AccountDAO dao = new AccountDAO();
         if (fullName == null || fullName.isBlank()) {
-            session.setAttribute("toastError", "Họ tên không được để trống!");
+            session.setAttribute("toastError", "Full name cannot be empty!");
             response.sendRedirect(request.getContextPath() + "/profile");
             return;
         }
         if (phone != null && !phone.isBlank() && dao.phoneExistsForOtherAccount(phone, user.getAccountId())) {
-            session.setAttribute("toastError", "Số điện thoại đã được sử dụng bởi tài khoản khác!");
+            session.setAttribute("toastError", "Phone number is already used by another account!");
             response.sendRedirect(request.getContextPath() + "/profile");
             return;
         }
 
-        // 3. Cập nhật dữ liệu vào object Account hiện tại
+        // 3. Update Account object
         user.setFullName(fullName);
         user.setPhone(phone);
         user.setAddress(address);
 
-        // 4. Gọi DAO để cập nhật Database
+        // 4. Call DAO to update database
         boolean isSuccess = dao.updateProfile(user);
 
         if (isSuccess) {
-            // Cập nhật lại session để giao diện Header cũng đổi ảnh ngay lập tức
+            // Refresh session so header updates immediately
             session.setAttribute("USER", user);
-            // Gửi thông báo thành công (Bạn có thể in nó ra bằng EL trong jsp sau)
-            session.setAttribute("toastMsg", "Cập nhật hồ sơ thành công!");
+            session.setAttribute("toastMsg", "Profile updated successfully!");
         } else {
-            session.setAttribute("toastError", "Có lỗi xảy ra khi lưu dữ liệu!");
+            session.setAttribute("toastError", "Error while saving data!");
         }
 
-        // 5. Redirect lại trang profile
+        // 5. Redirect back to profile
         response.sendRedirect(request.getContextPath() + "/profile");
     }
 }

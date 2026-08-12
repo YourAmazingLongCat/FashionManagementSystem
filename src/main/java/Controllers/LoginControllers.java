@@ -12,52 +12,51 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * Controller xử lý logic Đăng Nhập cho Fashion Store
+ * Controller for Login logic (Fashion Store).
  */
 @WebServlet(name = "LoginControllers", urlPatterns = {"/auth/login"})
 public class LoginControllers extends HttpServlet {
 
     /**
-     * Xử lý phương thức GET: Mở trang web đăng nhập
+     * Handle GET: show login page.
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Điều hướng tới file Login.jsp
+        // Forward to Login.jsp
         request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
     }
 
     /**
-     * Xử lý phương thức POST: Khi người dùng bấm nút "Đăng Nhập"
+     * Handle POST: process login form submit.
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 1. Lấy dữ liệu từ form (khớp với thuộc tính name="email" và name="password" trong JSP)
+        // 1. Read form data (matches name="email" and name="password" in JSP)
         String email = request.getParameter("email");
         String password = request.getParameter("password");
 
-        // 2. Gọi DAO để kiểm tra DB
+        // 2. Call DAO to check DB
         AccountDAO dao = new AccountDAO();
         Account acc = dao.checkLogin(email, password);
 
-        // 3. Xử lý kết quả
+        // 3. Handle result
         if (acc != null) {
 
-            // 👉 SỬA Ở ĐÂY: Kiểm tra status kiểu String
-            // Nếu status khác null và KHÔNG bằng chữ "Active" (không phân biệt hoa thường)
+            // If status is not null and NOT "Active" (case-insensitive)
             if (acc.getStatus() != null && !acc.getStatus().equalsIgnoreCase("Active")) {
-                request.setAttribute("errorMessage", "Tài khoản của bạn đã bị khóa hoặc chưa kích hoạt!");
+                request.setAttribute("errorMessage", "Your account is locked or not activated!");
                 request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
                 return;
             }
 
-            // Đăng nhập thành công: Lưu thông tin Account vào Session
+            // Login success: store Account in session
             HttpSession session = request.getSession();
             session.setAttribute("USER", acc);
 
-            // Chuyển hướng Staff đến Product Management, Admin đến Admin dashboard, Customer đến Home
+            // Redirect by role: Staff -> Product Mgmt, Admin -> Dashboard, Customer -> Home
             String role = acc.getRole();
             if (role != null && role.equalsIgnoreCase("Staff")) {
                 response.sendRedirect(request.getContextPath() + "/staff/products");
@@ -68,8 +67,8 @@ public class LoginControllers extends HttpServlet {
             }
 
         } else {
-            // Đăng nhập thất bại: Gửi thông báo lỗi về lại trang Login
-            request.setAttribute("errorMessage", "Email hoặc mật khẩu không chính xác!");
+            // Login failed: show error message
+            request.setAttribute("errorMessage", "Email or password is incorrect!");
             request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
         }
     }

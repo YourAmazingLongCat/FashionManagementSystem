@@ -23,6 +23,29 @@ public class OrderDAO extends DBContext {
         super();
     }
 
+    /**
+     * Count orders whose status is still Pending that reference any variant of
+     * the given product. Used to block product deletion only while the order
+     * is in Pending state. Confirmed/Processing/Shipping/Delivered/Cancelled
+     * orders do NOT block deletion.
+     */
+    public int countPendingOrdersByProductId(String productId) {
+        if (connection == null || productId == null || productId.isBlank()) return 0;
+        String sql = "SELECT COUNT(*) FROM OrderItems oi "
+                + "JOIN Orders o ON oi.orderId = o.orderId "
+                + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "WHERE pv.productId = ? AND o.orderStatus = 'Pending'";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException ex) {
+            System.out.println("countPendingOrdersByProductId error: " + ex.getMessage());
+        }
+        return 0;
+    }
+
     public int countOrders(String keyword) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Orders o WHERE 1=1 ");
         List<Object> params = new ArrayList<>();

@@ -41,7 +41,6 @@
                 </c:choose>
             </div>
 
-            <div class="detail-price" id="detailPrice">...</div>
             <div class="detail-price" id="detailPrice"><fmt:formatNumber value="${displayPrice}" type="number" groupingUsed="true"/> đ</div>
             <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
 
@@ -56,7 +55,11 @@
                 </div>
             </c:if>
 
-            <form method="post" action="${pageContext.request.contextPath}/home/cart/add" class="detail-purchase-panel" id="addToCartForm">
+            <div id="loginRequiredMsg" class="detail-flash-message error" style="display: none;">
+                Please login to add items to cart.
+            </div>
+
+            <form method="post" action="${pageContext.request.contextPath}/home/cart/add" class="detail-purchase-panel" id="addToCartForm" data-logged-in="${not empty sessionScope.USER}">
                 <input type="hidden" name="productId" value="${product.productId}" />
                 <input type="hidden" name="variantId" id="selectedVariantId" value="" />
 
@@ -87,35 +90,31 @@
                     <div class="summary-actions">
                         <div class="detail-quantity-wrap">
                             <label for="quantity">Qty</label>
-                            <input id="quantity" name="quantity" type="number" min="1" value="1" class="detail-quantity-input" />
+                            <div class="qty-control">
+                                <button type="button" class="qty-btn qty-minus" onclick="adjustQty(-1)">−</button>
+                                <input id="quantity" name="quantity" type="number" min="1" value="1" class="detail-quantity-input" onchange="validateQty(this)" />
+                                <button type="button" class="qty-btn qty-plus" onclick="adjustQty(1)">+</button>
+                            </div>
                         </div>
                         <button type="submit" class="detail-add-cart-btn" id="addToCartButton" disabled>Add to cart</button>
                     </div>
                 </div>
             </form>
 
+            <c:if test="${not empty product.variants}">
+            <script>
+                window.__VARIANT_DATA__ = [
+                    <c:forEach var="variant" items="${product.variants}" varStatus="vs">
+                        {variantId: "${variant.variantId}", colorName: "${variant.colorName}", sizeName: "${variant.sizeName}", stockQty: ${variant.availableQty}, price: ${variant.priceOverride != null ? variant.priceOverride : product.basePrice}}${vs.last ? '' : ','}
+                    </c:forEach>
+                ];
+            </script>
+            </c:if>
+
             <div class="variant-table-card">
                 <div class="variant-table-head">
                     <h3>Available variants</h3>
-                    <span>${product.totalStockQty} items in stock</span>
-                </div>
-                <div class="variant-table-list" id="variantTableList">
-                    <c:forEach var="variant" items="${product.variants}">
-                        <div class="variant-table-row ${variant.availableQty <= 0 ? 'out-of-stock' : ''}"
-                             data-variant-id="${variant.variantId}"
-                             data-color-name="${variant.colorName}"
-                             data-size-name="${variant.sizeName}"
-                             data-stock-qty="${variant.availableQty}"
-                             data-price="${variant.priceOverride != null ? variant.priceOverride : product.basePrice}">
-                            <div>
-                                <strong>${variant.colorName} / ${variant.sizeName}</strong>
-                            </div>
-                            <div>
-                                <strong><fmt:formatNumber value="${variant.priceOverride != null ? variant.priceOverride : product.basePrice}" type="number" groupingUsed="true"/> đ</strong>
-                                <span>${variant.availableQty > 0 ? variant.availableQty : 0} available</span>
-                            </div>
-                        </div>
-                    </c:forEach>
+                    <span id="variantStockSummary">${product.totalStockQty} items in stock</span>
                 </div>
             </div>
         </div>
@@ -139,25 +138,19 @@
                                     <div class="product-price-row">
                                         <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
                                     </div>
-                                    <div class="product-info">
-                                        <div class="product-name">${p.name}</div>
-                                        <div class="product-price-row">
-                                            <span class="price"><fmt:formatNumber value="${productDAO.getDisplayPrice(p)}" type="number" groupingUsed="true"/> đ</span>
-                                        </div>
-                                        <c:set var="rs" value="${ratingMap[p.productId]}" />
-                                        <div class="product-rating-row">
-                                            <c:choose>
-                                                <c:when test="${not empty rs && rs[1] > 0}">
-                                                    <span class="product-stars">
-                                                        <c:forEach begin="1" end="5" var="i">${i <= rs[0] + 0.5 ? '★' : '☆'}</c:forEach>
-                                                        </span>
-                                                        <span class="product-review-count">(${rs[1]})</span>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="product-no-rating">No reviews yet</span>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </div>
+                                    <c:set var="rs" value="${ratingMap[p.productId]}" />
+                                    <div class="product-rating-row">
+                                        <c:choose>
+                                            <c:when test="${not empty rs && rs[1] > 0}">
+                                                <span class="product-stars">
+                                                    <c:forEach begin="1" end="5" var="i">${i <= rs[0] + 0.5 ? '★' : '☆'}</c:forEach>
+                                                </span>
+                                                <span class="product-review-count">(${rs[1]})</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="product-no-rating">No reviews yet</span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </div>
                                 </div>
                             </div>
@@ -172,19 +165,64 @@
 </div>
 
 <script>
+    function clearQtyValidity(input) {
+        input.setCustomValidity('');
+    }
+
+    function adjustQty(delta) {
+        const input = document.getElementById('quantity');
+        const max = parseInt(input.max, 10);
+        const cur = parseInt(input.value, 10);
+        let val = isNaN(cur) ? 1 : cur + delta;
+        if (val < 1) val = 1;
+        if (!isNaN(max) && max > 0 && val > max) val = max;
+        input.value = val;
+        clearQtyValidity(input);
+    }
+
+    function validateQty(input) {
+        clearQtyValidity(input);
+
+        const raw = String(input.value || '').trim();
+        if (raw === '' || isNaN(Number(raw))) {
+            input.setCustomValidity('Please enter a valid number.');
+            input.reportValidity();
+            return;
+        }
+
+        const val = parseInt(raw, 10);
+        const max = parseInt(input.max, 10);
+
+        if (val < 1) {
+            input.setCustomValidity('Quantity must be greater than or equal to 1.');
+            input.reportValidity();
+            return;
+        }
+
+        if (!isNaN(max) && max > 0 && val > max) {
+            input.setCustomValidity('Quantity exceeds ' + max + ' in stock. Please enter ' + max + ' or less.');
+            input.reportValidity();
+            return;
+        }
+    }
+
     (function () {
         const colorButtons = Array.from(document.querySelectorAll('#colorOptions .detail-chip-button'));
         const sizeButtons = Array.from(document.querySelectorAll('#sizeOptions .detail-chip-button'));
-        const variantRows = Array.from(document.querySelectorAll('#variantTableList .variant-table-row'));
         const selectedVariantId = document.getElementById('selectedVariantId');
         const selectedVariantLabel = document.getElementById('selectedVariantLabel');
         const selectedVariantStock = document.getElementById('selectedVariantStock');
         const addToCartButton = document.getElementById('addToCartButton');
         const quantityInput = document.getElementById('quantity');
         const detailPrice = document.getElementById('detailPrice');
+        const addToCartForm = document.getElementById('addToCartForm');
 
         let selectedColor = '';
         let selectedSize = '';
+
+        const isLoggedIn = addToCartForm.dataset.loggedIn === 'true';
+
+        const variantData = window.__VARIANT_DATA__ || [];
 
         const formatPrice = (value) => {
             const amount = Number(String(value || '0').replace(/,/g, ''));
@@ -197,40 +235,93 @@
             });
         };
 
+        const variantMap = {};
+        variantData.forEach(v => {
+            if (!variantMap[v.colorName]) variantMap[v.colorName] = {};
+            variantMap[v.colorName][v.sizeName] = v;
+        });
+
+        const refreshAvailability = () => {
+            colorButtons.forEach(btn => {
+                const c = btn.dataset.colorName || '';
+                const rows = Object.values(variantMap[c] || {});
+                const hasAny = rows.some(r => r.stockQty > 0);
+                btn.disabled = !hasAny;
+                btn.classList.toggle('unavailable', !hasAny);
+            });
+            sizeButtons.forEach(btn => {
+                const s = btn.dataset.sizeName || '';
+                let hasAny = false;
+                Object.values(variantMap).forEach(bySize => {
+                    const row = bySize[s];
+                    if (row && row.stockQty > 0) hasAny = true;
+                });
+                btn.disabled = !hasAny;
+                btn.classList.toggle('unavailable', !hasAny);
+            });
+        };
+
         const refreshVariantSelection = () => {
-            const matched = variantRows.find(row => row.dataset.colorName === selectedColor && row.dataset.sizeName === selectedSize);
-            variantRows.forEach(row => row.classList.toggle('selected', row === matched));
+            const matched = (variantMap[selectedColor] || {})[selectedSize];
 
             if (!matched) {
                 selectedVariantId.value = '';
                 addToCartButton.disabled = true;
-                selectedVariantLabel.textContent = selectedColor || selectedSize ? 'This combination is unavailable' : 'Choose color and size';
-                selectedVariantStock.textContent = 'Available stock will appear here.';
+                if (!selectedColor && !selectedSize) {
+                    selectedVariantLabel.textContent = 'Choose color and size';
+                    selectedVariantStock.textContent = 'Available stock will appear here.';
+                } else {
+                    selectedVariantLabel.textContent = 'This combination is unavailable';
+                    selectedVariantStock.textContent = 'Please pick another option.';
+                }
                 return;
             }
 
-            const stockQty = Number(matched.dataset.stockQty || '0');
-            selectedVariantId.value = matched.dataset.variantId;
-            detailPrice.textContent = formatPrice(matched.dataset.price);
-            selectedVariantLabel.textContent = matched.dataset.colorName + ' / ' + matched.dataset.sizeName;
-            selectedVariantStock.textContent = stockQty > 0 ? stockQty + ' items available' : 'Out of stock';
-            quantityInput.max = String(Math.max(stockQty, 1));
-            if (Number(quantityInput.value) > stockQty && stockQty > 0) {
-                quantityInput.value = String(stockQty);
+            const stockQty = matched.stockQty || 0;
+            selectedVariantId.value = matched.variantId;
+            detailPrice.textContent = formatPrice(matched.price);
+            selectedVariantLabel.textContent = matched.colorName + ' / ' + matched.sizeName;
+            if (stockQty > 0) {
+                selectedVariantStock.textContent = stockQty + ' items available';
+                quantityInput.max = String(Math.max(stockQty, 1));
+                if (Number(quantityInput.value) > stockQty) {
+                    quantityInput.value = String(stockQty);
+                }
+                addToCartButton.disabled = false;
+            } else {
+                selectedVariantStock.textContent = 'Out of stock';
+                quantityInput.max = '0';
+                addToCartButton.disabled = true;
             }
-            addToCartButton.disabled = stockQty <= 0;
         };
 
         colorButtons.forEach(button => button.addEventListener('click', () => {
+                if (button.disabled) return;
                 selectedColor = button.dataset.colorName;
                 setActiveButton(colorButtons, selectedColor, 'colorName');
                 refreshVariantSelection();
             }));
 
         sizeButtons.forEach(button => button.addEventListener('click', () => {
+                if (button.disabled) return;
                 selectedSize = button.dataset.sizeName;
                 setActiveButton(sizeButtons, selectedSize, 'sizeName');
                 refreshVariantSelection();
             }));
+
+        if (addToCartForm) {
+            addToCartForm.addEventListener('submit', function(e) {
+                if (!isLoggedIn) {
+                    e.preventDefault();
+                    const loginMsg = document.getElementById('loginRequiredMsg');
+                    if (loginMsg) {
+                        loginMsg.style.display = 'block';
+                        setTimeout(() => loginMsg.style.display = 'none', 3000);
+                    }
+                }
+            });
+        }
+
+        refreshAvailability();
     })();
 </script>

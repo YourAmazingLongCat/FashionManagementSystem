@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Controller xử lý trang chủ và chi tiết sản phẩm cho khách.
+ * Controller for the home page and product detail (guest view).
  */
 @WebServlet(name = "HomeControllers", urlPatterns = {"/home", "/home/view-detail-product"})
 public class HomeControllers extends HttpServlet {
@@ -78,7 +78,7 @@ public class HomeControllers extends HttpServlet {
             request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
             request.setAttribute("cartCount", getCartCount(request));
 
-            // Gom productId từ tất cả các section để lấy rating trong 1 lần query
+            // Collect productIds from all sections to fetch ratings in one query
             List<String> allProductIds = new ArrayList<>();
             allProductIds.addAll(collectProductIds(latestProducts));
             allProductIds.addAll(collectProductIds(tops));
@@ -120,11 +120,11 @@ public class HomeControllers extends HttpServlet {
         request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
         request.setAttribute("cartCount", getCartCount(request));
 
-        // Rating của sản phẩm đang xem
+        // Rating for current product
         double[] ratingSummary = commentDAO.getRatingSummary(productId);
         request.setAttribute("ratingSummary", ratingSummary);
 
-        // Rating của các sản phẩm liên quan
+        // Rating for related products
         List<String> relatedIds = collectProductIds(relatedProducts);
         Map<String, double[]> ratingMap = commentDAO.getRatingSummaryMap(relatedIds);
         request.setAttribute("ratingMap", ratingMap);

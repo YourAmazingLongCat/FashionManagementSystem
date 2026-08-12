@@ -11,10 +11,10 @@ import java.util.Map;
 
 public class CommentDAO {
 
-    // Giới hạn chỉnh sửa: 7 ngày (tính bằng milliseconds)
+    // Edit limit: 7 days (in milliseconds)
     public static final long EDIT_LIMIT_MS = 7L * 24 * 60 * 60 * 1000;
 
-    // Giới hạn thêm comment mới: 7 ngày sau khi đơn hàng được giao
+    // Limit to add new comment: 7 days after order delivered
     public static final int ADD_LIMIT_DAYS = 7;
 
     private static final String BASE_SELECT
@@ -391,7 +391,7 @@ public class CommentDAO {
     }
 
     /**
-     * Kiểm tra eligibility cho một orderItem cụ thể
+     * Check eligibility for a specific orderItem.
      */
     public EligibilityStatus checkOrderItemEligibility(String orderItemId, String accountId) {
         String sql
@@ -456,7 +456,7 @@ public class CommentDAO {
     }
 
     /**
-     * Lấy comment của customer cho một orderItem cụ thể
+     * Get a customer's comment for a specific orderItem.
      */
     public Comment getCommentByOrderItem(String orderItemId, String accountId) {
         String sql = BASE_SELECT + "WHERE c.orderItemId = ? AND c.accountId = ?";
@@ -515,8 +515,8 @@ public class CommentDAO {
     }
 
     /**
-     * Kiểm tra comment còn trong thời hạn chỉnh sửa 7 ngày không
-     * Chỉ áp dụng cho Admin/Staff, KHÔNG cho customer
+     * Check if a comment is still within the 7-day edit window.
+     * Applies to Admin/Staff only, NOT to customer.
      */
     public boolean isWithinEditLimit(String commentId) {
         // Customer reviews from order detail KHONG duoc sua/xoa
@@ -558,14 +558,11 @@ public class CommentDAO {
     }
 
     /**
-     * Lấy rating trung bình + tổng số đánh giá của 1 sản phẩm Trả về double[] {
-     * avgRating, totalCount }
+     * Get average rating + total count for a product.
+     * Includes Hidden comments (hidden only hides text, rating still counts).
+     * Returns double[] { avgRating, totalCount }.
      */
-/**
- * Lấy rating trung bình + tổng số đánh giá của 1 sản phẩm
- * Tính CẢ comment Hidden (chỉ ẩn nội dung bình luận, rating vẫn được tính)
- */
-public double[] getRatingSummary(String productId) {
+    public double[] getRatingSummary(String productId) {
     String sql =
         "SELECT AVG(CAST(c.rating AS FLOAT)) AS avgRating, COUNT(*) AS totalCount " +
         "FROM Comments c " +
@@ -594,8 +591,8 @@ public double[] getRatingSummary(String productId) {
 }
 
 /**
- * Lấy rating cho NHIỀU sản phẩm cùng lúc (trang chủ / related products)
- * Tính CẢ comment Hidden
+ * Get rating for MANY products at once (home / related products).
+ * Includes Hidden comments.
  */
 public Map<String, double[]> getRatingSummaryMap(List<String> productIds) {
     Map<String, double[]> result = new HashMap<>();

@@ -28,13 +28,14 @@
                     Search customer orders, review payment readiness, and manage fulfilment status.
                 </p>
             </div>
-            <div class="order-actions-row">
-                <a class="order-btn" href="${pageContext.request.contextPath}/staff/dashboard">
-                    <span class="material-symbols-outlined">dashboard</span>
-                    Dashboard
-                </a>
-            </div>
         </section>
+
+        <div class="back-nav-row">
+            <a class="back-btn" href="${pageContext.request.contextPath}/staff/products">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Back to Staff
+            </a>
+        </div>
 
         <nav class="staff-module-tabs" aria-label="Order and payment management">
             <a class="staff-module-tab active" href="${pageContext.request.contextPath}/staff/orders">

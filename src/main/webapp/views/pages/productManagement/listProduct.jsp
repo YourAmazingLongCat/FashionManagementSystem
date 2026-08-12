@@ -1,6 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html>
     <head>
@@ -53,10 +54,10 @@
             .section-header h3 { margin: 0; font-size: 1.35rem; }
             .section-body { padding: 24px; }
             .product-list { display: grid; gap: 18px; }
-            .product-card { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr) auto; gap: 18px; align-items: stretch; padding: 20px; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04); contain: content; }
+            .product-card { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(180px, 0.8fr) auto; gap: 14px; align-items: start; padding: 16px; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04); contain: content; }
             .product-card:hover { box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1); transform: translateY(-2px); transition: all 0.2s ease; }
             .product-main { display: flex; gap: 16px; min-width: 0; }
-            .thumb, .thumb-empty { width: 88px; height: 88px; border-radius: 16px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
+            .thumb, .thumb-empty { width: 76px; height: 76px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
             .thumb { object-fit: cover; display: block; }
             .thumb-empty { display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.76rem; text-align: center; padding: 10px; }
             .product-copy { min-width: 0; display: grid; gap: 10px; align-content: start; }
@@ -65,21 +66,21 @@
             .id-badge, .soft-badge, .summary-pill, .status-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700; }
             .id-badge { padding: 7px 12px; background: #eef2ff; color: #4338ca; font-size: 0.8rem; }
             .product-description { margin: 0; font-size: 0.94rem; white-space: normal; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
-            .product-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-            .meta-card { padding: 14px 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 0; }
-            .meta-label { margin-bottom: 8px; color: #94a3b8; }
-            .meta-copy { margin: 0; font-size: 0.94rem; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
-            .summary-pill-list { display: flex; flex-wrap: wrap; gap: 8px; }
-            .summary-pill { padding: 6px 11px; background: #eef2ff; color: #334155; font-size: 0.8rem; }
-            .product-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-            .info-card { padding: 16px; border-radius: 20px; border: 1px solid #e2e8f0; background: #ffffff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); text-align: center; min-width: 0; overflow: hidden; }
-            .info-card strong { display: block; font-size: 1.18rem; margin-top: 6px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
-            .info-copy { margin: 0; font-size: 0.82rem; }
+            .product-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+            .meta-card { padding: 10px 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 0; }
+            .meta-label { margin: 0 0 6px; color: #94a3b8; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+            .meta-copy { margin: 0; font-size: 0.9rem; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+            .summary-pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+            .summary-pill { padding: 5px 10px; background: #eef2ff; color: #334155; font-size: 0.78rem; }
+            .product-side { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .info-card { padding: 10px 12px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: center; min-width: 0; overflow: hidden; }
+            .info-card strong { display: block; font-size: 1rem; margin-top: 2px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+            .info-copy { margin: 0; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
             .status-badge { min-width: 112px; padding: 9px 14px; font-size: 0.82rem; }
             .status-Available { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
             .status-OutOfStock { background: rgba(245, 158, 11, 0.14); color: #b45309; }
             .status-Inactive { background: rgba(100, 116, 139, 0.16); color: #475569; }
-            .product-actions { display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-width: 128px; }
+            .product-actions { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 128px; }
             .action-group { display: flex; flex-direction: column; gap: 10px; }
             .table-btn { min-width: 96px; padding: 11px 14px; font-size: 0.85rem; border: none; }
             .primary-btn { border: none; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 18px 30px rgba(124, 58, 237, 0.22); }
@@ -185,7 +186,7 @@
 
                 <section class="tab-panel ${activeTab eq 'products' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Products</h3><p>Review images, colors, sizes, stock levels, and prices in a clean layout.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=create&tab=products">Add product</a></div>
+                        <div class="section-header"><div><h3>Products</h3><p>Review images, colors, sizes, stock levels, and prices in a clean layout.</p></div><button type="button" class="primary-btn" data-open-create>Add product</button></div>
                         <div class="section-body">
                             <form id="productFilterForm" method="get" action="${pageContext.request.contextPath}/staff/products" class="filter-toolbar">
                                 <input type="hidden" name="tab" value="products" />
@@ -236,10 +237,6 @@
                                                                 <p class="meta-copy"><strong>${product.categoryName}</strong></p>
                                                             </div>
                                                             <div class="meta-card">
-                                                                <p class="meta-label">Status</p>
-                                                                <span class="status-badge status-${product.status}">${product.status}</span>
-                                                            </div>
-                                                            <div class="meta-card">
                                                                 <p class="meta-label">Colors</p>
                                                                 <div class="summary-pill-list">
                                                                     <c:forEach var="colorName" items="${product.colorNames}">
@@ -273,21 +270,12 @@
                                                         </strong>
                                                     </div>
                                                     <div class="info-card"><p class="info-copy">Price</p><strong><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> đ</strong></div>
-                                                    <div class="info-card"><p class="info-copy">Catalog</p><strong>${product.categoryName}</strong></div>
                                                 </div>
                                                 <div class="product-actions">
                                                     <span class="status-badge status-${product.status}">${product.status}</span>
                                                     <div class="action-group">
-                                                        <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=edit&id=${product.productId}&tab=products">Edit</a>
-                                                        <c:set var="hasOrders" value="${productHasOrders[product.productId]}" />
-                                                        <c:choose>
-                                                            <c:when test="${hasOrders}">
-                                                                <span class="table-btn delete" style="background: #f1f5f9; color: #94a3b8; cursor: not-allowed;" title="Cannot delete: product has existing orders">Delete</span>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=delete&id=${product.productId}&tab=products">Delete</a>
-                                                            </c:otherwise>
-                                                        </c:choose>
+                                                        <a class="table-btn edit" href="javascript:void(0)" data-open-edit data-product-id="${product.productId}">Edit</a>
+                                                        <a class="table-btn delete" href="javascript:void(0)" onclick="openDeleteModal('product','${product.productId}','${fn:escapeXml(product.name)}')">Delete</a>
                                                     </div>
                                                 </div>
                                             </article>
@@ -324,7 +312,7 @@
 
                 <section class="tab-panel ${activeTab eq 'categories' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Categories</h3><p>Manage category names and descriptions in a structured table.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=createCategory&tab=categories">Add category</a></div>
+                        <div class="section-header"><div><h3>Categories</h3><p>Manage category names and descriptions in a structured table.</p></div><button type="button" class="primary-btn" onclick="openCategoryModal()">Add category</button></div>
                         <div class="section-body">
                             <c:choose>
                                 <c:when test="${empty categoryItems}">
@@ -349,8 +337,8 @@
                                                         <td class="cell-description">${empty category.description ? '-' : category.description}</td>
                                                         <td class="cell-actions">
                                                             <div class="action-group">
-                                                                <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=editCategory&id=${category.categoryId}&tab=categories">Edit</a>
-                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=deleteCategory&id=${category.categoryId}&tab=categories">Delete</a>
+                                                                <button type="button" class="table-btn edit" onclick="openCategoryModal('${category.categoryId}')">Edit</button>
+                                                                <button type="button" class="table-btn delete" onclick="openDeleteModal('category','${category.categoryId}','${fn:escapeXml(category.name)}')">Delete</button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -389,7 +377,7 @@
 
                 <section class="tab-panel ${activeTab eq 'colors' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Colors</h3><p>Display color details in a structured table format.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=createColor&tab=colors">Add color</a></div>
+                        <div class="section-header"><div><h3>Colors</h3><p>Display color details in a structured table format.</p></div><button type="button" class="primary-btn" onclick="openColorModal()">Add color</button></div>
                         <div class="section-body">
                             <c:choose>
                                 <c:when test="${empty colorItems}">
@@ -420,8 +408,8 @@
                                                         </td>
                                                         <td class="cell-actions">
                                                             <div class="action-group">
-                                                                <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=editColor&id=${color.colorId}&tab=colors">Edit</a>
-                                                                <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=deleteColor&id=${color.colorId}&tab=colors">Delete</a>
+                                                                <button type="button" class="table-btn edit" onclick="openColorModal('${color.colorId}')">Edit</button>
+                                                                <button type="button" class="table-btn delete" onclick="openDeleteModal('color','${color.colorId}','${fn:escapeXml(color.colorName)}')">Delete</button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -460,7 +448,7 @@
 
                 <section class="tab-panel ${activeTab eq 'sizes' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Sizes</h3><p>Manage sizes grouped by category. Click on a category to expand and view its sizes.</p></div><a class="primary-btn" href="${pageContext.request.contextPath}/staff/products?action=createSize&tab=sizes">Add size</a></div>
+                        <div class="section-header"><div><h3>Sizes</h3><p>Manage sizes grouped by category. Click on a category to expand and view its sizes.</p></div><button type="button" class="primary-btn" onclick="openSizeModal()">Add size</button></div>
                         <div class="section-body">
                             <c:choose>
                                 <c:when test="${empty sizesByCategory}">
@@ -483,9 +471,9 @@
                                                         <span class="size-group-title">${currentCategory.name}</span>
                                                         <span class="size-group-count">(${sizesInCategory.size()} sizes)</span>
                                                     </div>
-                                                    <a class="add-size-btn" href="${pageContext.request.contextPath}/staff/products?action=createSize&categoryId=${currentCategory.categoryId}&tab=sizes" onclick="event.stopPropagation();">
+                                                    <button type="button" class="add-size-btn" onclick="event.stopPropagation(); openSizeModal('${currentCategory.categoryId}')">
                                                         + Add Size
-                                                    </a>
+                                                    </button>
                                                 </div>
                                                 <div class="size-group-body" data-group="${currentCategory.categoryId}">
                                                     <c:choose>
@@ -509,8 +497,8 @@
                                                                                 <td class="cell-name">${size.sizeName}</td>
                                                                                 <td class="cell-actions">
                                                                                     <div class="action-group">
-                                                                                        <a class="table-btn edit" href="${pageContext.request.contextPath}/staff/products?action=editSize&id=${size.sizeId}&tab=sizes">Edit</a>
-                                                                                        <a class="table-btn delete" href="${pageContext.request.contextPath}/staff/products?action=deleteSize&id=${size.sizeId}&tab=sizes">Delete</a>
+                                                                                        <button type="button" class="table-btn edit" onclick="openSizeModal(null,'${size.sizeId}')">Edit</button>
+                                                                                        <button type="button" class="table-btn delete" onclick="openDeleteModal('size','${size.sizeId}','${fn:escapeXml(size.sizeName)}')">Delete</button>
                                                                                     </div>
                                                                                 </td>
                                                                             </tr>
@@ -532,6 +520,877 @@
             </main>
         </div>
     </body>
+
+    <!-- Modal: Add / Edit category -->
+    <div id="categoryModal" class="product-modal" aria-hidden="true">
+        <div class="product-modal-overlay" data-close-modal></div>
+        <div class="product-modal-panel" role="dialog" aria-modal="true">
+            <header class="product-modal-header">
+                <h3 id="categoryModalTitle">Add category</h3>
+                <button type="button" class="product-modal-close" data-close-modal aria-label="Close">×</button>
+            </header>
+            <form id="categoryForm">
+                <input type="hidden" name="categoryId" id="categoryIdInput">
+                <div class="product-modal-body">
+                    <div id="categoryModalAlert" class="alert" style="display:none;"></div>
+                    <div class="product-modal-grid">
+                        <div class="form-group full-width">
+                            <label for="categoryNameInput">Category name *</label>
+                            <input id="categoryNameInput" name="name" type="text" maxlength="200" required placeholder="Ex: T-Shirts">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="categoryDescInput">Description</label>
+                            <textarea id="categoryDescInput" name="description" rows="4" placeholder="Add a short description for this category..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <footer class="product-modal-footer">
+                    <button type="button" class="ghost-btn" data-close-modal>Cancel</button>
+                    <button type="submit" class="primary-btn">Save</button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit color -->
+    <div id="colorModal" class="product-modal" aria-hidden="true">
+        <div class="product-modal-overlay" data-close-modal></div>
+        <div class="product-modal-panel" role="dialog" aria-modal="true">
+            <header class="product-modal-header">
+                <h3 id="colorModalTitle">Add color</h3>
+                <button type="button" class="product-modal-close" data-close-modal aria-label="Close">×</button>
+            </header>
+            <form id="colorForm">
+                <input type="hidden" name="colorId" id="colorIdInput">
+                <div class="product-modal-body">
+                    <div id="colorModalAlert" class="alert" style="display:none;"></div>
+                    <div class="product-modal-grid">
+                        <div class="form-group">
+                            <label for="colorNameInput">Color name *</label>
+                            <input id="colorNameInput" name="colorName" type="text" maxlength="100" required placeholder="Ex: Red">
+                        </div>
+                        <div class="form-group">
+                            <label for="colorHexInput">Hex code *</label>
+                            <input id="colorHexInput" name="hexCode" type="color" value="#000000" required style="height: 48px; padding: 6px;">
+                        </div>
+                    </div>
+                </div>
+                <footer class="product-modal-footer">
+                    <button type="button" class="ghost-btn" data-close-modal>Cancel</button>
+                    <button type="submit" class="primary-btn">Save</button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit size -->
+    <div id="sizeModal" class="product-modal" aria-hidden="true">
+        <div class="product-modal-overlay" data-close-modal></div>
+        <div class="product-modal-panel" role="dialog" aria-modal="true">
+            <header class="product-modal-header">
+                <h3 id="sizeModalTitle">Add size</h3>
+                <button type="button" class="product-modal-close" data-close-modal aria-label="Close">×</button>
+            </header>
+            <form id="sizeForm">
+                <input type="hidden" name="sizeId" id="sizeIdInput">
+                <div class="product-modal-body">
+                    <div id="sizeModalAlert" class="alert" style="display:none;"></div>
+                    <div class="product-modal-grid">
+                        <div class="form-group">
+                            <label for="sizeCategorySelect">Category *</label>
+                            <select id="sizeCategorySelect" name="categoryId" required>
+                                <option value="">-- Select category --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sizeNameInput">Size name *</label>
+                            <input id="sizeNameInput" name="sizeName" type="text" maxlength="50" required placeholder="Ex: S, M, L, 38, 40...">
+                        </div>
+                    </div>
+                </div>
+                <footer class="product-modal-footer">
+                    <button type="button" class="ghost-btn" data-close-modal>Cancel</button>
+                    <button type="submit" class="primary-btn">Save</button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Delete chung cho category / color / size -->
+    <div id="deleteModal" class="product-modal" aria-hidden="true">
+        <div class="product-modal-overlay" data-close-modal></div>
+        <div class="product-modal-panel" role="dialog" aria-modal="true" style="width: min(480px, 100%);">
+            <header class="product-modal-header">
+                <h3 id="deleteModalTitle">Delete</h3>
+                <button type="button" class="product-modal-close" data-close-modal aria-label="Close">×</button>
+            </header>
+            <div class="product-modal-body">
+                <div id="deleteModalAlert" class="alert" style="display:none;"></div>
+                <p id="deleteModalBody" style="margin: 0; color: #334155; line-height: 1.6;">Are you sure you want to delete this item?</p>
+            </div>
+            <footer class="product-modal-footer">
+                <button type="button" class="ghost-btn" data-close-modal>Cancel</button>
+                <button type="button" id="deleteModalConfirm" class="primary-btn" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 18px 30px rgba(239, 68, 68, 0.22);">Delete</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modal: Add / Edit product -->
+    <div id="productModal" class="product-modal" aria-hidden="true">
+        <div class="product-modal-overlay" data-close-modal></div>
+        <div class="product-modal-panel" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+            <header class="product-modal-header">
+                <div>
+                    <p class="eyebrow" style="margin: 0 0 6px;">Catalog / Product</p>
+                    <h3 id="productModalTitle">Add Product</h3>
+                </div>
+                <button type="button" class="product-modal-close" data-close-modal aria-label="Close">×</button>
+            </header>
+            <div class="product-modal-body">
+                <div id="productModalAlert" class="alert" style="display:none;"></div>
+                <form id="productModalForm" method="post" action="${pageContext.request.contextPath}/staff/products" enctype="multipart/form-data">
+                    <input type="hidden" name="action" id="productModalAction" value="create">
+                    <input type="hidden" name="productId" id="productModalProductId" value="">
+                    <input type="hidden" name="existingImageUrl" id="productModalExistingImage" value="">
+
+                    <div class="product-modal-grid">
+                        <div class="form-group">
+                            <label for="modalName">Product name *</label>
+                            <input id="modalName" name="name" type="text" required maxlength="200" placeholder="e.g. Classic denim jacket">
+                        </div>
+                        <div class="form-group">
+                            <label for="modalCategory">Category *</label>
+                            <select id="modalCategory" name="categoryId" required>
+                                <option value="">-- Select category --</option>
+                                <c:forEach var="category" items="${categories}">
+                                    <option value="${category.categoryId}">${category.name}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="modalBasePrice">Base price (đ) *</label>
+                            <input id="modalBasePrice" name="basePrice" type="text" inputmode="numeric" required placeholder="e.g. 500000">
+                        </div>
+                        <div class="form-group">
+                            <label for="modalStatus">Status *</label>
+                            <select id="modalStatus" name="status" required>
+                                <c:forEach var="status" items="${statuses}">
+                                    <c:if test="${status != 'OutOfStock'}">
+                                        <option value="${status}">${status}</option>
+                                    </c:if>
+                                </c:forEach>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="modalDescription">Description</label>
+                            <textarea id="modalDescription" name="description" rows="3" placeholder="Add a short description about material, style, or target audience..."></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="modalImage">Product image</label>
+                            <input id="modalImage" name="productImage" type="file" accept="image/*">
+                            <div id="modalImagePreview" class="modal-image-preview">No image</div>
+                        </div>
+                    </div>
+
+                    <div class="modal-section-heading">
+                        <h4>Product variants</h4>
+                        <p>Add each size/color option as a separate row. Stock is managed in the Warehouse module.</p>
+                    </div>
+                    <div id="modalVariantsList" class="variants-list"></div>
+                    <button type="button" id="modalAddVariantBtn" class="variant-add-btn">+ Add variant</button>
+
+                    <!-- Source data for JS (sizes by category, colors, existing variants) -->
+                    <div id="modalSizeData" style="display:none;">
+                        <c:forEach var="size" items="${allSizes}">
+                            <div data-size-id="${size.sizeId}" data-size-name="${size.sizeName}" data-category-id="${size.categoryId}"></div>
+                        </c:forEach>
+                    </div>
+                    <div id="modalColorData" style="display:none;">
+                        <c:forEach var="color" items="${colors}">
+                            <div data-color-id="${color.colorId}" data-color-name="${fn:escapeXml(color.colorName)}"></div>
+                        </c:forEach>
+                    </div>
+                </form>
+            </div>
+            <footer class="product-modal-footer">
+                <button type="button" class="ghost-btn" data-close-modal>Close</button>
+                <button type="submit" form="productModalForm" class="primary-btn" id="productModalSubmit">Save product</button>
+            </footer>
+        </div>
+    </div>
+
+    <style>
+        .product-modal { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
+        .product-modal.open { display: flex; }
+        .product-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px); }
+        .product-modal-panel { position: relative; background: #ffffff; border-radius: 24px; width: min(960px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25); overflow: hidden; }
+        .product-modal-header { padding: 22px 28px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .product-modal-header h3 { margin: 0; font-size: 1.5rem; }
+        .product-modal-close { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 1.4rem; cursor: pointer; color: #475569; }
+        .product-modal-close:hover { background: #e2e8f0; }
+        .product-modal-body { padding: 24px 28px; overflow-y: auto; flex: 1; }
+        .product-modal-footer { padding: 18px 28px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; }
+        .product-modal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .product-modal-grid .full-width { grid-column: 1 / -1; }
+        .product-modal-grid label { display: block; font-weight: 700; margin-bottom: 8px; color: #334155; font-size: 0.9rem; }
+        .product-modal-grid input, .product-modal-grid select, .product-modal-grid textarea { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid #dbe3f0; background: #ffffff; font: inherit; box-sizing: border-box; }
+        .product-modal-grid input:focus, .product-modal-grid select:focus, .product-modal-grid textarea:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12); }
+        .modal-image-preview { width: 120px; height: 120px; border-radius: 16px; border: 1px solid #dbe3f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; color: #94a3b8; margin-top: 10px; overflow: hidden; }
+        .modal-image-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-section-heading { margin: 24px 0 12px; }
+        .modal-section-heading h4 { margin: 0; font-size: 1.05rem; }
+        .modal-section-heading p { margin: 4px 0 0; color: #64748b; font-size: 0.85rem; }
+        .variant-row { border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; background: #ffffff; display: grid; gap: 14px; margin-bottom: 12px; }
+        .variant-row-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .variant-row-title-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .variant-row-title { font-weight: 700; color: #334155; }
+        .variant-stock-badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .variant-stock-badge.in-stock { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+        .variant-stock-badge.out-of-stock { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+        .variant-row-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        .variant-row-grid label { display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 6px; color: #475569; }
+        .variant-row-grid select, .variant-row-grid input { padding: 10px 12px; border-radius: 12px; border: 1px solid #dbe3f0; background: #ffffff; width: 100%; box-sizing: border-box; }
+        .variant-remove-btn { background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: none; padding: 8px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        @media (max-width: 768px) { .product-modal-grid { grid-template-columns: 1fr; } .variant-row-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+
+    <script type="application/json" id="allCategoriesData">
+        <c:forEach var="cat" items="${allCategoryItems}" varStatus="status">
+            <c:if test="${not status.first}">,</c:if>{"id":"${fn:escapeXml(cat.categoryId)}","name":"${fn:escapeXml(cat.name)}"}
+        </c:forEach>
+    </script>
+
+    <script>
+        (function () {
+            const ctx = '${pageContext.request.contextPath}';
+            const modal = document.getElementById('productModal');
+            const form = document.getElementById('productModalForm');
+            const titleEl = document.getElementById('productModalTitle');
+            const actionInput = document.getElementById('productModalAction');
+            const productIdInput = document.getElementById('productModalProductId');
+            const existingImageInput = document.getElementById('productModalExistingImage');
+            const nameInput = document.getElementById('modalName');
+            const categorySelect = document.getElementById('modalCategory');
+            const basePriceInput = document.getElementById('modalBasePrice');
+            const statusSelect = document.getElementById('modalStatus');
+            const descriptionInput = document.getElementById('modalDescription');
+            const imageInput = document.getElementById('modalImage');
+            const imagePreview = document.getElementById('modalImagePreview');
+            const variantsList = document.getElementById('modalVariantsList');
+            const addVariantBtn = document.getElementById('modalAddVariantBtn');
+            const alertBox = document.getElementById('productModalAlert');
+            const submitBtn = document.getElementById('productModalSubmit');
+
+            const allSizeOptions = Array.from(document.querySelectorAll('#modalSizeData div')).map(node => ({
+                id: node.dataset.sizeId,
+                name: node.dataset.sizeName,
+                categoryId: node.dataset.categoryId
+            }));
+            const colorOptions = Array.from(document.querySelectorAll('#modalColorData div')).map(node => ({
+                id: node.dataset.colorId,
+                name: node.dataset.colorName
+            }));
+            let sizeOptions = [];
+
+            const formatPrice = (value) => {
+                // Accept both string and number (priceOverride from JSON can be a number)
+                const str = value == null ? '' : String(value);
+                const digits = str.replace(/\D/g, '');
+                if (!digits) return '';
+                return Number(digits).toLocaleString('vi-VN');
+            };
+
+            const getSizesByCategory = (categoryId) => {
+                if (!categoryId) return [];
+                return allSizeOptions.filter(item => item.categoryId === categoryId);
+            };
+
+            const showAlert = (msg, type) => {
+                if (!msg) { alertBox.style.display = 'none'; return; }
+                alertBox.className = 'alert alert-' + (type || 'error');
+                alertBox.textContent = msg;
+                alertBox.style.display = 'block';
+            };
+
+            const setImagePreview = (src) => {
+                imagePreview.innerHTML = '';
+                if (src) {
+                    // Normalize URL: keep http(s)/data:, prepend context for relative paths
+                    let finalSrc = src;
+                    if (!/^(https?:|data:)/i.test(src)) {
+                        if (!src.startsWith('/')) {
+                            finalSrc = ctx + '/' + src;
+                        } else {
+                            finalSrc = ctx + src;
+                        }
+                    }
+                    const img = document.createElement('img');
+                    img.src = finalSrc;
+                    img.onerror = function () {
+                        imagePreview.innerHTML = '';
+                        const span = document.createElement('span');
+                        span.textContent = 'Image not found';
+                        imagePreview.appendChild(span);
+                    };
+                    imagePreview.appendChild(img);
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = 'No image';
+                    imagePreview.appendChild(span);
+                }
+            };
+
+            const buildVariantRow = (variant) => {
+                const row = document.createElement('div');
+                row.className = 'variant-row';
+                if (variant && variant.variantId) row.dataset.variantId = variant.variantId;
+
+                // Hidden variantId so servlet knows old (keep stock) vs new variant
+                const hiddenVariantId = document.createElement('input');
+                hiddenVariantId.type = 'hidden';
+                hiddenVariantId.name = 'variantId';
+                hiddenVariantId.value = (variant && variant.variantId) ? variant.variantId : '';
+                row.appendChild(hiddenVariantId);
+
+                const header = document.createElement('div');
+                header.className = 'variant-row-header';
+                const titleWrap = document.createElement('div');
+                titleWrap.className = 'variant-row-title-wrap';
+                const title = document.createElement('div');
+                title.className = 'variant-row-title';
+                title.textContent = 'Variant';
+                titleWrap.appendChild(title);
+
+                if (variant && variant.variantId) {
+                    row.dataset.variantId = variant.variantId;
+                    const stockNum = Number(variant.availableQty || 0);
+                    const badge = document.createElement('span');
+                    badge.className = 'variant-stock-badge ' + (stockNum > 0 ? 'in-stock' : 'out-of-stock');
+                    badge.textContent = 'Stock: ' + stockNum;
+                    titleWrap.appendChild(badge);
+                }
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'variant-remove-btn';
+                removeBtn.textContent = 'Remove';
+                removeBtn.addEventListener('click', () => row.remove());
+                header.appendChild(titleWrap);
+                header.appendChild(removeBtn);
+
+                const grid = document.createElement('div');
+                grid.className = 'variant-row-grid';
+
+                // Size select
+                const sizeWrap = document.createElement('div');
+                const sizeLabel = document.createElement('label');
+                sizeLabel.textContent = 'Size';
+                const sizeSelect = document.createElement('select');
+                sizeSelect.name = 'variantSizeId';
+                sizeSelect.required = true;
+                sizeSelect.innerHTML = '<option value="">-- Select size --</option>';
+                sizeOptions.forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt.id;
+                    o.textContent = opt.name;
+                    if (variant && variant.sizeId === opt.id) o.selected = true;
+                    sizeSelect.appendChild(o);
+                });
+                sizeWrap.appendChild(sizeLabel);
+                sizeWrap.appendChild(sizeSelect);
+
+                // Color select
+                const colorWrap = document.createElement('div');
+                const colorLabel = document.createElement('label');
+                colorLabel.textContent = 'Color';
+                const colorSelect = document.createElement('select');
+                colorSelect.name = 'variantColorId';
+                colorSelect.required = true;
+                colorSelect.innerHTML = '<option value="">-- Select color --</option>';
+                colorOptions.forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt.id;
+                    o.textContent = opt.name;
+                    if (variant && variant.colorId === opt.id) o.selected = true;
+                    colorSelect.appendChild(o);
+                });
+                colorWrap.appendChild(colorLabel);
+                colorWrap.appendChild(colorSelect);
+
+                // SKU input
+                const skuWrap = document.createElement('div');
+                const skuLabel = document.createElement('label');
+                skuLabel.textContent = 'SKU';
+                const skuInput = document.createElement('input');
+                skuInput.type = 'text';
+                skuInput.name = 'variantSku';
+                skuInput.placeholder = 'Required SKU';
+                skuInput.value = (variant && variant.sku) || '';
+                skuWrap.appendChild(skuLabel);
+                skuWrap.appendChild(skuInput);
+
+                // Price override input
+                const priceWrap = document.createElement('div');
+                const priceLabel = document.createElement('label');
+                priceLabel.textContent = 'Price override';
+                const priceInput = document.createElement('input');
+                priceInput.type = 'text';
+                priceInput.name = 'variantPriceOverride';
+                priceInput.inputMode = 'numeric';
+                priceInput.placeholder = 'Optional';
+                priceInput.value = (variant && variant.priceOverride) ? formatPrice(variant.priceOverride) : '';
+                priceInput.addEventListener('input', function () { this.value = formatPrice(this.value); });
+                priceWrap.appendChild(priceLabel);
+                priceWrap.appendChild(priceInput);
+
+                grid.appendChild(sizeWrap);
+                grid.appendChild(colorWrap);
+                grid.appendChild(skuWrap);
+                grid.appendChild(priceWrap);
+                row.appendChild(header);
+                row.appendChild(grid);
+                return row;
+            };
+
+            const refreshVariantRowsSizes = () => {
+                const selects = variantsList.querySelectorAll('select[name="variantSizeId"]');
+                selects.forEach(select => {
+                    const current = select.value;
+                    select.innerHTML = '<option value="">-- Select size --</option>';
+                    sizeOptions.forEach(opt => {
+                        const o = document.createElement('option');
+                        o.value = opt.id;
+                        o.textContent = opt.name;
+                        if (current === opt.id) o.selected = true;
+                        select.appendChild(o);
+                    });
+                });
+            };
+
+            const openModal = (mode, productId, productData) => {
+                form.reset();
+                variantsList.innerHTML = '';
+                showAlert('', 'error');
+                actionInput.value = mode;
+                productIdInput.value = productId || '';
+                titleEl.textContent = mode === 'edit' ? 'Update Product' : 'Add Product';
+                submitBtn.textContent = mode === 'edit' ? 'Save changes' : 'Create product';
+
+                if (mode === 'edit' && productData) {
+                    nameInput.value = productData.name || '';
+                    categorySelect.value = productData.categoryId || '';
+                    sizeOptions = getSizesByCategory(productData.categoryId);
+                    basePriceInput.value = formatPrice(productData.basePrice);
+                    statusSelect.value = productData.status || 'Available';
+                    // Fallback to Available if status not in dropdown (e.g. OutOfStock)
+                    if (!statusSelect.value) statusSelect.value = 'Available';
+                    descriptionInput.value = productData.description || '';
+                    existingImageInput.value = productData.primaryImageUrl || '';
+                    setImagePreview(productData.primaryImageUrl || '');
+                    (productData.variants || []).forEach(v => variantsList.appendChild(buildVariantRow(v)));
+                } else {
+                    sizeOptions = getSizesByCategory(categorySelect.value);
+                    existingImageInput.value = '';
+                    setImagePreview('');
+                    if (colorOptions.length === 0 || allSizeOptions.length === 0) {
+                        variantsList.appendChild(buildVariantRow({}));
+                    }
+                }
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+            };
+
+            const closeModal = () => {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                // Strip ?openModal query for clean URL
+                if (window.history && window.history.replaceState) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('openModal');
+                    url.searchParams.delete('productId');
+                    window.history.replaceState({}, '', url);
+                }
+            };
+
+            // Close buttons
+            modal.querySelectorAll('[data-close-modal]').forEach(el => {
+                el.addEventListener('click', closeModal);
+            });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+            // On category change: update sizeOptions
+            categorySelect.addEventListener('change', () => {
+                sizeOptions = getSizesByCategory(categorySelect.value);
+                refreshVariantRowsSizes();
+            });
+
+            // Preview image when file is selected
+            imageInput.addEventListener('change', () => {
+                const file = imageInput.files && imageInput.files[0];
+                if (!file) {
+                    setImagePreview(existingImageInput.value);
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => setImagePreview(e.target.result);
+                reader.readAsDataURL(file);
+            });
+
+            // Currency formatter cho base price
+            basePriceInput.addEventListener('input', function () { this.value = formatPrice(this.value); });
+
+            // Add variant
+            addVariantBtn.addEventListener('click', () => {
+                if (sizeOptions.length === 0) {
+                    showAlert('Please choose a category first.', 'error');
+                    return;
+                }
+                variantsList.appendChild(buildVariantRow({}));
+            });
+
+            // NÚT "Add product" trong trang
+            document.querySelectorAll('[data-open-create]').forEach(btn => {
+                btn.addEventListener('click', (e) => { e.preventDefault(); openModal('create', null, null); });
+            });
+
+            // "Edit" button in each product card
+            document.querySelectorAll('[data-open-edit]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const productId = btn.dataset.productId;
+                    titleEl.textContent = 'Loading...';
+                    // Clear form first to avoid showing stale data
+                    form.reset();
+                    variantsList.innerHTML = '';
+                    showAlert('', 'error');
+                    modal.classList.add('open');
+                    modal.setAttribute('aria-hidden', 'false');
+                    fetch(ctx + '/staff/products?action=getProductJson&id=' + encodeURIComponent(productId), {
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                        .then(async r => {
+                            const text = await r.text();
+                            let data;
+                            try { data = JSON.parse(text); }
+                            catch (parseErr) {
+                                throw new Error('Server returned non-JSON (status ' + r.status + '): ' + text.substring(0, 120));
+                            }
+                            return data;
+                        })
+                        .then(data => {
+                            if (!data) { showAlert('Empty response from server.', 'error'); return; }
+                            if (data.error) { showAlert(data.error, 'error'); return; }
+                            openModal('edit', productId, data);
+                        })
+                        .catch(err => {
+                            // Don't close modal - keep error visible for debugging
+                            titleEl.textContent = 'Update Product';
+                            showAlert('Cannot load product: ' + err.message, 'error');
+                            console.error('Edit product load failed:', err);
+                        });
+                });
+            });
+
+            // Validation: block duplicate SKU and missing size/color
+            form.addEventListener('submit', function (e) {
+                showAlert('', 'error');
+                if (!nameInput.value.trim()) { e.preventDefault(); showAlert('Product name is required.', 'error'); return; }
+                if (!categorySelect.value) { e.preventDefault(); showAlert('Please select a category.', 'error'); return; }
+                if (!basePriceInput.value.trim()) { e.preventDefault(); showAlert('Base price is required.', 'error'); return; }
+                const skus = Array.from(variantsList.querySelectorAll('input[name="variantSku"]'))
+                    .map(i => (i.value || '').trim().toUpperCase()).filter(Boolean);
+                const seen = new Set();
+                for (const sku of skus) {
+                    if (seen.has(sku)) { e.preventDefault(); showAlert('Duplicate SKU: ' + sku, 'error'); return; }
+                    seen.add(sku);
+                }
+                // Check each variant has size + color
+                const sizes = Array.from(variantsList.querySelectorAll('select[name="variantSizeId"]')).map(s => s.value);
+                const colors = Array.from(variantsList.querySelectorAll('select[name="variantColorId"]')).map(s => s.value);
+                for (let i = 0; i < sizes.length; i++) {
+                    if (!sizes[i] || !colors[i]) {
+                        e.preventDefault();
+                        showAlert('Each variant must have size and color selected.', 'error');
+                        return;
+                    }
+                }
+            });
+
+            // Auto-open modal if URL has ?openModal=create
+            const urlParams = new URLSearchParams(window.location.search);
+            const openMode = urlParams.get('openModal');
+            if (openMode === 'create') {
+                openModal('create', null, null);
+            }
+
+            // ============ Modal Category ============
+            const categoryModal = document.getElementById('categoryModal');
+            const categoryForm = document.getElementById('categoryForm');
+            const categoryTitleEl = document.getElementById('categoryModalTitle');
+            const categoryIdInput = document.getElementById('categoryIdInput');
+            const categoryNameInput = document.getElementById('categoryNameInput');
+            const categoryDescInput = document.getElementById('categoryDescInput');
+
+            function attachModalClose(modalEl) {
+                if (!modalEl) return;
+                modalEl.querySelectorAll('[data-close-modal]').forEach(el => {
+                    el.addEventListener('click', () => {
+                        modalEl.classList.remove('open');
+                        modalEl.setAttribute('aria-hidden', 'true');
+                    });
+                });
+            }
+            // Show alert (error/success) inside the open modal instead of productModal alert box
+            function localShowAlert(modalEl, msg, type) {
+                if (!modalEl) { alert(msg); return; }
+                const box = modalEl.querySelector('.alert');
+                if (!box) { alert(msg); return; }
+                box.className = 'alert alert-' + (type || 'error');
+                box.textContent = msg;
+                box.style.display = 'block';
+            }
+            function localClearAlert(modalEl) {
+                if (!modalEl) return;
+                const box = modalEl.querySelector('.alert');
+                if (box) { box.style.display = 'none'; box.textContent = ''; }
+            }
+            attachModalClose(categoryModal);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.product-modal.open').forEach(m => {
+                        m.classList.remove('open');
+                        m.setAttribute('aria-hidden', 'true');
+                    });
+                }
+            });
+
+            window.openCategoryModal = function (categoryId) {
+                if (!categoryModal) return;
+                localClearAlert(categoryModal);
+                if (categoryId) {
+                    categoryTitleEl.textContent = 'Edit category';
+                    categoryIdInput.value = categoryId;
+                    categoryNameInput.value = '';
+                    categoryDescInput.value = '';
+                    fetch(ctx + '/staff/products?action=getCategoryJson&id=' + encodeURIComponent(categoryId))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.error) { localShowAlert(categoryModal, data.error, 'error'); return; }
+                            categoryNameInput.value = data.name || '';
+                            categoryDescInput.value = data.description || '';
+                        }).catch(err => localShowAlert(categoryModal, 'Failed to load category: ' + err.message, 'error'));
+                } else {
+                    categoryTitleEl.textContent = 'Add category';
+                    categoryIdInput.value = '';
+                    categoryForm.reset();
+                }
+                categoryModal.classList.add('open');
+                categoryModal.setAttribute('aria-hidden', 'false');
+            };
+
+            categoryForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                localClearAlert(categoryModal);
+                const isEdit = categoryIdInput.value !== '';
+                const params = new URLSearchParams();
+                params.set('action', isEdit ? 'editCategory' : 'createCategory');
+                params.set('name', categoryNameInput.value.trim());
+                params.set('description', categoryDescInput.value.trim());
+                if (isEdit) params.set('categoryId', categoryIdInput.value);
+                fetch(ctx + '/staff/products', { method: 'POST', body: params })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            localShowAlert(categoryModal, data.message, 'success');
+                            setTimeout(() => { categoryModal.classList.remove('open'); window.location.reload(); }, 600);
+                        } else {
+                            localShowAlert(categoryModal, data.message || 'Failed', 'error');
+                        }
+                    }).catch(err => localShowAlert(categoryModal, 'Request failed: ' + err.message, 'error'));
+            });
+
+            // ============ Modal Color ============
+            const colorModal = document.getElementById('colorModal');
+            const colorForm = document.getElementById('colorForm');
+            const colorTitleEl = document.getElementById('colorModalTitle');
+            const colorIdInput = document.getElementById('colorIdInput');
+            const colorNameInput = document.getElementById('colorNameInput');
+            const colorHexInput = document.getElementById('colorHexInput');
+            attachModalClose(colorModal);
+
+            window.openColorModal = function (colorId) {
+                if (!colorModal) return;
+                localClearAlert(colorModal);
+                if (colorId) {
+                    colorTitleEl.textContent = 'Edit color';
+                    colorIdInput.value = colorId;
+                    fetch(ctx + '/staff/products?action=getColorJson&id=' + encodeURIComponent(colorId))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.error) { localShowAlert(colorModal, data.error, 'error'); return; }
+                            colorNameInput.value = data.colorName || '';
+                            colorHexInput.value = data.hexCode || '#000000';
+                        }).catch(err => localShowAlert(colorModal, 'Failed to load color: ' + err.message, 'error'));
+                } else {
+                    colorTitleEl.textContent = 'Add color';
+                    colorIdInput.value = '';
+                    colorForm.reset();
+                    colorHexInput.value = '#000000';
+                }
+                colorModal.classList.add('open');
+                colorModal.setAttribute('aria-hidden', 'false');
+            };
+
+            colorForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                localClearAlert(colorModal);
+                const isEdit = colorIdInput.value !== '';
+                const params = new URLSearchParams();
+                params.set('action', isEdit ? 'editColor' : 'createColor');
+                params.set('colorName', colorNameInput.value.trim());
+                params.set('hexCode', colorHexInput.value);
+                if (isEdit) params.set('colorId', colorIdInput.value);
+                fetch(ctx + '/staff/products', { method: 'POST', body: params })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            localShowAlert(colorModal, data.message, 'success');
+                            setTimeout(() => { colorModal.classList.remove('open'); window.location.reload(); }, 600);
+                        } else {
+                            localShowAlert(colorModal, data.message || 'Failed', 'error');
+                        }
+                    }).catch(err => localShowAlert(colorModal, 'Request failed: ' + err.message, 'error'));
+            });
+
+            // ============ Modal Size ============
+            const sizeModal = document.getElementById('sizeModal');
+            const sizeForm = document.getElementById('sizeForm');
+            const sizeTitleEl = document.getElementById('sizeModalTitle');
+            const sizeIdInput = document.getElementById('sizeIdInput');
+            const sizeCategorySelect = document.getElementById('sizeCategorySelect');
+            const sizeNameInput = document.getElementById('sizeNameInput');
+            attachModalClose(sizeModal);
+
+            function populateSizeCategoryOptions() {
+                sizeCategorySelect.innerHTML = '<option value="">-- Select category --</option>';
+                for (const cat of allCategoriesForSize) {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    sizeCategorySelect.appendChild(opt);
+                }
+            }
+            const allCategoriesForSize = (() => {
+                // Read from JSON block rendered by servlet - contains ALL categories, regardless of active tab
+                try {
+                    const raw = document.getElementById('allCategoriesData').textContent.trim() || '[]';
+                    return JSON.parse('[' + raw + ']');
+                } catch (err) {
+                    return [];
+                }
+            })();
+
+            window.openSizeModal = function (preselectCategoryId, sizeId) {
+                if (!sizeModal) return;
+                localClearAlert(sizeModal);
+                populateSizeCategoryOptions();
+                if (sizeId) {
+                    sizeTitleEl.textContent = 'Edit size';
+                    sizeIdInput.value = sizeId;
+                    sizeNameInput.value = '';
+                    fetch(ctx + '/staff/products?action=getSizeJson&id=' + encodeURIComponent(sizeId))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.error) { localShowAlert(sizeModal, data.error, 'error'); return; }
+                            sizeNameInput.value = data.sizeName || '';
+                            sizeCategorySelect.value = data.categoryId || '';
+                        }).catch(err => localShowAlert(sizeModal, 'Failed to load size: ' + err.message, 'error'));
+                } else {
+                    sizeTitleEl.textContent = 'Add size';
+                    sizeIdInput.value = '';
+                    sizeForm.reset();
+                    if (preselectCategoryId) sizeCategorySelect.value = preselectCategoryId;
+                }
+                sizeModal.classList.add('open');
+                sizeModal.setAttribute('aria-hidden', 'false');
+            };
+
+            sizeForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                localClearAlert(sizeModal);
+                const isEdit = sizeIdInput.value !== '';
+                const params = new URLSearchParams();
+                params.set('action', isEdit ? 'editSize' : 'createSize');
+                params.set('sizeName', sizeNameInput.value.trim());
+                params.set('categoryId', sizeCategorySelect.value);
+                if (isEdit) params.set('sizeId', sizeIdInput.value);
+                fetch(ctx + '/staff/products', { method: 'POST', body: params })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            localShowAlert(sizeModal, data.message, 'success');
+                            setTimeout(() => { sizeModal.classList.remove('open'); window.location.reload(); }, 600);
+                        } else {
+                            localShowAlert(sizeModal, data.message || 'Failed', 'error');
+                        }
+                    }).catch(err => localShowAlert(sizeModal, 'Request failed: ' + err.message, 'error'));
+            });
+
+            // ============ Modal Delete (chung cho category/color/size) ============
+            const deleteModalEl = document.getElementById('deleteModal');
+            const deleteModalTitle = document.getElementById('deleteModalTitle');
+            const deleteModalBody = document.getElementById('deleteModalBody');
+            const deleteModalConfirm = document.getElementById('deleteModalConfirm');
+            attachModalClose(deleteModalEl);
+            let deleteTarget = null;
+
+            window.openDeleteModal = function (type, id, label) {
+                if (!deleteModalEl) return;
+                localClearAlert(deleteModalEl);
+                deleteTarget = { type: type, id: id };
+                const typeName = (type === 'category') ? 'Category' : (type === 'color') ? 'Color' : (type === 'size') ? 'Size' : 'Product';
+                deleteModalTitle.textContent = 'Delete ' + typeName;
+                deleteModalBody.textContent = 'Are you sure you want to delete ' + typeName.toLowerCase() + ' "' + label + '"? This action cannot be undone.';
+                deleteModalEl.classList.add('open');
+                deleteModalEl.setAttribute('aria-hidden', 'false');
+            };
+
+            deleteModalConfirm.addEventListener('click', function () {
+                if (!deleteTarget) return;
+                localClearAlert(deleteModalEl);
+                const params = new URLSearchParams();
+                const actionMap = {
+                    category: 'deleteCategory', color: 'deleteColor', size: 'deleteSize', product: 'deleteProduct'
+                };
+                const idMap = {
+                    category: 'categoryId', color: 'colorId', size: 'sizeId', product: 'productId'
+                };
+                const action = actionMap[deleteTarget.type];
+                const idParam = idMap[deleteTarget.type];
+                if (!action || !idParam) {
+                    localShowAlert(deleteModalEl, 'Unsupported delete target', 'error');
+                    return;
+                }
+                params.set('action', action);
+                params.set(idParam, deleteTarget.id);
+                fetch(ctx + '/staff/products', {
+                    method: 'POST',
+                    body: params,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            localShowAlert(deleteModalEl, data.message, 'success');
+                            setTimeout(() => { deleteModalEl.classList.remove('open'); window.location.reload(); }, 600);
+                        } else {
+                            localShowAlert(deleteModalEl, data.message || 'Failed', 'error');
+                        }
+                    }).catch(err => localShowAlert(deleteModalEl, 'Request failed: ' + err.message, 'error'));
+            });
+        })();
+    </script>
     <script>
         function submitProductFilterForm() {
             const form = document.getElementById('productFilterForm');
