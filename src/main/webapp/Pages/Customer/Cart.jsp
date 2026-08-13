@@ -262,13 +262,47 @@ function saveCheckedItems() {
 function updateQty(id, qty) {
     saveCheckedItems();
 
+    qty = parseInt(qty);
+
+    if (isNaN(qty) || qty < 1) {
+        alert("Quantity must be at least 1.");
+        location.reload();
+        return;
+    }
+
     fetch('${pageContext.request.contextPath}/cart/update', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: 'cartItemId=' + id + '&quantity=' + qty
-    }).then(() => {
+        body: 'cartItemId=' + encodeURIComponent(id)
+            + '&quantity=' + encodeURIComponent(qty)
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.success) {
+
+            if (data.adjusted) {
+                alert(
+                    "You have reached the maximum available stock.\n\n"
+                    + "Only " + data.stock + " item(s) are available.\n"
+                    + "The quantity has been automatically adjusted to "
+                    + data.quantity + "."
+                );
+            }
+
+            location.reload();
+
+        } else {
+            alert(data.message || "Unable to update cart.");
+            location.reload();
+        }
+
+    })
+    .catch(error => {
+        console.error("Update cart error:", error);
+        alert("An error occurred while updating the cart.");
         location.reload();
     });
 }

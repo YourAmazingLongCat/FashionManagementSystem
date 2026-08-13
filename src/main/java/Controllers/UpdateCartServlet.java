@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package Controllers;
 
 import DALs.CartItemDAO;
@@ -14,34 +10,36 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-
-/**
- *
- * @author Admin
- */
-
 @WebServlet(name = "UpdateCartServlet", urlPatterns = {"/cart/update"})
 public class UpdateCartServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request,
-                          HttpServletResponse response)
+            HttpServletResponse response)
             throws ServletException, IOException {
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
         try {
             String cartItemId = request.getParameter("cartItemId");
             String qtyStr = request.getParameter("quantity");
 
             if (cartItemId == null || cartItemId.isBlank()) {
-                response.sendRedirect(request.getContextPath() + "/cart");
+                response.getWriter().write(
+                        "{\"success\":false,\"message\":\"Invalid cart item.\"}"
+                );
                 return;
             }
 
             int quantity = 1;
+
             if (qtyStr != null && !qtyStr.isEmpty()) {
                 try {
                     quantity = Integer.parseInt(qtyStr);
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                    quantity = 1;
+                }
             }
 
             if (quantity < 1) {
@@ -52,24 +50,51 @@ public class UpdateCartServlet extends HttpServlet {
             ProductDAO productDAO = new ProductDAO();
 
             String variantId = cartItemDAO.getVariantIdByCartItemId(cartItemId);
+
+            boolean adjusted = false;
+            int availableStock = 0;
+
             if (variantId != null) {
+
                 ProductVariant variant = productDAO.getVariantById(variantId);
+
                 if (variant != null) {
-                    int availableStock = variant.getAvailableQty();
+
+                    availableStock = variant.getAvailableQty();
+
                     if (quantity > availableStock) {
                         quantity = availableStock;
+                        adjusted = true;
                     }
                 }
             }
 
-            if (quantity >= 1) {
-                cartItemDAO.updateQuantity(cartItemId, quantity);
+            // Nếu tồn kho = 0
+            if (availableStock <= 0) {
+                response.getWriter().write(
+                        "{\"success\":false,\"message\":\"This product is currently out of stock.\"}"
+                );
+                return;
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            cartItemDAO.updateQuantity(cartItemId, quantity);
 
-        response.sendRedirect(request.getContextPath() + "/cart");
+            response.getWriter().write(
+                    "{"
+                    + "\"success\":true,"
+                    + "\"adjusted\":" + adjusted + ","
+                    + "\"quantity\":" + quantity + ","
+                    + "\"stock\":" + availableStock
+                    + "}"
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            response.getWriter().write(
+                    "{\"success\":false,\"message\":\"Unable to update cart.\"}"
+            );
+        }
     }
 }
