@@ -1,6 +1,7 @@
 package Controllers;
 
 import DALs.ProductDAO;
+import DALs.StatisticDAO;
 import Models.Account;
 import Models.Order;
 import Models.Payment;
@@ -25,12 +26,14 @@ public class StaffDashboardServlet extends HttpServlet {
     private OrderService orderService;
     private PaymentService paymentService;
     private ProductDAO productDAO;
+    private StatisticDAO statisticDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
         paymentService = new PaymentService();
         productDAO = new ProductDAO();
+        statisticDAO = new StatisticDAO();
     }
 
     @Override
@@ -49,10 +52,13 @@ public class StaffDashboardServlet extends HttpServlet {
         List<Payment> pendingDeposits = safePendingDeposits();
         List<Product> products = safeProducts();
 
+        request.setAttribute("totalCustomers", statisticDAO.getTotalCustomers());
         request.setAttribute("totalOrders", orders.size());
         request.setAttribute("pendingOrders", countOrdersByStatus(orders, OrderStatus.PENDING));
         request.setAttribute("processingOrders", countOrdersByStatus(orders, OrderStatus.PROCESSING));
         request.setAttribute("shippingOrders", countOrdersByStatus(orders, OrderStatus.SHIPPING));
+        request.setAttribute("deliveredOrders", countOrdersByStatus(orders, OrderStatus.DELIVERED));
+        request.setAttribute("cancelledOrders", countOrdersByStatus(orders, OrderStatus.CANCELLED));
         request.setAttribute("totalPayments", payments.size());
         request.setAttribute("pendingPayments", countPaymentsByStatus(payments, PaymentStatus::isPending));
         request.setAttribute("paidPayments", countPaymentsByStatus(payments, PaymentStatus::isPaid));
@@ -61,6 +67,15 @@ public class StaffDashboardServlet extends HttpServlet {
         request.setAttribute("recentOrders", orders);
         request.setAttribute("payments", payments);
         request.setAttribute("pendingDeposits", pendingDeposits);
+
+        // Overview analytics (same data set used by Admin)
+        request.setAttribute("revenue", statisticDAO.getRevenue());
+        request.setAttribute("costOfGoodsSold", statisticDAO.getCostOfGoodsSold());
+        request.setAttribute("profit", statisticDAO.getProfit());
+        request.setAttribute("totalProductSold", statisticDAO.getTotalProductSold(null, null));
+        request.setAttribute("topProducts", statisticDAO.getTopProducts(5, null, null));
+        request.setAttribute("topSpenders", statisticDAO.getTopSpenders(5, null, null));
+        request.setAttribute("orderStatistics", statisticDAO.getOrderStatistics());
 
         request.getRequestDispatcher("/Pages/Staff/Staff.jsp").forward(request, response);
     }

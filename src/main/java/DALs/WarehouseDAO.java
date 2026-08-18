@@ -876,4 +876,163 @@ public class WarehouseDAO extends DBContext {
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
+
+    /**
+     * Group imports into "bills" using importedAt (second precision) +
+     * employeeId as the bill key. Excludes export rows (importPrice = 0).
+     * Returns [billKey, importedAt, employeeId, employeeName, itemCount, totalQty, totalPrice].
+     */
+    public Map<String, Object> getImportBillsPaginated(String importerFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
+        Map<String, Object> result = new HashMap<>();
+        List<Object[]> bills = new ArrayList<>();
+        if (connection == null) {
+            result.put("data", bills);
+            result.put("totalRecords", 0);
+            result.put("totalPages", 0);
+            return result;
+        }
+
+        StringBuilder countSql = new StringBuilder(
+            "SELECT COUNT(*) FROM ("
+            + "SELECT 1 FROM WarehouseImports wi "
+            + "JOIN Employees e ON wi.employeeId = e.employeeId "
+            + "WHERE wi.importPrice > 0 ");
+        StringBuilder sql = new StringBuilder(
+            "SELECT billKey, importedAt, employeeId, employeeName, itemCount, totalQty, totalPrice FROM ("
+            + "SELECT CONVERT(VARCHAR(20), wi.importedAt, 120) + '|' + wi.employeeId AS billKey, "
+            + "MIN(wi.importedAt) AS importedAt, wi.employeeId, "
+            + "e.fullName AS employeeName, "
+            + "COUNT(*) AS itemCount, "
+            + "SUM(wi.quantity) AS totalQty, "
+            + "SUM(wi.quantity * wi.importPrice) AS totalPrice "
+            + "FROM WarehouseImports wi "
+            + "JOIN Employees e ON wi.employeeId = e.employeeId "
+            + "WHERE wi.importPrice > 0 ");
+
+        List<Object> countParams = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
+        if (importerFilter != null && !importerFilter.isBlank()) {
+            String cond = " AND e.employeeId = ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(importerFilter);
+            params.add(importerFilter);
+        }
+        if (dateFrom != null && !dateFrom.isBlank()) {
+            String cond = " AND wi.importedAt >= ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
+            params.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
+        }
+        if (dateTo != null && !dateTo.isBlank()) {
+            String cond = " AND wi.importedAt <= ? ";
+            countSql.append(cond);
+            sql.append(cond);
+            countParams.add(LocalDateTime.parse(dateTo + "T23:59:59"));
+            params.add(LocalDateTime.parse(dateTo + "T23:59:59"));
+        }
+        if (search != null && !search.isBlank()) {
+            String cond = " AND (e.fullName LIKE ?) ";
+            countSql.append(cond);
+            sql.append(cond);
+            String like = "%" + search + "%";
+            countParams.add(like);
+            params.add(like);
+        }
+
+        countSql.append(" GROUP BY CONVERT(VARCHAR(20), wi.importedAt, 120), wi.employeeId, e.fullName) g");
+        sql.append(" GROUP BY CONVERT(VARCHAR(20), wi.importedAt, 120), wi.employeeId, e.fullName) bills ORDER BY importedAt DESC");
+
+        int totalRecords = 0;
+        try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
+            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) totalRecords = rs.getInt(1);
+            }
+        } catch (SQLException ex) {
+            System.out.println("getImportBillsPaginated count error: " + ex.getMessage());
+        }
+
+        int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+        int offset = (page - 1) * pageSize;
+        String paginated = " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        sql = new StringBuilder(sql.toString().replace("ORDER BY importedAt DESC", "ORDER BY importedAt DESC" + paginated));
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            ps.setInt(params.size() + 1, offset);
+            ps.setInt(params.size() + 2, pageSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] row = new Object[7];
+                    row[0] = rs.getString("billKey");
+                    row[1] = rs.getTimestamp("importedAt");
+                    row[2] = rs.getString("employeeId");
+                    row[3] = rs.getString("employeeName");
+                    row[4] = rs.getInt("itemCount");
+                    row[5] = rs.getInt("totalQty");
+                    row[6] = rs.getBigDecimal("totalPrice");
+                    bills.add(row);
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("getImportBillsPaginated error: " + ex.getMessage());
+        }
+
+        result.put("data", bills);
+        result.put("totalRecords", totalRecords);
+        result.put("totalPages", totalPages);
+        return result;
+    }
+
+    /**
+     * Detail of one import bill: all rows in WarehouseImports with the given
+     * billKey (which is importedAt-string + employeeId). Excludes export rows.
+     */
+    public List<Object[]> getImportBillDetail(String billKey) {
+        List<Object[]> rows = new ArrayList<>();
+        if (connection == null || isBlank(billKey)) return rows;
+
+        int sep = billKey.indexOf('|');
+        if (sep < 0) return rows;
+        String importedAtStr = billKey.substring(0, sep);
+        String employeeId = billKey.substring(sep + 1);
+
+        String sql = "SELECT wi.importId, p.productId, p.name AS productName, "
+                + "pv.sku, wi.quantity, wi.importPrice, (wi.quantity * wi.importPrice) AS lineTotal, "
+                + "wi.importedAt, e.fullName AS employeeName "
+                + "FROM WarehouseImports wi "
+                + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+                + "JOIN Products p ON pv.productId = p.productId "
+                + "WHERE wi.importPrice > 0 "
+                + "AND CONVERT(VARCHAR(20), wi.importedAt, 120) = ? "
+                + "AND wi.employeeId = ? "
+                + "ORDER BY p.name, pv.sku";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, importedAtStr);
+            ps.setString(2, employeeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Object[] row = new Object[9];
+                    row[0] = rs.getString("importId");
+                    row[1] = rs.getString("productId");
+                    row[2] = rs.getString("productName");
+                    row[3] = rs.getString("sku");
+                    row[4] = rs.getInt("quantity");
+                    row[5] = rs.getBigDecimal("importPrice");
+                    row[6] = rs.getBigDecimal("lineTotal");
+                    row[7] = rs.getTimestamp("importedAt");
+                    row[8] = rs.getString("employeeName");
+                    rows.add(row);
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("getImportBillDetail error: " + ex.getMessage());
+        }
+        return rows;
+    }
 }

@@ -110,13 +110,6 @@
                 ];
             </script>
             </c:if>
-
-            <div class="variant-table-card">
-                <div class="variant-table-head">
-                    <h3>Available variants</h3>
-                    <span id="variantStockSummary">${product.totalStockQty} items in stock</span>
-                </div>
-            </div>
         </div>
     </section>
 

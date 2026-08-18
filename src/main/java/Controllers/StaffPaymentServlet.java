@@ -59,9 +59,7 @@ public class StaffPaymentServlet extends HttpServlet {
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("pageSize", pageSize);
         request.setAttribute("totalPayments", totalPayments);
-        request.setAttribute("contentPage", "/Pages/Staff/payments.jsp");
-        request.setAttribute("hideStaffHeader", "true");
-        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+        request.getRequestDispatcher("/Pages/Staff/payments.jsp").forward(request, response);
     }
 
     private boolean isStaffOrAdmin(Account user) {

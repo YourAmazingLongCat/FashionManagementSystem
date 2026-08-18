@@ -8,90 +8,113 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Product Management</title>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260609-friendly-admin-en">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         <style>
-            body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
-            .product-shell { width: min(1440px, calc(100% - 40px)); margin: 28px auto; display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
-            .sidebar-panel, .content-panel { background: #ffffff; border: 1px solid rgba(226, 232, 240, 0.9); border-radius: 24px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1); contain: content; }
-            .sidebar-panel { padding: 28px; display: flex; flex-direction: column; gap: 24px; background: linear-gradient(180deg, #0f172a 0%, #312e81 100%); color: #ffffff; position: sticky; top: 32px; align-self: start; max-height: calc(100vh - 64px); overflow-y: auto; }
-            .brand-label, .eyebrow, .sidebar-label, .meta-label { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.74rem; font-weight: 700; }
-            .sidebar-panel h1, .hero-panel h2 { margin: 0; font-size: 2rem; line-height: 1.12; }
-            .sidebar-text, .section-header p, .product-description, .info-copy, .meta-copy { margin: 12px 0 0; color: #64748b; line-height: 1.7; }
-            .sidebar-panel .sidebar-text { color: rgba(255, 255, 255, 0.78); }
-            .sidebar-block { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 24px; padding: 18px; }
-            .sidebar-tabs { display: grid; gap: 12px; }
-            .sidebar-tab, .home-link, .primary-btn, .table-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; border-radius: 16px; font-weight: 700; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease; }
-            .sidebar-tab { justify-content: flex-start; background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.88); border: 1px solid transparent; }
-            .sidebar-tab.active { background: #ffffff; color: #312e81; box-shadow: 0 18px 30px rgba(15, 23, 42, 0.18); }
-            .tab-badge { margin-left: auto; min-width: 34px; height: 34px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.82rem; background: rgba(255, 255, 255, 0.12); color: inherit; }
-            .sidebar-tab.active .tab-badge { background: rgba(79, 70, 229, 0.12); }
-            .home-link { background: rgba(255, 255, 255, 0.12); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.18); }
-            .sidebar-tab:hover, .home-link:hover, .primary-btn:hover, .table-btn:hover { transform: translateY(-2px); }
-            .content-panel { padding: 24px; }
-            .hero-panel { position: relative; display: flex; flex-direction: column; gap: 24px; padding: 30px; background: linear-gradient(135deg, #ffffff 0%, #ede9fe 100%); border: 1px solid #e2e8f0; border-radius: 26px; }
-            .hero-panel h2 { font-size: 2.15rem; margin: 0; }
-            .hero-actions { position: absolute; top: 24px; right: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
-            .profile-btn, .logout-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 24px; border-radius: 999px; background: #111827; color: #ffffff; text-transform: uppercase; font-weight: 800; font-size: 0.9rem; text-decoration: none; box-shadow: 0 20px 36px rgba(17, 24, 39, 0.18); transition: transform 0.2s ease, background-color 0.2s ease; }
-            .profile-btn:hover, .logout-btn:hover { background: #1f2937; transform: translateY(-1px); }
-            .logout-btn { background: #ef4444; }
-            .logout-btn:hover { background: #dc2626; }
+            body { margin: 0; font-family: 'Inter', 'Segoe UI', sans-serif; color: #2c3e50; background: #f8f9fa; }
+            .container-fluid { padding: 0; }
+            .row { margin: 0; }
+            .row > * { padding: 0; }
+            .sidebar {
+                background: linear-gradient(180deg, #2c3e50, #1a252f);
+                position: sticky; top: 0; height: 100vh; overflow-y: auto;
+                align-self: flex-start; padding: 0; color: #ecf0f1;
+            }
+            .sidebar .brand {
+                padding: 20px 15px; font-size: 1.5rem; font-weight: 600;
+                border-bottom: 1px solid #34495e; text-align: center;
+            }
+            .sidebar .nav-link {
+                color: #b0c4de; padding: 12px 20px; border-left: 3px solid transparent;
+                transition: 0.3s; font-weight: 500; display: flex; align-items: center;
+                text-decoration: none;
+            }
+            .sidebar .nav-link:hover, .sidebar .nav-link.active {
+                background: #34495e; color: #fff; border-left-color: #1abc9c;
+            }
+            .sidebar .nav-link i { width: 24px; margin-right: 10px; }
+            .sidebar .nav { display: flex; flex-direction: column; min-height: calc(100vh - 130px); padding: 0; margin: 0; list-style: none; }
+            .sidebar .nav-item { list-style: none; }
+            .sidebar .nav-item.mt-auto { margin-top: auto; }
+            .main-content { padding: 20px 30px; }
+            .stat-card {
+                background: #fff; border-radius: 12px; padding: 20px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 4px solid #1abc9c;
+                transition: 0.2s;
+            }
+            .stat-card:hover { transform: translateY(-4px); }
+            .stat-card .stat-number { font-size: 2rem; font-weight: 700; }
+            .stat-card .stat-label { color: #6c757d; text-transform: uppercase; font-size: 0.9rem; }
+            .stat-card span { display: block; color: #6c757d; font-size: 0.9rem; margin-bottom: 8px; text-transform: uppercase; font-weight: 500; }
+            .stat-card strong { font-size: 2rem; font-weight: 700; color: #2c3e50; }
+
+            /* Content panel that holds the catalog */
+            .product-shell { width: 100%; margin: 0; display: block; }
+            .content-panel { background: transparent; border: none; box-shadow: none; padding: 0; }
+
+            /* Hero panel */
+            .hero-panel {
+                position: relative; display: flex; flex-direction: column; gap: 24px;
+                padding: 30px; background: #fff; border: 1px solid #e2e8f0;
+                border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;
+            }
+            .hero-panel h2 { font-size: 2rem; margin: 0; color: #2c3e50; }
+            .eyebrow { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.74rem; font-weight: 700; color: #1abc9c; }
             .hero-stats { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 16px; margin-top: 16px; }
-            @media (max-width: 900px) { .hero-panel { padding: 24px; } .hero-actions { position: static; width: 100%; } .profile-btn, .logout-btn { width: 100%; } .hero-stats { grid-template-columns: repeat(2, minmax(150px, 1fr)); } }
-            @media (max-width: 600px) { .hero-stats { grid-template-columns: 1fr; } }
-            .stat-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; min-width: 150px; }
-            .stat-card span { display: block; color: #64748b; font-size: 0.88rem; margin-bottom: 8px; }
-            .stat-card strong { font-size: 1.8rem; }
-            .alert { margin-top: 20px; padding: 16px 18px; border-radius: 18px; font-weight: 600; }
-            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
-            .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
-            .surface-panel { margin-top: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 26px; overflow: hidden; }
+
+            .alert { margin-top: 20px; padding: 16px 18px; border-radius: 8px; font-weight: 600; }
+            .alert-success { background: #dcfce7; color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
+            .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
+
+            /* Surface panel = card */
+            .surface-panel { margin-top: 0; background: #fff; border: 1px solid #e2e8f0;
+                border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
             .filter-toolbar { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(180px, 0.7fr)) auto; gap: 12px; margin-bottom: 20px; }
-            .filter-input, .filter-select { width: 100%; padding: 13px 15px; border-radius: 16px; border: 1px solid #dbe3f0; background: #fff; font: inherit; color: #0f172a; box-sizing: border-box; }
+            .filter-input, .filter-select { width: 100%; padding: 10px 13px; border-radius: 8px; border: 1px solid #dbe3f0; background: #fff; font: inherit; color: #0f172a; box-sizing: border-box; }
             .filter-actions { display: flex; gap: 10px; }
-            .ghost-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 16px; border-radius: 16px; font-weight: 700; text-decoration: none; border: 1px solid #dbe3f0; background: #fff; color: #334155; }
-            .section-header { padding: 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #eef2f7; }
-            .section-header h3 { margin: 0; font-size: 1.35rem; }
+            .ghost-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid #dbe3f0; background: #fff; color: #334155; }
+            .section-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid #eef2f7; background: #f8f9fa; }
+            .section-header h3 { margin: 0; font-size: 1.35rem; color: #2c3e50; }
+            .section-header p { margin: 6px 0 0; color: #64748b; }
             .section-body { padding: 24px; }
             .product-list { display: grid; gap: 18px; }
-            .product-card { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(180px, 0.8fr) auto; gap: 14px; align-items: start; padding: 16px; border: 1px solid #e2e8f0; border-radius: 20px; background: #ffffff; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04); contain: content; }
-            .product-card:hover { box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1); transform: translateY(-2px); transition: all 0.2s ease; }
+            .product-card { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(180px, 0.8fr) auto; gap: 14px; align-items: start; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); }
+            .product-card:hover { box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08); transition: all 0.2s ease; }
             .product-main { display: flex; gap: 16px; min-width: 0; }
-            .thumb, .thumb-empty { width: 76px; height: 76px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
+            .thumb, .thumb-empty { width: 76px; height: 76px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
             .thumb { object-fit: cover; display: block; }
             .thumb-empty { display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.76rem; text-align: center; padding: 10px; }
             .product-copy { min-width: 0; display: grid; gap: 10px; align-content: start; }
             .product-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-            .product-name { margin: 0; font-size: 1.08rem; line-height: 1.45; font-weight: 800; }
-            .id-badge, .soft-badge, .summary-pill, .status-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700; }
-            .id-badge { padding: 7px 12px; background: #eef2ff; color: #4338ca; font-size: 0.8rem; }
-            .product-description { margin: 0; font-size: 0.94rem; white-space: normal; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+            .product-name { margin: 0; font-size: 1.08rem; line-height: 1.45; font-weight: 700; color: #2c3e50; }
+            .product-description { margin: 0; font-size: 0.94rem; color: #64748b; }
             .product-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-            .meta-card { padding: 10px 12px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 0; }
+            .meta-card { padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; min-width: 0; }
             .meta-label { margin: 0 0 6px; color: #94a3b8; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-            .meta-copy { margin: 0; font-size: 0.9rem; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+            .meta-copy { margin: 0; font-size: 0.9rem; color: #2c3e50; }
             .summary-pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
-            .summary-pill { padding: 5px 10px; background: #eef2ff; color: #334155; font-size: 0.78rem; }
+            .id-badge, .soft-badge, .summary-pill, .status-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 700; }
+            .id-badge { padding: 5px 10px; background: #e0f2fe; color: #0369a1; font-size: 0.8rem; }
+            .summary-pill { padding: 5px 10px; background: #e0f2fe; color: #0369a1; font-size: 0.78rem; }
             .product-side { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-            .info-card { padding: 10px 12px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: center; min-width: 0; overflow: hidden; }
-            .info-card strong { display: block; font-size: 1rem; margin-top: 2px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+            .info-card { padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; text-align: center; min-width: 0; overflow: hidden; }
+            .info-card strong { display: block; font-size: 1rem; margin-top: 2px; line-height: 1.2; }
             .info-copy { margin: 0; font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
             .status-badge { min-width: 112px; padding: 9px 14px; font-size: 0.82rem; }
-            .status-Available { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
-            .status-OutOfStock { background: rgba(245, 158, 11, 0.14); color: #b45309; }
-            .status-Inactive { background: rgba(100, 116, 139, 0.16); color: #475569; }
+            .status-Available { background: #dcfce7; color: #166534; }
+            .status-OutOfStock { background: #fef3c7; color: #92400e; }
+            .status-Inactive { background: #e2e8f0; color: #475569; }
             .product-actions { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 128px; }
             .action-group { display: flex; flex-direction: column; gap: 10px; }
-            .table-btn { min-width: 96px; padding: 11px 14px; font-size: 0.85rem; border: none; }
-            .primary-btn { border: none; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 18px 30px rgba(124, 58, 237, 0.22); }
-            .table-btn.edit { background: rgba(124, 58, 237, 0.12); color: #5b21b6; }
-            .table-btn.delete { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+            .table-btn { min-width: 96px; padding: 10px 14px; font-size: 0.85rem; border: none; cursor: pointer; }
+            .primary-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s ease; border: none; background: #1abc9c; color: #fff; }
+            .primary-btn:hover { background: #16a085; transform: translateY(-1px); }
+            .table-btn.edit { background: rgba(124, 58, 237, 0.12); color: #5b21b6; border-radius: 8px; }
+            .table-btn.delete { background: rgba(220, 38, 38, 0.12); color: #b91c1c; border-radius: 8px; }
             .collection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
-            .collection-card { padding: 20px; border: 1px solid #e2e8f0; border-radius: 24px; background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%); box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05); display: grid; gap: 14px; }
-            .collection-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-            .collection-card h4 { margin: 0; font-size: 1.05rem; line-height: 1.4; }
-            .collection-description { margin: 0; color: #64748b; line-height: 1.65; font-size: 0.93rem; }
-            .collection-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+            .collection-card { padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); display: grid; gap: 14px; }
+            .collection-card h4 { margin: 0; font-size: 1.05rem; color: #2c3e50; }
+            .collection-description { margin: 0; color: #64748b; }
             .soft-badge { padding: 6px 12px; background: #f8fafc; color: #475569; font-size: 0.78rem; border: 1px solid #e2e8f0; }
             .color-preview { display: inline-flex; align-items: center; gap: 10px; }
             .color-dot { width: 22px; height: 22px; border-radius: 999px; border: 1px solid rgba(15,23,42,0.12); flex-shrink: 0; }
@@ -100,9 +123,9 @@
             .data-table-wrapper { overflow-x: auto; }
             .data-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
             .data-table th, .data-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-            .data-table th { background: #f8fafc; font-weight: 700; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; color: #64748b; white-space: nowrap; }
-            .data-table tbody tr:hover { background: #f8fafc; }
-            .data-table .cell-id { font-family: monospace; color: #4338ca; font-weight: 600; font-size: 0.85rem; }
+            .data-table th { background: #f1f3f5; font-weight: 600; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; color: #6c757d; white-space: nowrap; }
+            .data-table tbody tr:hover { background: #f8f9fa; }
+            .data-table .cell-id { font-family: monospace; color: #0369a1; font-weight: 600; font-size: 0.85rem; }
             .data-table .cell-name { font-weight: 600; }
             .data-table .cell-description { color: #64748b; max-width: 300px; }
             .data-table .cell-actions { white-space: nowrap; }
@@ -111,78 +134,83 @@
 
             /* Category group styles for Sizes table */
             .size-group-list { display: flex; flex-direction: column; gap: 12px; }
-            .size-group { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
-            .size-group-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; }
-            .size-group-header-left { display: flex; align-items: center; gap: 12px; }
-            .size-group-title { font-weight: 700; font-size: 0.95rem; }
-            .size-group-count { font-size: 0.8rem; opacity: 0.85; }
-            .add-size-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: #ffffff; font-size: 0.75rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; }
-            .add-size-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
-            .size-group-body .data-table-wrapper { border-radius: 0; border: none; border-top: 1px solid #e2e8f0; }
-            .empty-state { padding: 42px 16px; text-align: center; }
-            .empty-state h4 { margin: 0 0 10px; font-size: 1.15rem; }
+            .size-group { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+            .size-group-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f1f3f5; color: #2c3e50; border-bottom: 1px solid #e2e8f0; }
+            .size-group-title { font-weight: 700; font-size: 1rem; }
+            .size-group-count { font-size: 0.85rem; color: #6c757d; margin-left: 10px; }
+            .add-size-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #1abc9c; border: none; border-radius: 8px; color: #ffffff; font-size: 0.8rem; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.2s ease; }
+            .add-size-btn:hover { background: #16a085; }
+            .empty-state { padding: 42px 16px; text-align: center; color: #64748b; }
+            .empty-state h4 { margin: 0 0 10px; font-size: 1.15rem; color: #2c3e50; }
             .empty-state p { margin: 0; color: #64748b; }
             .pagination-bar { margin-top: 22px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
             .pagination-summary { color: #64748b; font-size: 0.92rem; font-weight: 600; }
             .pagination-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-            .page-link { min-width: 42px; height: 42px; padding: 0 14px; border-radius: 14px; border: 1px solid #dbe3f0; background: #ffffff; color: #334155; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 700; }
-            .page-link.active { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; border-color: transparent; box-shadow: 0 14px 24px rgba(124, 58, 237, 0.18); }
-            .page-link:hover { transform: translateY(-2px); }
+            .page-link { min-width: 42px; height: 42px; padding: 0 14px; border-radius: 8px; border: 1px solid #dbe3f0; background: #ffffff; color: #334155; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 700; transition: all 0.2s ease; }
+            .page-link.active { background: #1abc9c; color: #ffffff; border-color: transparent; }
+            .page-link:hover { transform: translateY(-1px); }
             .tab-panel { display: none; }
             .tab-panel.active { display: block; }
+
             @media (max-width: 1280px) { .product-card { grid-template-columns: minmax(0, 1fr); } .product-actions { flex-direction: row; align-items: center; min-width: 0; } .action-group { flex-direction: row; flex-wrap: wrap; } }
             @media (max-width: 1180px) { .product-shell { grid-template-columns: 1fr; } }
             @media (max-width: 900px) { .hero-panel { flex-direction: column; } .hero-stats { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); } .product-meta, .product-side { grid-template-columns: 1fr; } .section-header { flex-direction: column; } }
-            @media (max-width: 768px) { .product-shell { width: min(100% - 20px, 100%); margin: 10px auto; } .content-panel, .sidebar-panel, .section-body, .section-header { padding-left: 16px; padding-right: 16px; } .hero-stats { grid-template-columns: 1fr; } .sidebar-tabs, .action-group { flex-direction: column; } .product-main { flex-direction: column; } .thumb, .thumb-empty { width: 100%; max-width: 96px; height: 96px; } .product-actions { flex-direction: column; align-items: stretch; } .table-btn, .primary-btn { width: 100%; } .collection-grid { grid-template-columns: 1fr; } }
+            @media (max-width: 768px) { .sidebar { min-height: auto; height: auto; } .main-content { padding: 15px; } .stat-card .stat-number { font-size: 1.5rem; } .hero-stats { grid-template-columns: 1fr; } .product-main { flex-direction: column; } .thumb, .thumb-empty { width: 100%; max-width: 96px; height: 96px; } .product-actions { flex-direction: column; align-items: stretch; } .table-btn, .primary-btn { width: 100%; } .collection-grid { grid-template-columns: 1fr; } }
         </style>
     </head>
     <body>
         <c:set var="activeTab" value="${empty param.tab ? 'products' : param.tab}" />
-        <div class="product-shell">
-            <aside class="sidebar-panel">
-                <div>
-                    <p class="brand-label">Fashion Shop</p>
-                    <h1>Catalog Management</h1>
-                    <p class="sidebar-text">Manage products, categories, colors, and sizes in one place.</p>
+        <div class="container-fluid p-0">
+            <div class="row g-0">
+                <!-- Sidebar -->
+                <div class="col-md-3 col-lg-2 sidebar">
+                    <div class="brand">Staff</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Orders</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Payments</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="${pageContext.request.contextPath}/staff/products">Products</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Warehouse</a>
+                        </li>
+                        <li class="nav-item mt-auto">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/auth/logout">Logout</a>
+                        </li>
+                    </ul>
                 </div>
-                <div class="sidebar-block">
-                    <p class="sidebar-label">Management</p>
-                    <div class="sidebar-tabs">
-                        <a class="sidebar-tab ${activeTab eq 'products' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=products"><span>Products</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'categories' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=categories"><span>Categories</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'colors' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=colors"><span>Colors</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'sizes' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/products?tab=sizes"><span>Sizes</span></a>
-                        <a class="sidebar-tab ${activeTab eq 'warehouse' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory"><span>Warehouse</span></a>
-                    </div>
-                </div>
-                <div class="sidebar-block">
-                    <p class="sidebar-label">Order Management</p>
-                    <div class="sidebar-tabs">
-                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/orders"><span>Orders</span></a>
-                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/BillServlet?action=list"><span>Bills</span></a>
-                        <a class="sidebar-tab" href="${pageContext.request.contextPath}/staff/payments"><span>Payments</span></a>
-                    </div>
-                </div>
-                <!-- Profile & Logout removed per UI requirements -->
-            </aside>
 
-            <main class="content-panel">
-                <section class="hero-panel">
-                    <div>
-                        <p class="eyebrow">Admin panel</p>
-                        <h2>${activeTab eq 'categories' ? 'Category Management' : (activeTab eq 'colors' ? 'Color Management' : (activeTab eq 'sizes' ? 'Size Management' : 'Product Management'))}</h2>
-                    </div>
-                    <a class="profile-btn" href="${pageContext.request.contextPath}/profile">My Profile</a>
-                    <div class="hero-stats">
-                        <div class="stat-card"><span>Total products</span><strong>${totalProducts}</strong></div>
-                        <div class="stat-card"><span>Total categories</span><strong>${totalCategories}</strong></div>
-                        <div class="stat-card"><span>Total colors</span><strong>${totalColors}</strong></div>
-                        <div class="stat-card"><span>Total sizes</span><strong>${totalSizes}</strong></div>
-                    </div>
-                </section>
+                <!-- Main Content -->
+                <div class="col-md-9 col-lg-10 main-content">
+                    <div class="product-shell">
+                        <div class="content-panel">
+                            <section class="hero-panel">
+                                <div>
+                                    <h2>${activeTab eq 'categories' ? 'Category Management' : (activeTab eq 'colors' ? 'Color Management' : (activeTab eq 'sizes' ? 'Size Management' : 'Product Management'))}</h2>
+                                </div>
+                                <ul class="nav nav-pills mt-2" style="gap: 8px;">
+                                    <li class="nav-item"><a class="nav-link ${activeTab eq 'products' ? 'active' : ''}" style="background: ${activeTab eq 'products' ? '#1abc9c' : '#f1f3f5'}; color: ${activeTab eq 'products' ? '#fff' : '#2c3e50'}; font-weight: 600; border-radius: 8px;" href="${pageContext.request.contextPath}/staff/products?tab=products">Products</a></li>
+                                    <li class="nav-item"><a class="nav-link ${activeTab eq 'categories' ? 'active' : ''}" style="background: ${activeTab eq 'categories' ? '#1abc9c' : '#f1f3f5'}; color: ${activeTab eq 'categories' ? '#fff' : '#2c3e50'}; font-weight: 600; border-radius: 8px;" href="${pageContext.request.contextPath}/staff/products?tab=categories">Categories</a></li>
+                                    <li class="nav-item"><a class="nav-link ${activeTab eq 'colors' ? 'active' : ''}" style="background: ${activeTab eq 'colors' ? '#1abc9c' : '#f1f3f5'}; color: ${activeTab eq 'colors' ? '#fff' : '#2c3e50'}; font-weight: 600; border-radius: 8px;" href="${pageContext.request.contextPath}/staff/products?tab=colors">Colors</a></li>
+                                    <li class="nav-item"><a class="nav-link ${activeTab eq 'sizes' ? 'active' : ''}" style="background: ${activeTab eq 'sizes' ? '#1abc9c' : '#f1f3f5'}; color: ${activeTab eq 'sizes' ? '#fff' : '#2c3e50'}; font-weight: 600; border-radius: 8px;" href="${pageContext.request.contextPath}/staff/products?tab=sizes">Sizes</a></li>
+                                </ul>
+                                <div class="hero-stats">
+                                    <div class="stat-card"><span>Total products</span><strong>${totalProducts}</strong></div>
+                                    <div class="stat-card"><span>Total categories</span><strong>${totalCategories}</strong></div>
+                                    <div class="stat-card"><span>Total colors</span><strong>${totalColors}</strong></div>
+                                    <div class="stat-card"><span>Total sizes</span><strong>${totalSizes}</strong></div>
+                                </div>
+                            </section>
 
-                <c:if test="${not empty error}"><div class="alert alert-error">${error}</div></c:if>
-                <c:if test="${not empty param.message}"><div class="alert ${param.messageType eq 'error' ? 'alert-error' : 'alert-success'}">${param.message}</div></c:if>
+                            <c:if test="${not empty error}"><div class="alert alert-error">${error}</div></c:if>
+                            <c:if test="${not empty param.message}"><div class="alert ${param.messageType eq 'error' ? 'alert-error' : 'alert-success'}">${param.message}</div></c:if>
 
                 <section class="tab-panel ${activeTab eq 'products' ? 'active' : ''}">
                     <section class="surface-panel">
@@ -517,8 +545,11 @@
                         </div>
                     </section>
                 </section>
-            </main>
-        </div>
+                        </div><!-- content-panel -->
+                    </div><!-- product-shell -->
+                </div><!-- main-content -->
+            </div><!-- row g-0 -->
+        </div><!-- container-fluid p-0 -->
     </body>
 
     <!-- Modal: Add / Edit category -->
@@ -641,7 +672,6 @@
         <div class="product-modal-panel" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
             <header class="product-modal-header">
                 <div>
-                    <p class="eyebrow" style="margin: 0 0 6px;">Catalog / Product</p>
                     <h3 id="productModalTitle">Add Product</h3>
                 </div>
                 <button type="button" class="product-modal-close" data-close-modal aria-label="Close">×</button>

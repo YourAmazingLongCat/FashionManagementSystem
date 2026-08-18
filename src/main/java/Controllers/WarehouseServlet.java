@@ -19,10 +19,14 @@ import jakarta.servlet.http.HttpServletResponse;
     "/admin/warehouse/inventory",
     "/admin/warehouse/import",
     "/admin/warehouse/export",
+    "/admin/warehouse/import-bills",
+    "/admin/warehouse/import-bills/view",
     "/staff/warehouse",
     "/staff/warehouse/inventory",
     "/staff/warehouse/import",
-    "/staff/warehouse/export"
+    "/staff/warehouse/export",
+    "/staff/warehouse/import-bills",
+    "/staff/warehouse/import-bills/view"
 })
 public class WarehouseServlet extends HttpServlet {
 
@@ -60,9 +64,13 @@ public class WarehouseServlet extends HttpServlet {
             case "/staff/warehouse/import":
                 showImport(request, response);
                 break;
-            case "/admin/warehouse/export":
-            case "/staff/warehouse/export":
-                showExport(request, response);
+            case "/admin/warehouse/import-bills":
+            case "/staff/warehouse/import-bills":
+                showImportBills(request, response);
+                break;
+            case "/admin/warehouse/import-bills/view":
+            case "/staff/warehouse/import-bills/view":
+                showImportBillDetail(request, response);
                 break;
             default:
                 showInventory(request, response);
@@ -158,13 +166,24 @@ public class WarehouseServlet extends HttpServlet {
         String sizeFilter = trim(request.getParameter("sizeFilter"));
         String colorFilter = trim(request.getParameter("colorFilter"));
 
-        List<Object[]> inventory = warehouseDAO.getInventorySummary(keyword, sizeFilter, colorFilter, productFilter);
+        int invPage = 1;
+        if (request.getParameter("invPage") != null && !request.getParameter("invPage").isBlank()) {
+            invPage = Math.max(1, Integer.parseInt(request.getParameter("invPage")));
+        }
+        int invPageSize = 10;
+
+        Map<String, Object> invResult = warehouseDAO.getInventorySummaryPaginated(keyword, sizeFilter, colorFilter, productFilter, invPage, invPageSize);
+        @SuppressWarnings("unchecked")
+        List<Object[]> inventory = (List<Object[]>) invResult.get("data");
+        int invTotalRecords = (int) invResult.get("totalRecords");
+        int invTotalPages = (int) invResult.get("totalPages");
+
         List<Product> products = productDAO.getAllProducts();
         List<Object[]> lowStock = warehouseDAO.getLowStockItems(10);
         List<Object[]> allSizes = warehouseDAO.getAllSizes();
         List<Object[]> allColors = warehouseDAO.getAllColors();
 
-        int totalItems = inventory.size();
+        int totalItems = invTotalRecords;
         int totalStock = 0;
         int totalAvailable = 0;
         int lowStockCount = lowStock.size();
@@ -190,6 +209,9 @@ public class WarehouseServlet extends HttpServlet {
         request.setAttribute("currentProductFilter", productFilter);
         request.setAttribute("currentSizeFilter", sizeFilter);
         request.setAttribute("currentColorFilter", colorFilter);
+        request.setAttribute("invPage", invPage);
+        request.setAttribute("invTotalPages", invTotalPages);
+        request.setAttribute("invTotalRecords", invTotalRecords);
 
         if (request.getParameter("message") != null) {
             request.setAttribute("message", request.getParameter("message"));
@@ -269,74 +291,65 @@ public class WarehouseServlet extends HttpServlet {
         request.getRequestDispatcher("/views/pages/productManagement/warehouse/warehouseImport.jsp").forward(request, response);
     }
 
-    private void showExport(HttpServletRequest request, HttpServletResponse response)
+    private void showImportBills(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String keyword = trim(request.getParameter("keyword"));
-        String productFilter = trim(request.getParameter("productFilter"));
-        String colorFilter = trim(request.getParameter("colorFilter"));
-        int expPage = 1;
+        String importerFilter = trim(request.getParameter("importerFilter"));
+        String dateFrom = trim(request.getParameter("dateFrom"));
+        String dateTo = trim(request.getParameter("dateTo"));
+        String search = trim(request.getParameter("search"));
+
+        int billPage = 1;
         try {
-            if (request.getParameter("expPage") != null && !request.getParameter("expPage").isBlank()) {
-                expPage = Math.max(1, Integer.parseInt(request.getParameter("expPage")));
+            if (request.getParameter("billPage") != null && !request.getParameter("billPage").isBlank()) {
+                billPage = Math.max(1, Integer.parseInt(request.getParameter("billPage")));
             }
         } catch (NumberFormatException ignored) {}
-        int expPageSize = 10;
+        int billPageSize = 10;
 
-        String exportProductFilter = trim(request.getParameter("exportProductFilter"));
-        String exportExporterFilter = trim(request.getParameter("exportExporterFilter"));
-        String exportDateFrom = trim(request.getParameter("exportDateFrom"));
-        String exportDateTo = trim(request.getParameter("exportDateTo"));
-        String exportSearch = trim(request.getParameter("exportSearch"));
-        int exportHistoryPage = 1;
-        try {
-            if (request.getParameter("exportPage") != null && !request.getParameter("exportPage").isBlank()) {
-                exportHistoryPage = Math.max(1, Integer.parseInt(request.getParameter("exportPage")));
-            }
-        } catch (NumberFormatException ignored) {}
-        int exportHistoryPageSize = 10;
-
-        Map<String, Object> invResult = warehouseDAO.getInventorySummaryPaginated(keyword, null, colorFilter, productFilter, expPage, expPageSize);
+        Map<String, Object> billResult = warehouseDAO.getImportBillsPaginated(
+                importerFilter, dateFrom, dateTo, search, billPage, billPageSize);
         @SuppressWarnings("unchecked")
-        List<Object[]> inventory = (List<Object[]>) invResult.get("data");
-        int invTotalRecords = (int) invResult.get("totalRecords");
-        int invTotalPages = (int) invResult.get("totalPages");
-        List<Product> products = productDAO.getAllProducts();
-        List<Object[]> allColors = warehouseDAO.getAllColors();
-        Map<String, Object> exportResult = warehouseDAO.getRecentExportsPaginated(
-                exportProductFilter, exportExporterFilter, exportDateFrom, exportDateTo, exportSearch, exportHistoryPage, exportHistoryPageSize);
-        @SuppressWarnings("unchecked")
-        List<Object[]> recentExports = (List<Object[]>) exportResult.get("data");
-        int exportTotalRecords = (int) exportResult.get("totalRecords");
-        int exportTotalPages = (int) exportResult.get("totalPages");
-        List<Object[]> exporters = warehouseDAO.getAllExporters();
+        List<Object[]> importBills = (List<Object[]>) billResult.get("data");
+        int totalRecords = (int) billResult.get("totalRecords");
+        int totalPages = (int) billResult.get("totalPages");
 
-        request.setAttribute("inventory", inventory);
-        request.setAttribute("products", products);
-        request.setAttribute("allColors", allColors);
-        request.setAttribute("recentExports", recentExports);
-        request.setAttribute("exporters", exporters);
-        request.setAttribute("activeTab", "export");
-        request.setAttribute("currentKeyword", keyword);
-        request.setAttribute("currentProductFilter", productFilter);
-        request.setAttribute("currentColorFilter", colorFilter);
-        request.setAttribute("expPage", expPage);
-        request.setAttribute("expTotalPages", invTotalPages);
-        request.setAttribute("expTotalRecords", invTotalRecords);
-        request.setAttribute("exportProductFilter", exportProductFilter);
-        request.setAttribute("exportExporterFilter", exportExporterFilter);
-        request.setAttribute("exportDateFrom", exportDateFrom);
-        request.setAttribute("exportDateTo", exportDateTo);
-        request.setAttribute("exportSearch", exportSearch);
-        request.setAttribute("exportHistoryPage", exportHistoryPage);
-        request.setAttribute("exportHistoryTotalPages", exportTotalPages);
-        request.setAttribute("exportHistoryTotalRecords", exportTotalRecords);
+        List<Object[]> importers = warehouseDAO.getAllImporters();
+
+        request.setAttribute("importBills", importBills);
+        request.setAttribute("importers", importers);
+        request.setAttribute("activeTab", "import-bills");
+        request.setAttribute("billPage", billPage);
+        request.setAttribute("billTotalPages", totalPages);
+        request.setAttribute("billTotalRecords", totalRecords);
+        request.setAttribute("importerFilter", importerFilter);
+        request.setAttribute("dateFrom", dateFrom);
+        request.setAttribute("dateTo", dateTo);
+        request.setAttribute("billSearch", search);
 
         if (request.getParameter("message") != null) {
             request.setAttribute("message", request.getParameter("message"));
             request.setAttribute("messageType", request.getParameter("messageType"));
         }
 
-        request.getRequestDispatcher("/views/pages/productManagement/warehouse/warehouseExport.jsp").forward(request, response);
+        request.getRequestDispatcher("/views/pages/productManagement/warehouse/importBillList.jsp").forward(request, response);
+    }
+
+    private void showImportBillDetail(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String billKey = trim(request.getParameter("billKey"));
+        List<Object[]> rows = warehouseDAO.getImportBillDetail(billKey);
+
+        request.setAttribute("billKey", billKey);
+        request.setAttribute("billRows", rows);
+        request.setAttribute("activeTab", "import-bills");
+
+        if (!rows.isEmpty()) {
+            Object[] first = rows.get(0);
+            request.setAttribute("billEmployeeName", first[8]);
+            request.setAttribute("billImportedAt", first[7]);
+        }
+
+        request.getRequestDispatcher("/views/pages/productManagement/warehouse/importBillDetail.jsp").forward(request, response);
     }
 
     private boolean handleImport(HttpServletRequest request, String importedBy) {
