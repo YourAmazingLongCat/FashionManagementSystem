@@ -61,8 +61,12 @@ public class RegisterControllers extends HttpServlet {
             connection = new DBContext().getConnection();
             System.out.println("Connection = " + connection);
 
-            // 3. Check duplicate (email or phone)
-            String checkSQL = "SELECT email FROM Accounts WHERE email = ? OR phone = ?";
+            // 3. Check duplicate (email or phone) - check both Customers and Employees.
+            String checkSQL = "SELECT email FROM ("
+                    + "SELECT email, phone FROM Customers "
+                    + "UNION ALL "
+                    + "SELECT email, phone FROM Employees) AS a "
+                    + "WHERE email = ? OR phone = ?";
             psCheck = connection.prepareStatement(checkSQL);
             psCheck.setString(1, email);
             psCheck.setString(2, phone);

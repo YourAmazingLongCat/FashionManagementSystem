@@ -75,13 +75,13 @@ public class VNPayStartServlet extends HttpServlet {
             return;
         }
 
-        if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+        if (PaymentStatus.isPaid(payment.getPaymentStatus())) {
             session.setAttribute("successMessage", "This VNPay payment has already been completed.");
             response.sendRedirect(resolveFallbackUrl(request, payment, orderId));
             return;
         }
 
-        if (!PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+        if (!PaymentStatus.isPending(payment.getPaymentStatus())) {
             session.setAttribute("errorMessage",
                     "This VNPay request is no longer active. Please create a new payment request.");
             response.sendRedirect(resolveFallbackUrl(request, payment, orderId));

@@ -194,11 +194,11 @@ public class PaymentService {
             + (existingPayment != null ? existingPayment.getPaymentId() + "/" + existingPayment.getPaymentType() + "/" + existingPayment.getPaymentMethod() + "/" + existingPayment.getPaymentStatus() : "null"));
         
         if (existingPayment != null) {
-            if (PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+            if (PaymentStatus.isPaid(existingPayment.getPaymentStatus())) {
                 syncBillSafely(existingPayment);
                 return true;
             }
-            if (PaymentStatus.PENDING.equals(existingPayment.getPaymentStatus())) {
+            if (PaymentStatus.isPending(existingPayment.getPaymentStatus())) {
                 return PaymentMethod.COD.equals(existingPayment.getPaymentMethod());
             }
         }
@@ -253,8 +253,8 @@ public class PaymentService {
                 return null;
             }
 
-            if (PaymentStatus.PENDING.equals(existingPayment.getPaymentStatus())
-                    || PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+            if (PaymentStatus.isPending(existingPayment.getPaymentStatus())
+                    || PaymentStatus.isPaid(existingPayment.getPaymentStatus())) {
                 syncBillSafely(existingPayment);
                 return existingPayment;
             }
@@ -318,7 +318,7 @@ public class PaymentService {
         boolean gatewaySuccess = "00".equals(responseCode)
                 && "00".equals(transactionStatus);
 
-        if (!PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+        if (!PaymentStatus.isPending(payment.getPaymentStatus())) {
             return VNPayProcessResult.ALREADY_PROCESSED;
         }
 
@@ -355,7 +355,7 @@ public class PaymentService {
         }
 
         Payment latest = paymentDAO.getPaymentById(payment.getPaymentId());
-        if (latest != null && !PaymentStatus.PENDING.equals(latest.getPaymentStatus())) {
+        if (latest != null && !PaymentStatus.isPending(latest.getPaymentStatus())) {
             return VNPayProcessResult.ALREADY_PROCESSED;
         }
 
@@ -397,7 +397,7 @@ public class PaymentService {
         }
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
-        if (existingPayment != null && PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+        if (existingPayment != null && PaymentStatus.isPaid(existingPayment.getPaymentStatus())) {
             return true;
         }
 
@@ -436,7 +436,7 @@ public class PaymentService {
         }
 
         Payment existingPayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
-        if (existingPayment != null && PaymentStatus.PAID.equals(existingPayment.getPaymentStatus())) {
+        if (existingPayment != null && PaymentStatus.isPaid(existingPayment.getPaymentStatus())) {
             syncBillSafely(existingPayment);
             return true;
         }
@@ -487,7 +487,7 @@ public class PaymentService {
         }
 
         if (isWalletOrVNPayMethod(payment.getPaymentMethod())) {
-            return PaymentStatus.PAID.equals(payment.getPaymentStatus());
+            return PaymentStatus.isPaid(payment.getPaymentStatus());
         }
 
         return true;
@@ -504,7 +504,7 @@ public class PaymentService {
             return true;
         }
 
-        if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+        if (PaymentStatus.isPaid(payment.getPaymentStatus())) {
             syncBillSafely(payment);
             return true;
         }
@@ -527,24 +527,24 @@ public class PaymentService {
             return true;
         }
 
-        if (PaymentStatus.REFUNDED.equals(payment.getPaymentStatus())
-                || PaymentStatus.CANCELLED.equals(payment.getPaymentStatus())
-                || PaymentStatus.FAILED.equals(payment.getPaymentStatus())) {
+        if (PaymentStatus.isRefunded(payment.getPaymentStatus())
+                || PaymentStatus.isCancelled(payment.getPaymentStatus())
+                || PaymentStatus.isFailed(payment.getPaymentStatus())) {
             syncBillSafely(payment);
             return true;
         }
 
         if (PaymentMethod.WALLET.equals(payment.getPaymentMethod())
-                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+                && PaymentStatus.isPaid(payment.getPaymentStatus())) {
             return refundWalletPaymentIfNeeded(orderId);
         }
 
         if (PaymentMethod.VNPAY.equals(payment.getPaymentMethod())) {
-            if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+            if (PaymentStatus.isPaid(payment.getPaymentStatus())) {
                 return refundVNPayPaymentIfNeeded(orderId);
             }
 
-            if (PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+            if (PaymentStatus.isPending(payment.getPaymentStatus())) {
                 boolean cancelled = paymentDAO.markVNPayPaymentUnsuccessful(
                         payment.getPaymentId(), payment.getAmount(),
                         PaymentStatus.CANCELLED,
@@ -558,7 +558,7 @@ public class PaymentService {
         }
 
         if (isCashOnDeliveryMethod(payment.getPaymentMethod())) {
-            if (PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+            if (PaymentStatus.isPending(payment.getPaymentStatus())) {
                 boolean cancelled = paymentDAO.cancelCashPayment(orderId.trim());
                 if (cancelled) {
                     syncBillSafely(orderId.trim(), PaymentMethod.COD,
@@ -566,7 +566,7 @@ public class PaymentService {
                 }
                 return cancelled;
             }
-            return PaymentStatus.PAID.equals(payment.getPaymentStatus());
+            return PaymentStatus.isPaid(payment.getPaymentStatus());
         }
 
         return true;
@@ -583,7 +583,7 @@ public class PaymentService {
             return true;
         }
 
-        if (PaymentStatus.CANCELLED.equals(payment.getPaymentStatus())) {
+        if (PaymentStatus.isCancelled(payment.getPaymentStatus())) {
             return true;
         }
 
@@ -601,7 +601,7 @@ public class PaymentService {
             Payment latestPurchasePayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
             if (latestPurchasePayment != null
                     && PaymentMethod.WALLET.equals(latestPurchasePayment.getPaymentMethod())
-                    && PaymentStatus.REFUNDED.equals(latestPurchasePayment.getPaymentStatus())) {
+                    && PaymentStatus.isRefunded(latestPurchasePayment.getPaymentStatus())) {
                 syncBillSafely(latestPurchasePayment);
             }
         }
@@ -620,7 +620,7 @@ public class PaymentService {
             Payment latestPurchasePayment = paymentDAO.getLatestPaymentByOrderId(orderId.trim());
             if (latestPurchasePayment != null
                     && PaymentMethod.VNPAY.equals(latestPurchasePayment.getPaymentMethod())
-                    && PaymentStatus.REFUNDED.equals(latestPurchasePayment.getPaymentStatus())) {
+                    && PaymentStatus.isRefunded(latestPurchasePayment.getPaymentStatus())) {
                 syncBillSafely(latestPurchasePayment);
             }
         }
@@ -643,13 +643,13 @@ public class PaymentService {
             + ", paymentStatus=" + payment.getPaymentStatus() + ", paymentType=" + payment.getPaymentType());
 
         if (PaymentMethod.WALLET.equals(payment.getPaymentMethod())
-                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+                && PaymentStatus.isPaid(payment.getPaymentStatus())) {
             System.out.println("refundPaymentIfNeeded: Calling refundWalletPaymentIfNeeded");
             return refundWalletPaymentIfNeeded(orderId);
         }
 
         if (PaymentMethod.VNPAY.equals(payment.getPaymentMethod())
-                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+                && PaymentStatus.isPaid(payment.getPaymentStatus())) {
             System.out.println("refundPaymentIfNeeded: Calling refundVNPayPaymentIfNeeded");
             return refundVNPayPaymentIfNeeded(orderId);
         }

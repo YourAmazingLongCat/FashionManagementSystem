@@ -15,11 +15,11 @@ public class WalletDAO extends DBContext {
         super();
     }
 
-    public Wallet getWalletByAccountId(String accountId) {
-        String query = "SELECT * FROM Wallets WHERE accountId = ?";
+    public Wallet getWalletByCustomerId(String customerId) {
+        String query = "SELECT * FROM Wallets WHERE customerId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, accountId);
+            ps.setString(1, customerId);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -27,10 +27,18 @@ public class WalletDAO extends DBContext {
                 }
             }
         } catch (SQLException e) {
-            System.out.println("getWalletByAccountId error: " + e);
+            System.out.println("getWalletByCustomerId error: " + e);
         }
 
         return null;
+    }
+
+    /**
+     * Backward-compatible alias kept so older callers (and any service code that
+     * hasn't been migrated yet) still compile. Treats the value as a customerId.
+     */
+    public Wallet getWalletByAccountId(String accountId) {
+        return getWalletByCustomerId(accountId);
     }
 
     public Wallet getWalletById(String walletId) {
@@ -52,8 +60,10 @@ public class WalletDAO extends DBContext {
     }
 
     public boolean createWallet(Wallet wallet) {
+        // New schema: Wallets(customerId) replaces Wallets(accountId).
+        // Wallet.accountId maps to customerId.
         String query = "INSERT INTO Wallets "
-                + "(walletId, accountId, balance, walletStatus, createdAt, updatedAt) "
+                + "(walletId, customerId, balance, walletStatus, createdAt, updatedAt) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -88,9 +98,10 @@ public class WalletDAO extends DBContext {
     }
 
     private Wallet getWalletFromResultSet(ResultSet rs) throws SQLException {
+        // The DB column is customerId; the Wallet POJO still calls it accountId.
         return new Wallet(
                 rs.getString("walletId"),
-                rs.getString("accountId"),
+                rs.getString("customerId"),
                 rs.getBigDecimal("balance"),
                 rs.getString("walletStatus"),
                 toLocalDateTime(rs.getTimestamp("createdAt")),

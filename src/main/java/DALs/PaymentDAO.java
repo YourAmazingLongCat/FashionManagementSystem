@@ -7,6 +7,7 @@ import Utils.PaymentMethod;
 import Utils.PaymentStatus;
 import Utils.PaymentType;
 import Utils.WalletStatus;
+import Utils.WalletTransactionStatus;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,12 +18,29 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Data Access Object for the legacy {@link Payment} view of payments.
+ *
+ * The schema no longer has a Payments table. Instead:
+ *   - Order payment method / status live on Orders (paymentMethod, paymentStatus, paidAmount).
+ *   - Wallet ledger entries live on WalletTransactions (transactionId, walletId, orderId,
+ *     transactionType, amount, transactionStatus, externalMethod, description, createdAt, completedAt).
+ *
+ * This DAO preserves the legacy {@link Payment} shape so existing controllers/services
+ * keep compiling. The {@code paymentMethod} for an Order-bound entry is read from
+ * Orders, while the underlying money movement (amount, status, completedAt, ...) is
+ * taken from WalletTransactions.
+ */
 public class PaymentDAO extends DBContext {
 
     public PaymentDAO() {
         super();
     }
 
+    /**
+     * Create a new wallet transaction (Deposit / Purchase / Refund).
+     * Returns true if the row was inserted.
+     */
     public boolean createPayment(Payment payment) {
         if (connection == null) {
             System.out.println("createPayment error: database connection is null");
@@ -34,13 +52,13 @@ public class PaymentDAO extends DBContext {
             return false;
         }
 
-        String query = "INSERT INTO Payments "
-                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
-                + "amount, description, createdAt, paidAt) "
+        String query = "INSERT INTO WalletTransactions "
+                + "(transactionId, walletId, orderId, transactionType, amount, "
+                + "transactionStatus, externalMethod, description, createdAt, completedAt) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            setPaymentParameters(ps, payment);
+            setWalletTransactionParameters(ps, payment);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("createPayment error for orderId="
@@ -54,7 +72,7 @@ public class PaymentDAO extends DBContext {
     }
 
     public Payment getPaymentById(String paymentId) {
-        String query = "SELECT * FROM Payments WHERE paymentId = ?";
+        String query = "SELECT * FROM WalletTransactions WHERE transactionId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, paymentId);
@@ -72,10 +90,10 @@ public class PaymentDAO extends DBContext {
     }
 
     public Payment getPaymentByIdAndAccountId(String paymentId, String accountId) {
-        String query = "SELECT p.* FROM Payments p "
-                + "LEFT JOIN Wallets w ON p.walletId = w.walletId "
-                + "LEFT JOIN Orders o ON p.orderId = o.orderId "
-                + "WHERE p.paymentId = ? AND (w.accountId = ? OR o.customerId = ?)";
+        String query = "SELECT wt.* FROM WalletTransactions wt "
+                + "LEFT JOIN Wallets w ON wt.walletId = w.walletId "
+                + "LEFT JOIN Orders o ON wt.orderId = o.orderId "
+                + "WHERE wt.transactionId = ? AND (w.customerId = ? OR o.customerId = ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, paymentId);
@@ -95,9 +113,9 @@ public class PaymentDAO extends DBContext {
     }
 
     public Payment getLatestPaymentByOrderId(String orderId) {
-        String query = "SELECT TOP 1 * FROM Payments "
-                + "WHERE orderId = ? AND paymentType <> ? "
-                + "ORDER BY createdAt DESC, paymentId DESC";
+        String query = "SELECT TOP 1 * FROM WalletTransactions "
+                + "WHERE orderId = ? AND transactionType <> ? "
+                + "ORDER BY createdAt DESC, transactionId DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -117,7 +135,7 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getPaymentsByWalletId(String walletId) {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT * FROM Payments WHERE walletId = ? ORDER BY createdAt DESC";
+        String query = "SELECT * FROM WalletTransactions WHERE walletId = ? ORDER BY createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, walletId);
@@ -136,11 +154,11 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getPaymentsByAccountId(String accountId) {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT DISTINCT p.* FROM Payments p "
-                + "LEFT JOIN Wallets w ON p.walletId = w.walletId "
-                + "LEFT JOIN Orders o ON p.orderId = o.orderId "
-                + "WHERE w.accountId = ? OR o.customerId = ? "
-                + "ORDER BY p.createdAt DESC";
+        String query = "SELECT DISTINCT wt.* FROM WalletTransactions wt "
+                + "LEFT JOIN Wallets w ON wt.walletId = w.walletId "
+                + "LEFT JOIN Orders o ON wt.orderId = o.customerId "
+                + "WHERE w.customerId = ? OR o.customerId = ? "
+                + "ORDER BY wt.createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, accountId);
@@ -160,7 +178,7 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getAllPayments() {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT * FROM Payments ORDER BY createdAt DESC";
+        String query = "SELECT * FROM WalletTransactions ORDER BY createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query);
                 ResultSet rs = ps.executeQuery()) {
@@ -175,7 +193,7 @@ public class PaymentDAO extends DBContext {
     }
 
     public int countAllPayments() {
-        String query = "SELECT COUNT(*) FROM Payments";
+        String query = "SELECT COUNT(*) FROM WalletTransactions";
         try (PreparedStatement ps = connection.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
@@ -189,7 +207,7 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getAllPaymentsPaginated(int offset, int limit) {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT * FROM Payments ORDER BY createdAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        String query = "SELECT * FROM WalletTransactions ORDER BY createdAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setInt(1, offset);
@@ -208,8 +226,8 @@ public class PaymentDAO extends DBContext {
 
     public List<Payment> getPendingDeposits() {
         List<Payment> payments = new ArrayList<>();
-        String query = "SELECT * FROM Payments "
-                + "WHERE paymentType = ? AND paymentStatus = ? "
+        String query = "SELECT * FROM WalletTransactions "
+                + "WHERE transactionType = ? AND transactionStatus = ? "
                 + "ORDER BY createdAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -232,6 +250,11 @@ public class PaymentDAO extends DBContext {
      * Creates a Pending order payment only when the order belongs to the account
      * and no other active Purchase payment exists. The order row and payment
      * range are locked in one transaction to avoid concurrent payment methods.
+     *
+     * Implementation: this method is now legacy. The Orders table itself stores
+     * paymentMethod/paymentStatus, and a placeholder WalletTransactions row is
+     * created for the audit trail. To avoid duplicate Purchase rows, we check
+     * Orders.paymentStatus before inserting.
      */
     public boolean createOrderPayment(Payment payment, String accountId) {
         if (payment == null || accountId == null || accountId.trim().isEmpty()
@@ -244,24 +267,27 @@ public class PaymentDAO extends DBContext {
             return false;
         }
 
-        String lockOrderQuery = "SELECT totalAmount, orderStatus FROM Orders "
+        String lockOrderQuery = "SELECT totalAmount, orderStatus, paymentStatus FROM Orders "
                 + "WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
                 + "WHERE orderId = ? AND customerId = ?";
-        String activePaymentQuery = "SELECT TOP 1 paymentId FROM Payments "
+        String activePaymentQuery = "SELECT TOP 1 transactionId FROM WalletTransactions "
                 + "WITH (UPDLOCK, HOLDLOCK) "
-                + "WHERE orderId = ? AND paymentType = ? "
-                + "AND paymentStatus IN (?, ?) "
-                + "ORDER BY createdAt DESC, paymentId DESC";
-        String insertQuery = "INSERT INTO Payments "
-                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
-                + "amount, description, createdAt, paidAt) "
+                + "WHERE orderId = ? AND transactionType = ? "
+                + "AND transactionStatus IN (?, ?) "
+                + "ORDER BY createdAt DESC, transactionId DESC";
+        String insertQuery = "INSERT INTO WalletTransactions "
+                + "(transactionId, walletId, orderId, transactionType, amount, "
+                + "transactionStatus, externalMethod, description, createdAt, completedAt) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String updateOrderQuery = "UPDATE Orders SET paymentMethod = ?, paymentStatus = ?, issuedDate = GETDATE() "
+                + "WHERE orderId = ?";
 
         try {
             connection.setAutoCommit(false);
 
             BigDecimal orderAmount = null;
             String orderStatus = null;
+            String orderPaymentStatus = null;
             try (PreparedStatement ps = connection.prepareStatement(lockOrderQuery)) {
                 ps.setString(1, payment.getOrderId().trim());
                 ps.setString(2, accountId.trim());
@@ -269,12 +295,20 @@ public class PaymentDAO extends DBContext {
                     if (rs.next()) {
                         orderAmount = rs.getBigDecimal("totalAmount");
                         orderStatus = rs.getString("orderStatus");
+                        orderPaymentStatus = rs.getString("paymentStatus");
                     }
                 }
             }
 
             if (orderAmount == null || orderAmount.compareTo(payment.getAmount()) != 0
                     || "Cancelled".equals(orderStatus) || "Delivered".equals(orderStatus)) {
+                connection.rollback();
+                return false;
+            }
+
+            // Block duplicates if Order is already in a finalised payment state
+            // or a non-cancelled payment ledger row already exists.
+            if (PaymentStatus.PAID.equals(orderPaymentStatus)) {
                 connection.rollback();
                 return false;
             }
@@ -293,11 +327,20 @@ public class PaymentDAO extends DBContext {
             }
 
             try (PreparedStatement ps = connection.prepareStatement(insertQuery)) {
-                setPaymentParameters(ps, payment);
+                setWalletTransactionParameters(ps, payment);
                 if (ps.executeUpdate() != 1) {
                     connection.rollback();
                     return false;
                 }
+            }
+
+            // Mirror the payment method/status onto Orders so the Order is now
+            // discoverable by OrderDAO without needing a WalletTransactions scan.
+            try (PreparedStatement ps = connection.prepareStatement(updateOrderQuery)) {
+                ps.setString(1, payment.getPaymentMethod());
+                ps.setString(2, PaymentStatus.PENDING);
+                ps.setString(3, payment.getOrderId().trim());
+                ps.executeUpdate();
             }
 
             connection.commit();
@@ -315,21 +358,21 @@ public class PaymentDAO extends DBContext {
     }
 
     public boolean completeDeposit(String paymentId, String description) {
-        String paymentQuery = "SELECT * FROM Payments WITH (UPDLOCK, ROWLOCK) "
-                + "WHERE paymentId = ? AND paymentType = ? AND paymentStatus = ?";
+        String paymentQuery = "SELECT * FROM WalletTransactions WITH (UPDLOCK, ROWLOCK) "
+                + "WHERE transactionId = ? AND transactionType = ? AND transactionStatus = ?";
         String updatePaymentQuery;
         String updateWalletQuery = "UPDATE Wallets "
                 + "SET balance = balance + ?, updatedAt = GETDATE() "
                 + "WHERE walletId = ? AND walletStatus = ?";
 
         if (description != null) {
-            updatePaymentQuery = "UPDATE Payments "
-                    + "SET paymentStatus = ?, paidAt = GETDATE(), description = ? "
-                    + "WHERE paymentId = ?";
+            updatePaymentQuery = "UPDATE WalletTransactions "
+                    + "SET transactionStatus = ?, completedAt = GETDATE(), description = ? "
+                    + "WHERE transactionId = ?";
         } else {
-            updatePaymentQuery = "UPDATE Payments "
-                    + "SET paymentStatus = ?, paidAt = GETDATE() "
-                    + "WHERE paymentId = ?";
+            updatePaymentQuery = "UPDATE WalletTransactions "
+                    + "SET transactionStatus = ?, completedAt = GETDATE() "
+                    + "WHERE transactionId = ?";
         }
 
         try {
@@ -365,7 +408,9 @@ public class PaymentDAO extends DBContext {
             }
 
             try (PreparedStatement ps = connection.prepareStatement(updatePaymentQuery)) {
-                ps.setString(1, PaymentStatus.PAID);
+                // transactionStatus column requires {"Pending","Completed","Failed","Cancelled"} —
+                // PaymentStatus.PAID ("Paid") is for Orders, here we must use Completed.
+                ps.setString(1, WalletTransactionStatus.COMPLETED);
                 if (description != null) {
                     ps.setString(2, description);
                     ps.setString(3, paymentId);
@@ -395,20 +440,23 @@ public class PaymentDAO extends DBContext {
         String orderQuery = "SELECT totalAmount, orderStatus FROM Orders "
                 + "WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
                 + "WHERE orderId = ? AND customerId = ?";
-        String activePaymentQuery = "SELECT TOP 1 paymentStatus FROM Payments "
+        String activePaymentQuery = "SELECT TOP 1 transactionStatus FROM WalletTransactions "
                 + "WITH (UPDLOCK, HOLDLOCK) "
-                + "WHERE orderId = ? AND paymentType = ? "
-                + "AND paymentStatus IN (?, ?) "
-                + "ORDER BY createdAt DESC, paymentId DESC";
+                + "WHERE orderId = ? AND transactionType = ? "
+                + "AND transactionStatus IN (?, ?) "
+                + "ORDER BY createdAt DESC, transactionId DESC";
         String walletQuery = "SELECT * FROM Wallets WITH (UPDLOCK, ROWLOCK) "
-                + "WHERE accountId = ?";
+                + "WHERE customerId = ?";
         String updateWalletQuery = "UPDATE Wallets "
                 + "SET balance = balance - ?, updatedAt = GETDATE() "
                 + "WHERE walletId = ? AND balance >= ? AND walletStatus = ?";
-        String insertPaymentQuery = "INSERT INTO Payments "
-                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
-                + "amount, description, createdAt, paidAt) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        String insertPaymentQuery = "INSERT INTO WalletTransactions "
+                + "(transactionId, walletId, orderId, transactionType, amount, "
+                + "transactionStatus, externalMethod, description, createdAt, completedAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, NULL, ?, GETDATE(), GETDATE())";
+        String updateOrderQuery = "UPDATE Orders SET paymentMethod = ?, paymentStatus = ?, "
+                + "paidAmount = ?, issuedDate = COALESCE(issuedDate, GETDATE()) "
+                + "WHERE orderId = ?";
 
         try {
             connection.setAutoCommit(false);
@@ -480,15 +528,23 @@ public class PaymentDAO extends DBContext {
                 ps.setString(2, wallet.getWalletId());
                 ps.setString(3, orderId);
                 ps.setString(4, PaymentType.PURCHASE);
-                ps.setString(5, PaymentMethod.WALLET);
-                ps.setString(6, PaymentStatus.PAID);
-                ps.setBigDecimal(7, amount);
-                ps.setString(8, description);
+                ps.setBigDecimal(5, amount);
+                // WalletTransactions only allows Completed / Pending / Cancelled / Failed.
+                ps.setString(6, WalletTransactionStatus.COMPLETED);
+                ps.setString(7, description);
 
                 if (ps.executeUpdate() <= 0) {
                     connection.rollback();
                     return false;
                 }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(updateOrderQuery)) {
+                ps.setString(1, PaymentMethod.WALLET);
+                ps.setString(2, PaymentStatus.PAID);
+                ps.setBigDecimal(3, amount);
+                ps.setString(4, orderId);
+                ps.executeUpdate();
             }
 
             connection.commit();
@@ -503,21 +559,25 @@ public class PaymentDAO extends DBContext {
     }
 
     public boolean completeCashPayment(String orderId) {
-        String query = "UPDATE Payments "
-                + "SET paymentStatus = ?, paidAt = GETDATE() "
+        String query = "UPDATE WalletTransactions "
+                + "SET transactionStatus = ?, completedAt = GETDATE() "
                 + "WHERE orderId = ? "
-                + "AND paymentType = ? "
-                + "AND paymentStatus = ? "
-                + "AND paymentMethod = ?";
+                + "AND transactionType = ? "
+                + "AND transactionStatus = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, PaymentStatus.PAID);
+            // WalletTransactions only allows Completed / Pending / Cancelled / Failed.
+            ps.setString(1, WalletTransactionStatus.COMPLETED);
             ps.setString(2, orderId);
             ps.setString(3, PaymentType.PURCHASE);
-            ps.setString(4, PaymentStatus.PENDING);
-            ps.setString(5, PaymentMethod.COD);
+            ps.setString(4, WalletTransactionStatus.PENDING);
 
-            return ps.executeUpdate() == 1;
+            int rows = ps.executeUpdate();
+            // Also mirror on Orders so the Order shows Paid.
+            if (rows > 0) {
+                markOrderPaymentStatus(orderId, PaymentStatus.PAID);
+            }
+            return rows == 1;
         } catch (SQLException e) {
             System.out.println("completeCashPayment error: " + e);
         }
@@ -526,21 +586,23 @@ public class PaymentDAO extends DBContext {
     }
 
     public boolean cancelCashPayment(String orderId) {
-        String query = "UPDATE Payments "
-                + "SET paymentStatus = ? "
+        String query = "UPDATE WalletTransactions "
+                + "SET transactionStatus = ? "
                 + "WHERE orderId = ? "
-                + "AND paymentType = ? "
-                + "AND paymentStatus = ? "
-                + "AND paymentMethod = ?";
+                + "AND transactionType = ? "
+                + "AND transactionStatus = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, PaymentStatus.CANCELLED);
+            ps.setString(1, WalletTransactionStatus.CANCELLED);
             ps.setString(2, orderId);
             ps.setString(3, PaymentType.PURCHASE);
-            ps.setString(4, PaymentStatus.PENDING);
-            ps.setString(5, PaymentMethod.COD);
+            ps.setString(4, WalletTransactionStatus.PENDING);
 
-            return ps.executeUpdate() == 1;
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                markOrderPaymentStatus(orderId, PaymentStatus.CANCELLED);
+            }
+            return rows == 1;
         } catch (SQLException e) {
             System.out.println("cancelCashPayment error: " + e);
         }
@@ -550,21 +612,30 @@ public class PaymentDAO extends DBContext {
 
     public boolean completeVNPayPurchase(String paymentId, BigDecimal amount,
             String description) {
-        String query = "UPDATE Payments "
-                + "SET paymentStatus = ?, paidAt = GETDATE(), "
+        String query = "UPDATE WalletTransactions "
+                + "SET transactionStatus = ?, completedAt = GETDATE(), "
                 + "description = COALESCE(NULLIF(?, ''), description) "
-                + "WHERE paymentId = ? AND paymentType = ? "
-                + "AND paymentMethod = ? AND paymentStatus = ? AND amount = ?";
+                + "WHERE transactionId = ? AND transactionType = ? "
+                + "AND externalMethod = ? AND transactionStatus = ? AND amount = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, PaymentStatus.PAID);
+            // WalletTransactions allows only Completed / Pending / Cancelled / Failed.
+            ps.setString(1, WalletTransactionStatus.COMPLETED);
             ps.setString(2, description);
             ps.setString(3, paymentId);
             ps.setString(4, PaymentType.PURCHASE);
             ps.setString(5, PaymentMethod.VNPAY);
-            ps.setString(6, PaymentStatus.PENDING);
+            ps.setString(6, WalletTransactionStatus.PENDING);
             ps.setBigDecimal(7, amount);
-            return ps.executeUpdate() == 1;
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                // Find orderId for this transaction so we can mirror to Orders.
+                Payment p = getPaymentById(paymentId);
+                if (p != null && p.getOrderId() != null) {
+                    markOrderPaymentStatusAndMethod(p.getOrderId(), PaymentMethod.VNPAY, PaymentStatus.PAID, amount);
+                }
+            }
+            return rows == 1;
         } catch (SQLException e) {
             System.out.println("completeVNPayPurchase error: " + e);
             return false;
@@ -578,20 +649,28 @@ public class PaymentDAO extends DBContext {
             return false;
         }
 
-        String query = "UPDATE Payments "
-                + "SET paymentStatus = ?, paidAt = NULL, "
+        String query = "UPDATE WalletTransactions "
+                + "SET transactionStatus = ?, completedAt = NULL, "
                 + "description = COALESCE(NULLIF(?, ''), description) "
-                + "WHERE paymentId = ? AND paymentMethod = ? "
-                + "AND paymentStatus = ? AND amount = ?";
+                + "WHERE transactionId = ? AND externalMethod = ? "
+                + "AND transactionStatus = ? AND amount = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, newStatus);
+            // Map PaymentStatus value to a value WalletTransactions accepts.
+            ps.setString(1, WalletTransactionStatus.fromPaymentStatus(newStatus));
             ps.setString(2, description);
             ps.setString(3, paymentId);
             ps.setString(4, PaymentMethod.VNPAY);
-            ps.setString(5, PaymentStatus.PENDING);
+            ps.setString(5, WalletTransactionStatus.PENDING);
             ps.setBigDecimal(6, amount);
-            return ps.executeUpdate() == 1;
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                Payment p = getPaymentById(paymentId);
+                if (p != null && p.getOrderId() != null) {
+                    markOrderPaymentStatusAndMethod(p.getOrderId(), PaymentMethod.VNPAY, newStatus, amount);
+                }
+            }
+            return rows == 1;
         } catch (SQLException e) {
             System.out.println("markVNPayPaymentUnsuccessful error: " + e);
             return false;
@@ -599,15 +678,15 @@ public class PaymentDAO extends DBContext {
     }
 
     public boolean refundWalletPaymentIfNeeded(String orderId, String refundPaymentId) {
-        String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
-                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
-                + "ORDER BY createdAt DESC, paymentId DESC";
-        String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
+        String selectQuery = "SELECT TOP 1 * FROM WalletTransactions WITH (UPDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND transactionType = ? AND transactionStatus = ? "
+                + "ORDER BY createdAt DESC, transactionId DESC";
+        String updateOriginalPaymentQuery = "UPDATE WalletTransactions SET transactionStatus = ? WHERE transactionId = ?";
         String updateWalletQuery = "UPDATE Wallets SET balance = balance + ?, updatedAt = GETDATE() WHERE walletId = ?";
-        String insertRefundQuery = "INSERT INTO Payments "
-                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
-                + "amount, description, createdAt, paidAt) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        String insertRefundQuery = "INSERT INTO WalletTransactions "
+                + "(transactionId, walletId, orderId, transactionType, amount, "
+                + "transactionStatus, externalMethod, description, createdAt, completedAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, NULL, ?, GETDATE(), GETDATE())";
 
         try {
             connection.setAutoCommit(false);
@@ -616,8 +695,7 @@ public class PaymentDAO extends DBContext {
             try (PreparedStatement ps = connection.prepareStatement(selectQuery)) {
                 ps.setString(1, orderId);
                 ps.setString(2, PaymentType.PURCHASE);
-                ps.setString(3, PaymentMethod.WALLET);
-                ps.setString(4, PaymentStatus.PAID);
+                ps.setString(3, PaymentStatus.PAID);
 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
@@ -638,26 +716,20 @@ public class PaymentDAO extends DBContext {
                 return false;
             }
 
-            System.out.println("refundWalletPaymentIfNeeded: Found payment - paymentId=" + paidWalletPayment.getPaymentId() 
-                + ", walletId=" + paidWalletPayment.getWalletId() + ", amount=" + paidWalletPayment.getAmount());
-
             try (PreparedStatement ps = connection.prepareStatement(updateWalletQuery)) {
                 ps.setBigDecimal(1, paidWalletPayment.getAmount());
                 ps.setString(2, paidWalletPayment.getWalletId());
 
-                System.out.println("refundWalletPaymentIfNeeded: walletId=" + paidWalletPayment.getWalletId() 
-                    + ", amount=" + paidWalletPayment.getAmount());
-
                 if (ps.executeUpdate() <= 0) {
-                    System.out.println("refundWalletPaymentIfNeeded: WALLET UPDATE FAILED - no rows affected for walletId: " + paidWalletPayment.getWalletId());
                     connection.rollback();
                     return false;
                 }
-                System.out.println("refundWalletPaymentIfNeeded: WALLET UPDATED successfully");
             }
 
             try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {
-                ps.setString(1, PaymentStatus.REFUNDED);
+                // WalletTransactions does not allow 'Refunded' (CHECK constraint);
+                // we leave the row in a final negative state via 'Cancelled'.
+                ps.setString(1, WalletTransactionStatus.CANCELLED);
                 ps.setString(2, paidWalletPayment.getPaymentId());
 
                 if (ps.executeUpdate() <= 0) {
@@ -671,16 +743,18 @@ public class PaymentDAO extends DBContext {
                 ps.setString(2, paidWalletPayment.getWalletId());
                 ps.setString(3, orderId);
                 ps.setString(4, PaymentType.REFUND);
-                ps.setString(5, PaymentMethod.WALLET);
-                ps.setString(6, PaymentStatus.PAID);
-                ps.setBigDecimal(7, paidWalletPayment.getAmount());
-                ps.setString(8, "Refund wallet payment for cancelled order " + orderId);
+                ps.setBigDecimal(5, paidWalletPayment.getAmount());
+                // Refund insert: WalletTransactions accepts 'Completed' for settled rows.
+                ps.setString(6, WalletTransactionStatus.COMPLETED);
+                ps.setString(7, "Refund wallet payment for cancelled order " + orderId);
 
                 if (ps.executeUpdate() <= 0) {
                     connection.rollback();
                     return false;
                 }
             }
+
+            markOrderPaymentStatusAndMethod(orderId, PaymentMethod.WALLET, PaymentStatus.REFUNDED, paidWalletPayment.getAmount());
 
             connection.commit();
             return true;
@@ -694,19 +768,20 @@ public class PaymentDAO extends DBContext {
     }
 
     /**
-     * Refunds a VNPay payment by updating the payment status to REFUNDED.
+     * Refunds a VNPay payment by updating the transaction status to REFUNDED.
      * Note: Actual VNPay refund requires calling VNPay's refund API.
-     * This method updates the local payment record for tracking purposes.
      */
     public boolean refundVNPayPayment(String paymentId, String refundDescription) {
         if (paymentId == null || paymentId.trim().isEmpty()) {
             return false;
         }
 
-        String query = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ? AND paymentMethod = ?";
+        String query = "UPDATE WalletTransactions SET transactionStatus = ? WHERE transactionId = ? AND externalMethod = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, PaymentStatus.REFUNDED);
+            // WalletTransactions does not allow 'Refunded' (CHECK constraint).
+            // Use 'Cancelled' as the terminal negative status for the original row.
+            ps.setString(1, WalletTransactionStatus.CANCELLED);
             ps.setString(2, paymentId.trim());
             ps.setString(3, PaymentMethod.VNPAY);
             return ps.executeUpdate() > 0;
@@ -722,14 +797,14 @@ public class PaymentDAO extends DBContext {
             return false;
         }
 
-        String selectQuery = "SELECT TOP 1 * FROM Payments WITH (UPDLOCK, ROWLOCK) "
-                + "WHERE orderId = ? AND paymentType = ? AND paymentMethod = ? AND paymentStatus = ? "
-                + "ORDER BY createdAt DESC, paymentId DESC";
-        String updateOriginalPaymentQuery = "UPDATE Payments SET paymentStatus = ? WHERE paymentId = ?";
-        String insertRefundQuery = "INSERT INTO Payments "
-                + "(paymentId, walletId, orderId, paymentType, paymentMethod, paymentStatus, "
-                + "amount, description, createdAt, paidAt) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
+        String selectQuery = "SELECT TOP 1 * FROM WalletTransactions WITH (UPDLOCK, ROWLOCK) "
+                + "WHERE orderId = ? AND transactionType = ? AND externalMethod = ? AND transactionStatus = ? "
+                + "ORDER BY createdAt DESC, transactionId DESC";
+        String updateOriginalPaymentQuery = "UPDATE WalletTransactions SET transactionStatus = ? WHERE transactionId = ?";
+        String insertRefundQuery = "INSERT INTO WalletTransactions "
+                + "(transactionId, walletId, orderId, transactionType, amount, "
+                + "transactionStatus, externalMethod, description, createdAt, completedAt) "
+                + "VALUES (?, NULL, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
 
         try {
             connection.setAutoCommit(false);
@@ -750,7 +825,8 @@ public class PaymentDAO extends DBContext {
             }
 
             try (PreparedStatement ps = connection.prepareStatement(updateOriginalPaymentQuery)) {
-                ps.setString(1, PaymentStatus.REFUNDED);
+                // 'Refunded' is not allowed on WalletTransactions; use 'Cancelled'.
+                ps.setString(1, WalletTransactionStatus.CANCELLED);
                 ps.setString(2, paidVNPayPayment.getPaymentId());
                 if (ps.executeUpdate() <= 0) {
                     connection.rollback();
@@ -764,18 +840,20 @@ public class PaymentDAO extends DBContext {
 
             try (PreparedStatement ps = connection.prepareStatement(insertRefundQuery)) {
                 ps.setString(1, refundPaymentId);
-                ps.setNull(2, Types.VARCHAR);
-                ps.setString(3, orderId);
-                ps.setString(4, PaymentType.REFUND);
-                ps.setString(5, PaymentMethod.VNPAY);
-                ps.setString(6, PaymentStatus.PAID);
-                ps.setBigDecimal(7, paidVNPayPayment.getAmount());
-                ps.setString(8, refundDesc);
+                ps.setString(2, orderId);
+                ps.setString(3, PaymentType.REFUND);
+                ps.setBigDecimal(4, paidVNPayPayment.getAmount());
+                // Refund insert must use a status allowed by the CHECK constraint.
+                ps.setString(5, WalletTransactionStatus.COMPLETED);
+                ps.setString(6, PaymentMethod.VNPAY);
+                ps.setString(7, refundDesc);
                 if (ps.executeUpdate() <= 0) {
                     connection.rollback();
                     return false;
                 }
             }
+
+            markOrderPaymentStatusAndMethod(orderId, PaymentMethod.VNPAY, PaymentStatus.REFUNDED, paidVNPayPayment.getAmount());
 
             connection.commit();
             return true;
@@ -788,7 +866,32 @@ public class PaymentDAO extends DBContext {
         return false;
     }
 
-    private void setPaymentParameters(PreparedStatement ps, Payment payment) throws SQLException {
+    private void markOrderPaymentStatus(String orderId, String paymentStatus) {
+        String sql = "UPDATE Orders SET paymentStatus = ? WHERE orderId = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, paymentStatus);
+            ps.setString(2, orderId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("markOrderPaymentStatus error: " + e.getMessage());
+        }
+    }
+
+    private void markOrderPaymentStatusAndMethod(String orderId, String paymentMethod,
+            String paymentStatus, BigDecimal paidAmount) {
+        String sql = "UPDATE Orders SET paymentMethod = ?, paymentStatus = ?, paidAmount = ? WHERE orderId = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, paymentMethod);
+            ps.setString(2, paymentStatus);
+            ps.setBigDecimal(3, paidAmount);
+            ps.setString(4, orderId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("markOrderPaymentStatusAndMethod error: " + e.getMessage());
+        }
+    }
+
+    private void setWalletTransactionParameters(PreparedStatement ps, Payment payment) throws SQLException {
         ps.setString(1, payment.getPaymentId());
 
         if (payment.getWalletId() == null || payment.getWalletId().trim().isEmpty()) {
@@ -803,10 +906,21 @@ public class PaymentDAO extends DBContext {
             ps.setString(3, payment.getOrderId());
         }
 
+        // transactionType
         ps.setString(4, payment.getPaymentType());
-        ps.setString(5, payment.getPaymentMethod());
-        ps.setString(6, payment.getPaymentStatus());
-        ps.setBigDecimal(7, payment.getAmount());
+
+        ps.setBigDecimal(5, payment.getAmount());
+
+        // transactionStatus (must satisfy CK_WalletTransactions_Status)
+        ps.setString(6, WalletTransactionStatus.fromPaymentStatus(payment.getPaymentStatus()));
+
+        // externalMethod: only "VNPay" or NULL.
+        if (PaymentMethod.VNPAY.equalsIgnoreCase(payment.getPaymentMethod())) {
+            ps.setString(7, PaymentMethod.VNPAY);
+        } else {
+            ps.setNull(7, Types.VARCHAR);
+        }
+
         ps.setString(8, payment.getDescription());
 
         if (payment.getCreatedAt() == null) {
@@ -822,25 +936,70 @@ public class PaymentDAO extends DBContext {
         }
     }
 
+    /**
+     * Maps a WalletTransactions row to the legacy Payment shape.
+     *
+     * The new schema stores payment method on Orders, not on the transaction
+     * itself (the only stored method is {@code externalMethod = 'VNPay'}). We
+     * therefore LEFT JOIN Orders to recover the canonical payment method for
+     * each transaction when possible.
+     */
     private Payment getPaymentFromResultSet(ResultSet rs) throws SQLException {
+        String transactionType = rs.getString("transactionType");
+        String transactionStatus = rs.getString("transactionStatus");
+        String orderId = rs.getString("orderId");
+        String externalMethod = rs.getString("externalMethod");
+
+        String resolvedMethod;
+        if ("VNPay".equalsIgnoreCase(externalMethod)) {
+            resolvedMethod = PaymentMethod.VNPAY;
+        } else if (transactionType != null && transactionType.equalsIgnoreCase(PaymentType.REFUND)) {
+            // Refund rows: prefer Wallet if there is a walletId, otherwise VNPay.
+            resolvedMethod = rs.getString("walletId") != null ? PaymentMethod.WALLET : PaymentMethod.VNPAY;
+        } else if (orderId != null) {
+            // Pull the canonical method from Orders if available.
+            resolvedMethod = lookupOrderPaymentMethod(orderId);
+        } else {
+            // Pure deposit by VNPay is the only remaining case.
+            resolvedMethod = PaymentMethod.VNPAY;
+        }
+
         return new Payment(
-                rs.getString("paymentId"),
+                rs.getString("transactionId"),
                 rs.getString("walletId"),
-                rs.getString("orderId"),
-                rs.getString("paymentType"),
-                rs.getString("paymentMethod"),
-                rs.getString("paymentStatus"),
+                orderId,
+                transactionType,
+                resolvedMethod,
+                transactionStatus,
                 rs.getBigDecimal("amount"),
                 rs.getString("description"),
                 toLocalDateTime(rs.getTimestamp("createdAt")),
-                toLocalDateTime(rs.getTimestamp("paidAt"))
+                toLocalDateTime(rs.getTimestamp("completedAt"))
         );
+    }
+
+    private String lookupOrderPaymentMethod(String orderId) {
+        String sql = "SELECT paymentMethod FROM Orders WHERE orderId = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String m = rs.getString("paymentMethod");
+                    if (m != null) {
+                        return m;
+                    }
+                }
+            }
+        } catch (SQLException ignore) {
+            // ignore
+        }
+        return null;
     }
 
     private Wallet getWalletFromResultSet(ResultSet rs) throws SQLException {
         return new Wallet(
                 rs.getString("walletId"),
-                rs.getString("accountId"),
+                rs.getString("customerId"),
                 rs.getBigDecimal("balance"),
                 rs.getString("walletStatus"),
                 toLocalDateTime(rs.getTimestamp("createdAt")),

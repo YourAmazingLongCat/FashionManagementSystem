@@ -92,11 +92,11 @@ public class VerifyOTPControllers extends HttpServlet {
                 try {
                     conn = new DBContext().getConnection();
 
-                    // Generate accountId using AccountDAO pattern
+                    // Generate customerId using AccountDAO pattern (now globally unique across both tables)
                     String newAccountId = new AccountDAO().generateNextAccountId();
 
-                    // Insert into Accounts (username = email, same as AccountDAO)
-                    String insertSQL = "INSERT INTO Accounts (accountId, username, email, passwordHash, fullName, role, status, phone) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?)";
+                    // Insert into Customers (role belongs to Employees only).
+                    String insertSQL = "INSERT INTO Customers (customerId, username, email, passwordHash, fullName, status, phone) VALUES (?, ?, ?, ?, ?, 'Active', ?)";
 
                     psInsert = conn.prepareStatement(insertSQL);
                     psInsert.setString(1, newAccountId);

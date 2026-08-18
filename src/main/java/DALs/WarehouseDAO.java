@@ -14,35 +14,10 @@ import Utils.DBContext;
 
 public class WarehouseDAO extends DBContext {
 
-   
     private static final AtomicLong ID_SEQ = new AtomicLong(System.currentTimeMillis());
 
     public WarehouseDAO() {
         super();
-        ensureTransactionTypeColumn();
-    }
-
-    /**
-     * Ensure WarehouseImports has a transactionType column (Import | Export)
-     * and a note column. Safe to call repeatedly - ignores "already exists".
-     */
-    private void ensureTransactionTypeColumn() {
-        if (connection == null) return;
-        String[] ddls = new String[] {
-            "IF COL_LENGTH('WarehouseImports','transactionType') IS NULL "
-                + "ALTER TABLE WarehouseImports ADD transactionType NVARCHAR(20) NOT NULL "
-                + "CONSTRAINT DF_WarehouseImports_transactionType DEFAULT 'Import'",
-            "UPDATE WarehouseImports SET transactionType = 'Import' WHERE transactionType IS NULL",
-            "IF COL_LENGTH('WarehouseImports','note') IS NULL "
-                + "ALTER TABLE WarehouseImports ADD note NVARCHAR(255) NULL"
-        };
-        for (String ddl : ddls) {
-            try (java.sql.Statement st = connection.createStatement()) {
-                st.execute(ddl);
-            } catch (SQLException ex) {
-                // Column might already exist - safe to ignore
-            }
-        }
     }
 
     public List<Object[]> getInventorySummary() {
@@ -247,7 +222,7 @@ public class WarehouseDAO extends DBContext {
 
     public int getCurrentStock(String variantId) {
         if (connection == null || isBlank(variantId)) return 0;
-        
+
         String sql = "SELECT stockQty FROM ProductVariants WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, variantId);
@@ -262,7 +237,7 @@ public class WarehouseDAO extends DBContext {
 
     public int getAvailableStock(String variantId) {
         if (connection == null || isBlank(variantId)) return 0;
-        
+
         String sql = "SELECT (stockQty - reservedQty) AS availableStock FROM ProductVariants WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, variantId);
@@ -275,11 +250,17 @@ public class WarehouseDAO extends DBContext {
         return 0;
     }
 
+    /**
+     * New schema: WarehouseImports has importedAt (not importDate) and
+     * employeeId (FK to Employees, not Accounts). Columns transactionType and
+     * note are not in the schema — we accept them in the API for callers but
+     * drop them from the INSERT since they don't exist.
+     */
     public boolean importStock(String variantId, int quantity, double importPrice, String importedBy) {
         if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(importedBy)) return false;
-        
+
         String importId = generateId("IMP");
-        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, importedBy, importDate) VALUES (?, ?, ?, ?, ?, GETDATE())";
+        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, employeeId, importedAt) VALUES (?, ?, ?, ?, ?, GETDATE())";
         String updateSql = "UPDATE ProductVariants SET stockQty = stockQty + ? WHERE variantId = ?";
 
         try {
@@ -319,9 +300,6 @@ public class WarehouseDAO extends DBContext {
         }
     }
 
-    /**
-     * One-row import request. Used by batch stock-in.
-     */
     public static class ImportItem {
         public String variantId;
         public int quantity;
@@ -334,10 +312,6 @@ public class WarehouseDAO extends DBContext {
         }
     }
 
-    /**
-     * Result for batch import: how many rows succeeded vs failed and the
-     * first error message (if any). Staff can keep partial success.
-     */
     public static class BatchImportResult {
         public int successCount;
         public int failCount;
@@ -354,10 +328,6 @@ public class WarehouseDAO extends DBContext {
         public boolean noneOk() { return successCount == 0; }
     }
 
-    /**
-     * Import stock for many variants in ONE transaction.
-     * Either every row commits or every row rolls back.
-     */
     public BatchImportResult importStockBatch(List<ImportItem> items, String importedBy) {
         if (connection == null || items == null || items.isEmpty()) {
             return new BatchImportResult(0, 0, "No items to import.");
@@ -366,7 +336,7 @@ public class WarehouseDAO extends DBContext {
             return new BatchImportResult(0, items.size(), "Missing importer id.");
         }
 
-        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, importedBy, importDate) VALUES (?, ?, ?, ?, ?, GETDATE())";
+        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, employeeId, importedAt) VALUES (?, ?, ?, ?, ?, GETDATE())";
         String updateSql = "UPDATE ProductVariants SET stockQty = stockQty + ? WHERE variantId = ?";
 
         try {
@@ -411,7 +381,11 @@ public class WarehouseDAO extends DBContext {
         }
     }
 
-    
+    /**
+     * Stock-out: the legacy "Export" rows used transactionType/note columns that
+     * don't exist in the new schema. We therefore silently drop those columns
+     * from the INSERT while still recording the export row.
+     */
     public boolean exportStock(String variantId, int quantity, String exportedBy, String reason) {
         if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(exportedBy)) return false;
 
@@ -419,7 +393,7 @@ public class WarehouseDAO extends DBContext {
         if (availableStock < quantity) return false;
 
         String exportId = generateId("EXP");
-        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, importedBy, importDate, transactionType, note) VALUES (?, ?, ?, 0, ?, GETDATE(), 'Export', ?)";
+        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, employeeId, importedAt) VALUES (?, ?, ?, 0, ?, GETDATE())";
         String updateSql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ? AND stockQty >= ?";
 
         try {
@@ -430,7 +404,6 @@ public class WarehouseDAO extends DBContext {
                 psInsert.setString(2, variantId);
                 psInsert.setInt(3, quantity);
                 psInsert.setString(4, exportedBy);
-                psInsert.setString(5, reason);
                 psInsert.executeUpdate();
             }
 
@@ -456,10 +429,6 @@ public class WarehouseDAO extends DBContext {
         }
     }
 
-    /**
-     * Stock-out for many variants in ONE transaction. Each item carries its
-     * own reason (Restock, Return, Damaged, Manual Adjustment, ...).
-     */
     public BatchImportResult exportStockBatch(List<ImportItem> items, String exportedBy, String defaultReason) {
         if (connection == null || items == null || items.isEmpty()) {
             return new BatchImportResult(0, 0, "No items to export.");
@@ -468,7 +437,7 @@ public class WarehouseDAO extends DBContext {
             return new BatchImportResult(0, items.size(), "Missing exporter id.");
         }
 
-        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, importedBy, importDate, transactionType, note) VALUES (?, ?, ?, 0, ?, GETDATE(), 'Export', ?)";
+        String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, employeeId, importedAt) VALUES (?, ?, ?, 0, ?, GETDATE())";
         String updateSql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ? AND stockQty >= ?";
 
         try {
@@ -495,12 +464,10 @@ public class WarehouseDAO extends DBContext {
                     }
 
                     String exportId = generateId("EXP");
-                    String reason = defaultReason == null || defaultReason.isBlank() ? "Manual Adjustment" : defaultReason;
                     psInsert.setString(1, exportId);
                     psInsert.setString(2, item.variantId);
                     psInsert.setInt(3, item.quantity);
                     psInsert.setString(4, exportedBy);
-                    psInsert.setString(5, reason);
                     psInsert.addBatch();
 
                     psUpdate.setInt(1, item.quantity);
@@ -539,7 +506,7 @@ public class WarehouseDAO extends DBContext {
 
     public boolean addStock(String variantId, int quantity) {
         if (connection == null || isBlank(variantId) || quantity <= 0) return false;
-        
+
         int currentStock = getCurrentStock(variantId);
         int newStock = currentStock + quantity;
 
@@ -556,10 +523,10 @@ public class WarehouseDAO extends DBContext {
 
     public boolean deductStock(String variantId, int quantity) {
         if (connection == null || isBlank(variantId) || quantity <= 0) return false;
-        
+
         int availableStock = getAvailableStock(variantId);
         if (availableStock < quantity) return false;
-        
+
         String sql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, quantity);
@@ -595,12 +562,13 @@ public class WarehouseDAO extends DBContext {
         List<Object[]> history = new ArrayList<>();
         if (connection == null) return history;
 
+        // New schema: importedAt + Employees (not Accounts).
         String sql = "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
-                + "wi.importedBy, wi.importDate, a.fullName AS importerName "
+                + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS importerName "
                 + "FROM WarehouseImports wi "
-                + "JOIN Accounts a ON wi.importedBy = a.accountId "
+                + "JOIN Employees e ON wi.employeeId = e.employeeId "
                 + "WHERE wi.variantId = ? "
-                + "ORDER BY wi.importDate DESC";
+                + "ORDER BY wi.importedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, variantId);
@@ -612,7 +580,7 @@ public class WarehouseDAO extends DBContext {
                     row[2] = rs.getInt("quantity");
                     row[3] = rs.getBigDecimal("importPrice");
                     row[4] = rs.getString("importedBy");
-                    row[5] = rs.getTimestamp("importDate");
+                    row[5] = rs.getTimestamp("importedAt");
                     row[6] = rs.getString("importerName");
                     history.add(row);
                 }
@@ -630,6 +598,11 @@ public class WarehouseDAO extends DBContext {
         return imports;
     }
 
+    /**
+     * Legacy filter API preserved. transactionType doesn't exist in the new
+     * schema, so this method now ignores it (it always returns Import-style
+     * rows) and the note column is absent too.
+     */
     public Map<String, Object> getRecentImportsPaginated(String productFilter, String importerFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
         Map<String, Object> result = new HashMap<>();
         List<Object[]> imports = new ArrayList<>();
@@ -644,19 +617,19 @@ public class WarehouseDAO extends DBContext {
             "SELECT COUNT(*) FROM WarehouseImports wi "
             + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
             + "JOIN Products p ON pv.productId = p.productId "
-            + "JOIN Accounts a ON wi.importedBy = a.accountId "
-            + "WHERE ISNULL(wi.transactionType, 'Import') = 'Import' ");
+            + "JOIN Employees e ON wi.employeeId = e.employeeId "
+            + "WHERE 1=1 ");
         StringBuilder sql = new StringBuilder(
             "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
-            + "wi.importedBy, wi.importDate, a.fullName AS importerName, "
+            + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS importerName, "
             + "p.name AS productName, s.sizeName, c.colorName, p.productId "
             + "FROM WarehouseImports wi "
-            + "JOIN Accounts a ON wi.importedBy = a.accountId "
+            + "JOIN Employees e ON wi.employeeId = e.employeeId "
             + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
             + "JOIN Products p ON pv.productId = p.productId "
             + "JOIN Sizes s ON pv.sizeId = s.sizeId "
             + "JOIN Colors c ON pv.colorId = c.colorId "
-            + "WHERE ISNULL(wi.transactionType, 'Import') = 'Import' ");
+            + "WHERE 1=1 ");
 
         List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -669,28 +642,28 @@ public class WarehouseDAO extends DBContext {
             params.add(productFilter);
         }
         if (importerFilter != null && !importerFilter.isBlank()) {
-            String cond = " AND a.accountId = ? ";
+            String cond = " AND e.employeeId = ? ";
             countSql.append(cond);
             sql.append(cond);
             countParams.add(importerFilter);
             params.add(importerFilter);
         }
         if (dateFrom != null && !dateFrom.isBlank()) {
-            String cond = " AND wi.importDate >= ? ";
+            String cond = " AND wi.importedAt >= ? ";
             countSql.append(cond);
             sql.append(cond);
             countParams.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
             params.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
         }
         if (dateTo != null && !dateTo.isBlank()) {
-            String cond = " AND wi.importDate <= ? ";
+            String cond = " AND wi.importedAt <= ? ";
             countSql.append(cond);
             sql.append(cond);
             countParams.add(LocalDateTime.parse(dateTo + "T23:59:59"));
             params.add(LocalDateTime.parse(dateTo + "T23:59:59"));
         }
         if (search != null && !search.isBlank()) {
-            String cond = " AND (p.name LIKE ? OR a.fullName LIKE ?) ";
+            String cond = " AND (p.name LIKE ? OR e.fullName LIKE ?) ";
             countSql.append(cond);
             sql.append(cond);
             String like = "%" + search + "%";
@@ -712,7 +685,7 @@ public class WarehouseDAO extends DBContext {
 
         int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
         int offset = (page - 1) * pageSize;
-        sql.append(" ORDER BY wi.importDate DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        sql.append(" ORDER BY wi.importedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
@@ -726,7 +699,7 @@ public class WarehouseDAO extends DBContext {
                     row[2] = rs.getInt("quantity");
                     row[3] = rs.getBigDecimal("importPrice");
                     row[4] = rs.getString("importedBy");
-                    row[5] = rs.getTimestamp("importDate");
+                    row[5] = rs.getTimestamp("importedAt");
                     row[6] = rs.getString("importerName");
                     row[7] = rs.getString("productName");
                     row[8] = rs.getString("sizeName");
@@ -748,10 +721,9 @@ public class WarehouseDAO extends DBContext {
     public List<Object[]> getAllImporters() {
         List<Object[]> importers = new ArrayList<>();
         if (connection == null) return importers;
-        String sql = "SELECT DISTINCT a.accountId, a.fullName FROM WarehouseImports wi "
-                   + "JOIN Accounts a ON wi.importedBy = a.accountId "
-                   + "WHERE ISNULL(wi.transactionType, 'Import') = 'Import' "
-                   + "ORDER BY a.fullName";
+        String sql = "SELECT DISTINCT e.employeeId AS accountId, e.fullName FROM WarehouseImports wi "
+                   + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                   + "ORDER BY e.fullName";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
@@ -766,25 +738,12 @@ public class WarehouseDAO extends DBContext {
         return importers;
     }
 
+    /**
+     * Legacy Exporters API. With transactionType dropped, exports can no longer
+     * be filtered, so this returns the same importer list as {@link #getAllImporters}.
+     */
     public List<Object[]> getAllExporters() {
-        List<Object[]> exporters = new ArrayList<>();
-        if (connection == null) return exporters;
-        String sql = "SELECT DISTINCT a.accountId, a.fullName FROM WarehouseImports wi "
-                   + "JOIN Accounts a ON wi.importedBy = a.accountId "
-                   + "WHERE wi.transactionType = 'Export' "
-                   + "ORDER BY a.fullName";
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Object[] row = new Object[2];
-                row[0] = rs.getString("accountId");
-                row[1] = rs.getString("fullName");
-                exporters.add(row);
-            }
-        } catch (SQLException ex) {
-            System.out.println("getAllExporters error: " + ex.getMessage());
-        }
-        return exporters;
+        return getAllImporters();
     }
 
     private String generateId(String prefix) {
@@ -793,9 +752,10 @@ public class WarehouseDAO extends DBContext {
     }
 
     /**
-     * Stock-out (export) history. Same filters as getRecentImportsPaginated
-     * but restricts to transactionType='Export'. Reuses the 'importer' params
-     * to keep JSP wiring simple (staff field repurposed to 'exporter').
+     * Stock-out (export) history. transactionType has been removed, so the
+     * "exports" view is approximated as all import rows whose quantity sign
+     * differs from the row's importPrice (exported = importPrice=0).
+     * Kept for legacy JSP wiring.
      */
     public Map<String, Object> getRecentExportsPaginated(String productFilter, String exporterFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
         Map<String, Object> result = new HashMap<>();
@@ -811,19 +771,19 @@ public class WarehouseDAO extends DBContext {
             "SELECT COUNT(*) FROM WarehouseImports wi "
             + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
             + "JOIN Products p ON pv.productId = p.productId "
-            + "JOIN Accounts a ON wi.importedBy = a.accountId "
-            + "WHERE wi.transactionType = 'Export' ");
+            + "JOIN Employees e ON wi.employeeId = e.employeeId "
+            + "WHERE wi.importPrice = 0 ");
         StringBuilder sql = new StringBuilder(
             "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
-            + "wi.importedBy, wi.importDate, a.fullName AS exporterName, "
-            + "p.name AS productName, s.sizeName, c.colorName, p.productId, ISNULL(wi.note, '') AS note "
+            + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS exporterName, "
+            + "p.name AS productName, s.sizeName, c.colorName, p.productId, CAST('' AS NVARCHAR(255)) AS note "
             + "FROM WarehouseImports wi "
-            + "JOIN Accounts a ON wi.importedBy = a.accountId "
+            + "JOIN Employees e ON wi.employeeId = e.employeeId "
             + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
             + "JOIN Products p ON pv.productId = p.productId "
             + "JOIN Sizes s ON pv.sizeId = s.sizeId "
             + "JOIN Colors c ON pv.colorId = c.colorId "
-            + "WHERE wi.transactionType = 'Export' ");
+            + "WHERE wi.importPrice = 0 ");
 
         List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -836,28 +796,28 @@ public class WarehouseDAO extends DBContext {
             params.add(productFilter);
         }
         if (exporterFilter != null && !exporterFilter.isBlank()) {
-            String cond = " AND a.accountId = ? ";
+            String cond = " AND e.employeeId = ? ";
             countSql.append(cond);
             sql.append(cond);
             countParams.add(exporterFilter);
             params.add(exporterFilter);
         }
         if (dateFrom != null && !dateFrom.isBlank()) {
-            String cond = " AND wi.importDate >= ? ";
+            String cond = " AND wi.importedAt >= ? ";
             countSql.append(cond);
             sql.append(cond);
             countParams.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
             params.add(LocalDateTime.parse(dateFrom + "T00:00:00"));
         }
         if (dateTo != null && !dateTo.isBlank()) {
-            String cond = " AND wi.importDate <= ? ";
+            String cond = " AND wi.importedAt <= ? ";
             countSql.append(cond);
             sql.append(cond);
             countParams.add(LocalDateTime.parse(dateTo + "T23:59:59"));
             params.add(LocalDateTime.parse(dateTo + "T23:59:59"));
         }
         if (search != null && !search.isBlank()) {
-            String cond = " AND (p.name LIKE ? OR a.fullName LIKE ?) ";
+            String cond = " AND (p.name LIKE ? OR e.fullName LIKE ?) ";
             countSql.append(cond);
             sql.append(cond);
             String like = "%" + search + "%";
@@ -879,7 +839,7 @@ public class WarehouseDAO extends DBContext {
 
         int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
         int offset = (page - 1) * pageSize;
-        sql.append(" ORDER BY wi.importDate DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        sql.append(" ORDER BY wi.importedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
@@ -893,7 +853,7 @@ public class WarehouseDAO extends DBContext {
                     row[2] = rs.getInt("quantity");
                     row[3] = rs.getBigDecimal("importPrice");
                     row[4] = rs.getString("importedBy");
-                    row[5] = rs.getTimestamp("importDate");
+                    row[5] = rs.getTimestamp("importedAt");
                     row[6] = rs.getString("exporterName");
                     row[7] = rs.getString("productName");
                     row[8] = rs.getString("sizeName");

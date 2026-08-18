@@ -11,7 +11,6 @@ public class WishlistDAO extends DBContext {
 
     public WishlistDAO() {
         super();
-        ensureTableExists();
     }
 
     public Set<String> getWishlistProductIdsByAccountId(String accountId) {
@@ -20,7 +19,8 @@ public class WishlistDAO extends DBContext {
             return wishlist;
         }
 
-        String sql = "SELECT productId FROM Wishlists WHERE accountId = ? ORDER BY createdAt DESC";
+        // New schema: Wishlists.customerId replaces Wishlists.accountId.
+        String sql = "SELECT productId FROM Wishlists WHERE customerId = ? ORDER BY createdAt DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -38,7 +38,7 @@ public class WishlistDAO extends DBContext {
         if (connection == null || isBlank(accountId) || isBlank(productId)) {
             return false;
         }
-        String sql = "SELECT 1 FROM Wishlists WHERE accountId = ? AND productId = ?";
+        String sql = "SELECT 1 FROM Wishlists WHERE customerId = ? AND productId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             ps.setString(2, productId);
@@ -60,7 +60,7 @@ public class WishlistDAO extends DBContext {
             return true;
         }
         String newId = generateNextWishlistId();
-        String sql = "INSERT INTO Wishlists (wishlistId, accountId, productId, createdAt) VALUES (?, ?, ?, GETDATE())";
+        String sql = "INSERT INTO Wishlists (wishlistId, customerId, productId, createdAt) VALUES (?, ?, ?, GETDATE())";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, newId);
             ps.setString(2, accountId);
@@ -79,7 +79,7 @@ public class WishlistDAO extends DBContext {
         if (connection == null || isBlank(accountId) || isBlank(productId)) {
             return false;
         }
-        String sql = "DELETE FROM Wishlists WHERE accountId = ? AND productId = ?";
+        String sql = "DELETE FROM Wishlists WHERE customerId = ? AND productId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             ps.setString(2, productId);
@@ -97,28 +97,6 @@ public class WishlistDAO extends DBContext {
         } else {
             addToWishlist(accountId, productId);
             return true;
-        }
-    }
-
-    private void ensureTableExists() {
-        if (connection == null) {
-            return;
-        }
-        String sql = "IF OBJECT_ID('dbo.Wishlists', 'U') IS NULL "
-                + "BEGIN "
-                + "CREATE TABLE dbo.Wishlists ("
-                + "wishlistId VARCHAR(20) NOT NULL PRIMARY KEY,"
-                + "accountId VARCHAR(20) NOT NULL,"
-                + "productId VARCHAR(20) NOT NULL,"
-                + "createdAt DATETIME NULL DEFAULT GETDATE(),"
-                + "CONSTRAINT UQ_Wishlists UNIQUE (accountId, productId),"
-                + "CONSTRAINT FK_Wishlists_Accounts FOREIGN KEY (accountId) REFERENCES dbo.Accounts(accountId),"
-                + "CONSTRAINT FK_Wishlists_Products FOREIGN KEY (productId) REFERENCES dbo.Products(productId) ON DELETE CASCADE"
-                + ") END";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.execute();
-        } catch (SQLException ex) {
-            System.out.println("ensureTableExists Wishlists error: " + ex.getMessage());
         }
     }
 
