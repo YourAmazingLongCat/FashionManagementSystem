@@ -6,6 +6,7 @@ import Utils.OrderStatus;
 import Utils.PaymentMethod;
 import Utils.PaymentStatus;
 import Utils.PaymentType;
+import Utils.WalletTransactionStatus;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -23,15 +24,16 @@ public class OrderExpirationDAO {
     public List<ExpiredOrderInfo> getExpiredPendingOrders() {
         List<ExpiredOrderInfo> result = new ArrayList<>();
 
+        // The new schema stores customer email/fullName on Customers, not Accounts.
         String sql = "SELECT o.orderId, o.customerId, o.placedAt, o.totalAmount, "
-                + "a.email, a.fullName "
+                + "c.email, c.fullName "
                 + "FROM Orders o "
-                + "JOIN Accounts a ON a.accountId = o.customerId "
+                + "JOIN Customers c ON c.customerId = o.customerId "
                 + "WHERE o.orderStatus = ? "
                 + "AND o.placedAt <= DATEADD(DAY, -2, GETDATE()) "
                 + "AND NOT EXISTS ("
-                + "  SELECT 1 FROM Payments p "
-                + "  WHERE p.orderId = o.orderId AND p.paymentType = ?"
+                + "  SELECT 1 FROM WalletTransactions wt "
+                + "  WHERE wt.orderId = o.orderId AND wt.transactionType = ?"
                 + ") "
                 + "ORDER BY o.placedAt ASC";
 
@@ -67,37 +69,37 @@ public class OrderExpirationDAO {
 
     /**
      * Deletes an expired Pending order only when the customer has not placed it.
-     * A Purchase payment record is the project marker that Place Order is complete.
      * The order row, payment check and stock release are protected in one transaction.
      */
     public boolean expirePendingOrder(String orderId, String refundPaymentId) {
         String lockSql = "SELECT o.orderStatus, o.placedAt, "
-                + "p.paymentId, p.walletId, p.paymentMethod, p.paymentStatus, p.amount "
+                + "wt.transactionId AS paymentId, wt.walletId, wt.externalMethod AS paymentMethod, wt.transactionStatus AS paymentStatus, wt.amount "
                 + "FROM Orders o WITH (UPDLOCK, HOLDLOCK, ROWLOCK) "
                 + "OUTER APPLY ("
-                + "  SELECT TOP 1 paymentId, walletId, paymentMethod, paymentStatus, amount "
-                + "  FROM Payments WITH (UPDLOCK, HOLDLOCK) "
-                + "  WHERE orderId = o.orderId AND paymentType = ? "
+                + "  SELECT TOP 1 transactionId, walletId, externalMethod, transactionStatus, amount "
+                + "  FROM WalletTransactions WITH (UPDLOCK, HOLDLOCK) "
+                + "  WHERE orderId = o.orderId AND transactionType = ? "
                 + "  ORDER BY createdAt DESC"
-                + ") p "
+                + ") wt "
                 + "WHERE o.orderId = ?";
 
         String updateWalletSql = "UPDATE Wallets "
                 + "SET balance = balance + ?, updatedAt = GETDATE() "
                 + "WHERE walletId = ?";
 
-        String insertRefundSql = "INSERT INTO Payments "
-                + "(paymentId, walletId, orderId, paymentType, paymentMethod, "
-                + "paymentStatus, amount, description, createdAt, paidAt) "
+        // No Bill entity in the new schema. Refund ledger row only.
+        String insertRefundSql = "INSERT INTO WalletTransactions "
+                + "(transactionId, walletId, orderId, transactionType, amount, "
+                + "transactionStatus, externalMethod, description, createdAt, completedAt) "
                 + "VALUES (?, ?, NULL, ?, ?, ?, ?, ?, GETDATE(), GETDATE())";
 
-        String deletePaymentsSql = "DELETE FROM Payments WHERE orderId = ?";
+        String deletePaymentsSql = "DELETE FROM WalletTransactions WHERE orderId = ?";
         String deleteOrderSql = "DELETE FROM Orders "
                 + "WHERE orderId = ? AND orderStatus = ? "
                 + "AND placedAt <= DATEADD(DAY, -2, GETDATE()) "
                 + "AND NOT EXISTS ("
-                + "  SELECT 1 FROM Payments p "
-                + "  WHERE p.orderId = Orders.orderId AND p.paymentType = ?"
+                + "  SELECT 1 FROM WalletTransactions wt "
+                + "  WHERE wt.orderId = Orders.orderId AND wt.transactionType = ?"
                 + ")";
 
         try (Connection conn = new DBContext().getConnection()) {
@@ -142,19 +144,17 @@ public class OrderExpirationDAO {
                     return false;
                 }
 
-                /*
-                 * The order is still Pending, so its units are reserved rather
-                 * than deducted from physical stock. Release those units inside
-                 * this same transaction before deleting the order.
-                 */
                 if (!releaseReservedStock(conn, orderId)) {
                     conn.rollback();
                     return false;
                 }
 
-                boolean isPaid = PaymentStatus.PAID.equals(paymentStatus);
-                boolean isWallet = PaymentMethod.WALLET.equals(paymentMethod);
+                // WalletTransactions stores 'Completed' for paid rows (CHECK constraint forbids 'Paid').
+                boolean isPaid = PaymentStatus.isPaid(paymentStatus);
+                // externalMethod stores only "VNPay"; Wallet payments never reach
+                // here because paymentId != null guards them out.
                 boolean isVNPay = PaymentMethod.VNPAY.equals(paymentMethod);
+                boolean isWallet = walletId != null && !isVNPay;
 
                 if (paymentId != null && isPaid && isWallet) {
                     if (walletId == null || amount == null) {
@@ -171,13 +171,15 @@ public class OrderExpirationDAO {
                         }
                     }
 
+                    // WalletTransactions CHECK constraint forbids 'Paid' / 'Refunded' —
+                    // use 'Completed' to mark the audit refund row as finalised.
                     insertRefundAudit(conn, insertRefundSql, refundPaymentId,
-                            walletId, PaymentMethod.WALLET, PaymentStatus.PAID,
+                            walletId, PaymentMethod.WALLET, WalletTransactionStatus.COMPLETED,
                             amount, "Automatic Wallet refund for expired order " + orderId);
                 } else if (paymentId != null && isPaid && isVNPay && amount != null) {
-                    // Project-level refund audit. Actual VNPay API refund can be connected later.
+                    // Same constraint: 'Completed' is the closest legal terminal status.
                     insertRefundAudit(conn, insertRefundSql, refundPaymentId,
-                            walletId, PaymentMethod.VNPAY, PaymentStatus.REFUNDED,
+                            walletId, PaymentMethod.VNPAY, WalletTransactionStatus.COMPLETED,
                             amount, "Automatic VNPay refund record for expired order " + orderId);
                 }
 
@@ -258,9 +260,14 @@ public class OrderExpirationDAO {
             ps.setString(1, refundPaymentId);
             ps.setString(2, walletId);
             ps.setString(3, PaymentType.REFUND);
-            ps.setString(4, method);
+            ps.setBigDecimal(4, amount);
             ps.setString(5, status);
-            ps.setBigDecimal(6, amount);
+            // externalMethod: 'VNPay' or NULL. Wallet refunds stay NULL.
+            if (PaymentMethod.VNPAY.equalsIgnoreCase(method)) {
+                ps.setString(6, PaymentMethod.VNPAY);
+            } else {
+                ps.setNull(6, java.sql.Types.VARCHAR);
+            }
             ps.setString(7, description);
 
             if (ps.executeUpdate() <= 0) {

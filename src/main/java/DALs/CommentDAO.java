@@ -17,14 +17,16 @@ public class CommentDAO {
     // Limit to add new comment: 7 days after order delivered
     public static final int ADD_LIMIT_DAYS = 7;
 
+    // New schema: Comments.customerId replaces accountId; Comments references
+    // ProductVariants directly via variantId. The Comment POJO still calls the
+    // field orderItemId, so we alias variantId back to orderItemId below.
     private static final String BASE_SELECT
-            = "SELECT c.commentId, c.orderItemId, c.accountId, c.rating, c.content, c.createdAt, c.status, "
-            + "a.fullName AS accountFullName, a.username AS accountUsername, "
+            = "SELECT c.commentId, c.variantId AS orderItemId, c.customerId AS accountId, c.rating, c.content, c.createdAt, c.status, "
+            + "cu.fullName AS accountFullName, cu.username AS accountUsername, "
             + "p.productId, p.name AS productName, sz.sizeName, col.colorName "
             + "FROM Comments c "
-            + "JOIN Accounts a ON c.accountId = a.accountId "
-            + "JOIN OrderItems oi ON c.orderItemId = oi.orderItemId "
-            + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+            + "JOIN Customers cu ON c.customerId = cu.customerId "
+            + "JOIN ProductVariants pv ON c.variantId = pv.variantId "
             + "JOIN Products p ON pv.productId = p.productId "
             + "JOIN Sizes sz ON pv.sizeId = sz.sizeId "
             + "JOIN Colors col ON pv.colorId = col.colorId ";
@@ -208,7 +210,8 @@ public class CommentDAO {
 
     // ==================== CREATE ====================
     public boolean addComment(Comment comment) {
-        String sql = "INSERT INTO Comments (commentId, orderItemId, accountId, rating, content, createdAt, status) "
+        // New schema: Comments has variantId, not orderItemId; accountId -> customerId.
+        String sql = "INSERT INTO Comments (commentId, variantId, customerId, rating, content, createdAt, status) "
                 + "VALUES (?, ?, ?, ?, ?, GETDATE(), 'Active')";
         Connection conn = null;
         try {
@@ -218,8 +221,8 @@ public class CommentDAO {
             }
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, Utils.generateId("CMT"));
-            ps.setString(2, comment.getOrderItemId());
-            ps.setString(3, comment.getAccountId());
+            ps.setString(2, comment.getOrderItemId()); // field still called orderItemId but holds variantId
+            ps.setString(3, comment.getAccountId());    // field still called accountId but holds customerId
             ps.setInt(4, comment.getRating());
             ps.setString(5, comment.getContent());
             boolean result = ps.executeUpdate() > 0;
@@ -314,8 +317,11 @@ public class CommentDAO {
 
     // ==================== PERMISSION CHECKS ====================
     public String getEligibleOrderItemId(String accountId, String productId) {
+        // Legacy method name kept for callers; the new schema keys Comments by
+        // variantId. We return a variantId here. The Comments INSERT accepts it
+        // through the orderItemId field.
         String sql
-                = "SELECT oi.orderItemId, o.placedAt "
+                = "SELECT TOP 1 pv.variantId AS orderItemId, o.placedAt "
                 + "FROM OrderItems oi "
                 + "JOIN Orders o ON oi.orderId = o.orderId "
                 + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
@@ -323,7 +329,7 @@ public class CommentDAO {
                 + "AND pv.productId = ? "
                 + "AND o.orderStatus = 'Delivered' "
                 + "AND DATEDIFF(DAY, o.placedAt, GETDATE()) <= ? "
-                + "AND oi.orderItemId NOT IN (SELECT orderItemId FROM Comments WHERE accountId = ?)";
+                + "AND pv.variantId NOT IN (SELECT variantId FROM Comments WHERE customerId = ?)";
         Connection conn = null;
         try {
             conn = new DBContext().getConnection();
@@ -361,7 +367,7 @@ public class CommentDAO {
                 + "WHERE o.customerId = ? "
                 + "AND pv.productId = ? "
                 + "AND o.orderStatus = 'Delivered' "
-                + "AND oi.orderItemId NOT IN (SELECT orderItemId FROM Comments WHERE accountId = ?)";
+                + "AND pv.variantId NOT IN (SELECT variantId FROM Comments WHERE customerId = ?)";
         Connection conn = null;
         try {
             conn = new DBContext().getConnection();
@@ -391,15 +397,17 @@ public class CommentDAO {
     }
 
     /**
-     * Check eligibility for a specific orderItem.
+     * Check eligibility for a specific variant. The "orderItemId" param is
+     * really a variantId in the new schema.
      */
-    public EligibilityStatus checkOrderItemEligibility(String orderItemId, String accountId) {
+    public EligibilityStatus checkOrderItemEligibility(String variantId, String accountId) {
         String sql
-                = "SELECT o.orderStatus, o.placedAt, o.customerId, "
-                + "(SELECT COUNT(*) FROM Comments WHERE orderItemId = ?) AS commentCount "
+                = "SELECT TOP 1 o.orderStatus, o.placedAt, o.customerId, "
+                + "       (SELECT COUNT(*) FROM Comments WHERE variantId = ?) AS commentCount "
                 + "FROM OrderItems oi "
                 + "JOIN Orders o ON oi.orderId = o.orderId "
-                + "WHERE oi.orderItemId = ?";
+                + "WHERE oi.variantId = ? "
+                + "ORDER BY o.placedAt DESC";
         Connection conn = null;
         try {
             conn = new DBContext().getConnection();
@@ -407,8 +415,8 @@ public class CommentDAO {
                 return EligibilityStatus.notEligible("Cannot connect to database");
             }
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, orderItemId);
-            ps.setString(2, orderItemId);
+            ps.setString(1, variantId);
+            ps.setString(2, variantId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 String orderStatus = rs.getString("orderStatus");
@@ -416,22 +424,18 @@ public class CommentDAO {
                 String customerId = rs.getString("customerId");
                 int commentCount = rs.getInt("commentCount");
 
-                // Check if belongs to this customer
                 if (!accountId.equals(customerId)) {
                     return EligibilityStatus.notEligible("This order does not belong to you");
                 }
 
-                // Check if already reviewed
                 if (commentCount > 0) {
                     return EligibilityStatus.alreadyReviewed("You have already reviewed this product");
                 }
 
-                // Check if delivered
                 if (!"Delivered".equalsIgnoreCase(orderStatus)) {
                     return EligibilityStatus.notEligible("Order must be delivered before reviewing");
                 }
 
-                // Check 7-day window
                 if (placedAt != null) {
                     long daysPassed = (System.currentTimeMillis() - placedAt.getTime()) / (24 * 60 * 60 * 1000);
                     if (daysPassed > ADD_LIMIT_DAYS) {
@@ -458,8 +462,9 @@ public class CommentDAO {
     /**
      * Get a customer's comment for a specific orderItem.
      */
-    public Comment getCommentByOrderItem(String orderItemId, String accountId) {
-        String sql = BASE_SELECT + "WHERE c.orderItemId = ? AND c.accountId = ?";
+    public Comment getCommentByOrderItem(String variantId, String accountId) {
+        // Both parameters now key off variantId (Comments) and customerId (Customers).
+        String sql = BASE_SELECT + "WHERE c.variantId = ? AND c.customerId = ?";
         Connection conn = null;
         try {
             conn = new DBContext().getConnection();
@@ -467,7 +472,7 @@ public class CommentDAO {
                 return null;
             }
             PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setString(1, orderItemId);
+            ps.setString(1, variantId);
             ps.setString(2, accountId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -487,7 +492,8 @@ public class CommentDAO {
     }
 
     public boolean isCommentOwner(String commentId, String accountId) {
-        String sql = "SELECT COUNT(*) FROM Comments WHERE commentId = ? AND accountId = ?";
+        // customerId replaces accountId.
+        String sql = "SELECT COUNT(*) FROM Comments WHERE commentId = ? AND customerId = ?";
         Connection conn = null;
         try {
             conn = new DBContext().getConnection();
@@ -526,11 +532,11 @@ public class CommentDAO {
 
     public double getAvgRatingByProduct(String productId) {
         // Tính cả comment bị ẩn - rating không thay đổi khi ẩn
+        // New schema: Comments.variantId -> ProductVariants directly.
         String sql
                 = "SELECT AVG(CAST(c.rating AS FLOAT)) "
                 + "FROM Comments c "
-                + "JOIN OrderItems oi ON c.orderItemId = oi.orderItemId "
-                + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "JOIN ProductVariants pv ON c.variantId = pv.variantId "
                 + "WHERE pv.productId = ?";
         Connection conn = null;
         try {
@@ -563,11 +569,11 @@ public class CommentDAO {
      * Returns double[] { avgRating, totalCount }.
      */
     public double[] getRatingSummary(String productId) {
+    // New schema: Comments.variantId directly -> ProductVariants (no OrderItems join).
     String sql =
         "SELECT AVG(CAST(c.rating AS FLOAT)) AS avgRating, COUNT(*) AS totalCount " +
         "FROM Comments c " +
-        "JOIN OrderItems oi ON c.orderItemId = oi.orderItemId " +
-        "JOIN ProductVariants pv ON oi.variantId = pv.variantId " +
+        "JOIN ProductVariants pv ON c.variantId = pv.variantId " +
         "WHERE pv.productId = ?";
     Connection conn = null;
     try {
@@ -603,11 +609,11 @@ public Map<String, double[]> getRatingSummaryMap(List<String> productIds) {
         placeholders.append(i > 0 ? ",?" : "?");
     }
 
+    // New schema: Comments.variantId directly -> ProductVariants (no OrderItems join).
     String sql =
         "SELECT pv.productId, AVG(CAST(c.rating AS FLOAT)) AS avgRating, COUNT(*) AS totalCount " +
         "FROM Comments c " +
-        "JOIN OrderItems oi ON c.orderItemId = oi.orderItemId " +
-        "JOIN ProductVariants pv ON oi.variantId = pv.variantId " +
+        "JOIN ProductVariants pv ON c.variantId = pv.variantId " +
         "WHERE pv.productId IN (" + placeholders + ") " +
         "GROUP BY pv.productId";
 

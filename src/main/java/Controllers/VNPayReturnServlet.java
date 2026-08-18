@@ -82,7 +82,7 @@ public class VNPayReturnServlet extends HttpServlet {
                 || result == VNPayProcessResult.ALREADY_PROCESSED)
                 && gatewaySuccess
                 && payment != null
-                && PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+                && PaymentStatus.isPaid(payment.getPaymentStatus())) {
             if (PaymentType.DEPOSIT.equals(payment.getPaymentType())) {
                 session.setAttribute("successMessage",
                         "VNPay payment completed. The money has been added to your wallet.");
@@ -118,7 +118,7 @@ public class VNPayReturnServlet extends HttpServlet {
                 || payment.getAmount().compareTo(amount) != 0) {
             return VNPayProcessResult.INVALID_AMOUNT;
         }
-        if (!PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+        if (!PaymentStatus.isPending(payment.getPaymentStatus())) {
             return VNPayProcessResult.ALREADY_PROCESSED;
         }
         return VNPayProcessResult.UPDATE_FAILED;

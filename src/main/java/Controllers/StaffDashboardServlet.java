@@ -54,8 +54,8 @@ public class StaffDashboardServlet extends HttpServlet {
         request.setAttribute("processingOrders", countOrdersByStatus(orders, OrderStatus.PROCESSING));
         request.setAttribute("shippingOrders", countOrdersByStatus(orders, OrderStatus.SHIPPING));
         request.setAttribute("totalPayments", payments.size());
-        request.setAttribute("pendingPayments", countPaymentsByStatus(payments, PaymentStatus.PENDING));
-        request.setAttribute("paidPayments", countPaymentsByStatus(payments, PaymentStatus.PAID));
+        request.setAttribute("pendingPayments", countPaymentsByStatus(payments, PaymentStatus::isPending));
+        request.setAttribute("paidPayments", countPaymentsByStatus(payments, PaymentStatus::isPaid));
         request.setAttribute("pendingDepositsCount", pendingDeposits.size());
         request.setAttribute("totalProducts", products.size());
         request.setAttribute("recentOrders", orders);
@@ -95,10 +95,10 @@ public class StaffDashboardServlet extends HttpServlet {
         return count;
     }
 
-    private int countPaymentsByStatus(List<Payment> payments, String status) {
+    private int countPaymentsByStatus(List<Payment> payments, java.util.function.Predicate<String> matcher) {
         int count = 0;
         for (Payment payment : payments) {
-            if (payment != null && status.equalsIgnoreCase(payment.getPaymentStatus())) {
+            if (payment != null && matcher.test(payment.getPaymentStatus())) {
                 count++;
             }
         }
