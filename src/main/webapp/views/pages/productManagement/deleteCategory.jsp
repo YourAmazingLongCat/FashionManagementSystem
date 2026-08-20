@@ -7,7 +7,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Delete Category</title>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260608-2233">
+        <style>
+            <%@ include file="/views/pages/productManagement/product-management.css" %>
+        </style>
         <style>
             body {
                 margin: 0;
