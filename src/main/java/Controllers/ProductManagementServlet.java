@@ -85,6 +85,9 @@ public class ProductManagementServlet extends HttpServlet {
             case "edit":
                 showEditForm(request, response);
                 break;
+            case "manageVariants":
+                showVariantManagement(request, response);
+                break;
             case "delete":
                 showDeleteForm(request, response);
                 break;
@@ -153,6 +156,9 @@ public class ProductManagementServlet extends HttpServlet {
             case "edit":
                 updateProduct(request, response);
                 break;
+            case "createVariant":
+                createVariant(request, response);
+                break;
             case "delete":
             case "deleteProduct":
                 deleteProduct(request, response);
@@ -191,6 +197,107 @@ public class ProductManagementServlet extends HttpServlet {
     }
 
     // ============ List page ============
+
+    private void showVariantManagement(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        List<Product> products = productDAO.getAllProducts();
+        String selectedProductId = getTrimmedParam(request, "productId", "");
+        Product selectedProduct = findProduct(products, selectedProductId);
+        List<ProductVariant> allVariants = variantDAO.getAllVariants();
+        int pageSize = 8;
+        int currentPage = parsePositiveInt(request.getParameter("page"), 1);
+        PageSlice<ProductVariant> variantPage = paginate(allVariants, currentPage, pageSize);
+
+        request.setAttribute("products", products);
+        request.setAttribute("variants", variantPage.items());
+        request.setAttribute("totalVariants", allVariants.size());
+        request.setAttribute("currentPage", variantPage.currentPage());
+        request.setAttribute("totalPages", variantPage.totalPages());
+        request.setAttribute("selectedProduct", selectedProduct);
+        request.setAttribute("sizes", selectedProduct == null ? List.of() : sizeDAO.getSizesByCategoryId(selectedProduct.getCategoryId()));
+        request.setAttribute("allSizes", sizeDAO.getAllSizes());
+        request.setAttribute("colors", colorDAO.getAllColors());
+        request.setAttribute("selectedProductId", selectedProductId);
+        request.getRequestDispatcher("/views/pages/productManagement/manageProductVariants.jsp").forward(request, response);
+    }
+
+    private Product findProduct(List<Product> products, String productId) {
+        if (products == null || productId == null || productId.isBlank()) return null;
+        for (Product product : products) {
+            if (productId.equals(product.getProductId())) return product;
+        }
+        return null;
+    }
+
+    private void createVariant(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String productId = getTrimmedParam(request, "productId");
+        String sizeId = getTrimmedParam(request, "sizeId");
+        String colorId = getTrimmedParam(request, "colorId");
+        Product product = productDAO.getProductById(productId);
+        Part imagePart = getVariantImagePartSafely(request);
+
+        String error = null;
+        if (product == null) error = "Please choose a valid product.";
+        else if (isBlank(sizeId)) error = "Please choose a size.";
+        else if (isBlank(colorId)) error = "Please choose a color.";
+        else if (!isSizeInCategory(sizeId, product.getCategoryId())) error = "The selected size does not belong to this product category.";
+        else if (imagePart == null || imagePart.getSize() <= 0) error = "Please choose an image for the variant.";
+
+        BigDecimal priceOverride = parseBigDecimal(normalizeCurrencyValue(getTrimmedParam(request, "priceOverride")));
+        if (error == null && priceOverride != null && priceOverride.compareTo(BigDecimal.ZERO) < 0) {
+            error = "Variant price cannot be negative.";
+        }
+
+        ProductVariant variant = new ProductVariant();
+        variant.setProductId(productId);
+        variant.setSizeId(sizeId);
+        variant.setColorId(colorId);
+        variant.setSku(getTrimmedParam(request, "sku"));
+        variant.setPriceOverride(priceOverride);
+
+        if (error == null && variantDAO.hasVariantCombination(productId, sizeId, colorId)) {
+            error = "This size and color combination already exists for the selected product.";
+        }
+
+        if (error == null && variantDAO.createVariant(variant)) {
+            String variantId = variantDAO.getLatestVariantId(variant);
+            if (imagePart != null && imagePart.getSize() > 0 && variantId != null) {
+                String imageUrl = saveImageFile(request, imagePart);
+                if (imageUrl != null && !variantDAO.upsertVariantImage(variantId, imageUrl)) {
+                    System.out.println("Variant saved, but image metadata could not be saved for " + variantId);
+                }
+            }
+            response.sendRedirect(request.getContextPath() + "/staff/products?action=manageVariants&productId="
+                    + java.net.URLEncoder.encode(productId, "UTF-8") + "&message=Variant+created+successfully&messageType=success");
+            return;
+        }
+
+        List<Product> products = productDAO.getAllProducts();
+        Product selectedProduct = findProduct(products, productId);
+        List<ProductVariant> allVariants = variantDAO.getAllVariants();
+        PageSlice<ProductVariant> variantPage = paginate(allVariants, 1, 8);
+        request.setAttribute("products", products);
+        request.setAttribute("variants", variantPage.items());
+        request.setAttribute("totalVariants", allVariants.size());
+        request.setAttribute("currentPage", variantPage.currentPage());
+        request.setAttribute("totalPages", variantPage.totalPages());
+        request.setAttribute("selectedProduct", selectedProduct);
+        request.setAttribute("sizes", selectedProduct == null ? List.of() : sizeDAO.getSizesByCategoryId(selectedProduct.getCategoryId()));
+        request.setAttribute("allSizes", sizeDAO.getAllSizes());
+        request.setAttribute("colors", colorDAO.getAllColors());
+        request.setAttribute("selectedProductId", productId);
+        request.setAttribute("formError", error == null ? "Unable to create variant." : error);
+        request.getRequestDispatcher("/views/pages/productManagement/manageProductVariants.jsp").forward(request, response);
+    }
+
+    private boolean isSizeInCategory(String sizeId, String categoryId) {
+        if (isBlank(sizeId) || isBlank(categoryId)) return false;
+        for (Size size : sizeDAO.getSizesByCategoryId(categoryId)) {
+            if (sizeId.equals(size.getSizeId())) return true;
+        }
+        return false;
+    }
 
     private void showProductList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -778,6 +885,7 @@ public class ProductManagementServlet extends HttpServlet {
 
     private String validateProduct(Product product, boolean isUpdate) {
         if (product == null) return "Product is missing.";
+        if (!isUpdate && isBlank(product.getPrimaryImageUrl())) return "Please choose a product image.";
         if (isBlank(product.getCategoryId())) return "Please choose a category.";
         if (isBlank(product.getName())) return "Please enter product name.";
         if (product.getName().length() > 200) return "Product name is too long (max 200 characters).";
@@ -1018,6 +1126,14 @@ public class ProductManagementServlet extends HttpServlet {
     private Part getImagePartSafely(HttpServletRequest request) {
         try {
             return request.getPart("productImage");
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private Part getVariantImagePartSafely(HttpServletRequest request) {
+        try {
+            return request.getPart("variantImage");
         } catch (Exception ex) {
             return null;
         }

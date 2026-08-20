@@ -46,6 +46,10 @@ public class OrderDAO extends DBContext {
     }
 
     public int countOrders(String keyword) {
+        return countOrders(keyword, null, null, null);
+    }
+
+    public int countOrders(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Orders o WHERE 1=1 ");
         List<Object> params = new ArrayList<>();
 
@@ -55,6 +59,18 @@ public class OrderDAO extends DBContext {
             params.add(kw);
             params.add(kw);
             params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(status.trim());
+        }
+        if (dateFrom != null) {
+            sql.append("AND o.placedAt >= ? ");
+            params.add(Timestamp.valueOf(dateFrom));
+        }
+        if (dateTo != null) {
+            sql.append("AND o.placedAt < ? ");
+            params.add(Timestamp.valueOf(dateTo));
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -87,6 +103,10 @@ public class OrderDAO extends DBContext {
             + "          THEN 1 ELSE 0 END AS BIT)";
 
     public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {
+        return getOrdersPaginated(keyword, null, null, null, offset, limit);
+    }
+
+    public List<Order> getOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
             "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE 1=1 "
@@ -100,6 +120,18 @@ public class OrderDAO extends DBContext {
             params.add(kw);
             params.add(kw);
             params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(status.trim());
+        }
+        if (dateFrom != null) {
+            sql.append("AND o.placedAt >= ? ");
+            params.add(Timestamp.valueOf(dateFrom));
+        }
+        if (dateTo != null) {
+            sql.append("AND o.placedAt < ? ");
+            params.add(Timestamp.valueOf(dateTo));
         }
 
         sql.append("ORDER BY o.placedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
@@ -231,27 +263,47 @@ public class OrderDAO extends DBContext {
     }
 
     public List<Order> searchOrdersPaginated(String keyword, int offset, int limit) {
+        return searchOrdersPaginated(keyword, null, null, null, offset, limit);
+    }
+
+    public List<Order> searchOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o "
-                + "WHERE o.orderId LIKE ? "
-                + "OR o.customerId LIKE ? "
-                + "OR o.orderStatus LIKE ? "
-                + "OR o.shippingPhone LIKE ? "
-                + "OR o.shippingAddress LIKE ? "
-                + "ORDER BY o.placedAt DESC "
-                + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        StringBuilder sql = new StringBuilder(
+                "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            String searchValue = "%" + keyword + "%";
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.orderStatus LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(status.trim());
+        }
+        if (dateFrom != null) {
+            sql.append("AND o.placedAt >= ? ");
+            params.add(Timestamp.valueOf(dateFrom));
+        }
+        if (dateTo != null) {
+            sql.append("AND o.placedAt < ? ");
+            params.add(Timestamp.valueOf(dateTo));
+        }
 
-            ps.setString(1, searchValue);
-            ps.setString(2, searchValue);
-            ps.setString(3, searchValue);
-            ps.setString(4, searchValue);
-            ps.setString(5, searchValue);
-            ps.setInt(6, offset);
-            ps.setInt(7, limit);
+        sql.append("ORDER BY o.placedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx, limit);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
