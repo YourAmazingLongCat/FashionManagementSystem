@@ -7,7 +7,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${pageTitle}</title>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260609-sizes-en">
+        <style>
+            <%@ include file="/views/pages/productManagement/product-management.css" %>
+        </style>
         <style>
             body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
             .form-shell { width: min(1080px, calc(100% - 40px)); margin: 28px auto; }

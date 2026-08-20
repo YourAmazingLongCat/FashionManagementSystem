@@ -397,7 +397,8 @@ public class AccountDAO {
 
     public String generateNextAccountId() {
         // Combine both tables so generated IDs are globally unique.
-        String query = "SELECT TOP 1 accountId FROM (" + ALL_BASE_SELECT + ") AS a ORDER BY accountId DESC";
+        // Parse the numeric suffix and sort numerically to avoid string-sort issues (e.g., "2" > "10" lexicographically).
+        String query = "SELECT TOP 1 accountId FROM (" + ALL_BASE_SELECT + ") AS a ORDER BY CAST(SUBSTRING(accountId, PATINDEX('%[0-9]%', accountId), LEN(accountId)) AS BIGINT) DESC";
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {

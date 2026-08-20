@@ -3,6 +3,8 @@ package Controllers;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import Utils.DBContext;
 import Utils.passwordUtil;
@@ -88,46 +90,89 @@ public class VerifyOTPControllers extends HttpServlet {
 
                 Connection conn = null;
                 PreparedStatement psInsert = null;
+                PreparedStatement psLock = null;
 
                 try {
                     conn = new DBContext().getConnection();
+                    conn.setAutoCommit(false);
 
-                    // Generate customerId using AccountDAO pattern (now globally unique across both tables)
-                    String newAccountId = new AccountDAO().generateNextAccountId();
+                    String newAccountId = null;
+                    int maxRetries = 5;
 
-                    // Insert into Customers (role belongs to Employees only).
-                    String insertSQL = "INSERT INTO Customers (customerId, username, email, passwordHash, fullName, status, phone) VALUES (?, ?, ?, ?, ?, 'Active', ?)";
+                    for (int attempt = 0; attempt < maxRetries; attempt++) {
+                        // Lock the Customers table with UPDLOCK to prevent concurrent reads
+                        psLock = conn.prepareStatement(
+                            "SELECT TOP 1 customerId FROM Customers WITH (UPDLOCK) ORDER BY customerId DESC");
+                        ResultSet rsLock = psLock.executeQuery();
 
-                    psInsert = conn.prepareStatement(insertSQL);
-                    psInsert.setString(1, newAccountId);
-                    psInsert.setString(2, email);
-                    psInsert.setString(3, email);
-                    psInsert.setString(4, passwordUtil.hashPassword(password));
-                    psInsert.setString(5, fullName);
-                    psInsert.setString(6, phone);
+                        String lastId = null;
+                        if (rsLock.next()) {
+                            lastId = rsLock.getString(1);
+                        }
+                        rsLock.close();
+                        psLock.close();
+                        psLock = null;
 
-                    int row = psInsert.executeUpdate();
+                        String numericPart = lastId != null ? lastId.replaceAll("[^0-9]", "") : "";
+                        long nextNum = numericPart.isEmpty() ? 1 : Long.parseLong(numericPart) + 1;
+                        newAccountId = "ACC" + String.format("%05d", nextNum);
 
-                    if (row > 0) {
-                        // Save success: cleanup session
-                        session.removeAttribute("tempName");
-                        session.removeAttribute("tempEmail");
-                        session.removeAttribute("tempPhone");
-                        session.removeAttribute("tempPassword");
-                        session.removeAttribute("generatedOTP");
+                        // Try to insert — if duplicate key, loop will retry with next ID
+                        String insertSQL = "INSERT INTO Customers (customerId, username, email, passwordHash, fullName, status, phone) VALUES (?, ?, ?, ?, ?, 'Active', ?)";
+                        psInsert = conn.prepareStatement(insertSQL);
+                        psInsert.setString(1, newAccountId);
+                        psInsert.setString(2, email);
+                        psInsert.setString(3, email);
+                        psInsert.setString(4, passwordUtil.hashPassword(password));
+                        psInsert.setString(5, fullName);
+                        psInsert.setString(6, phone);
 
-                        // Redirect to login with success message
-                        request.setAttribute("successMessage", "Verification successful! Your account is ready. Please log in.");
-                        request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
-                    } else {
-                        request.setAttribute("errorMessage", "System error while saving account.");
-                        request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                        try {
+                            int row = psInsert.executeUpdate();
+                            psInsert.close();
+                            psInsert = null;
+                            conn.commit();
+                            break;
+                        } catch (SQLException insertEx) {
+                            psInsert.close();
+                            psInsert = null;
+                            if (insertEx.getMessage() != null && insertEx.getMessage().contains("duplicate key")) {
+                                continue; // Retry with next ID
+                            }
+                            throw insertEx;
+                        }
                     }
+
+                    if (newAccountId == null) {
+                        conn.rollback();
+                        request.setAttribute("errorMessage", "Unable to generate a unique account ID after multiple attempts. Please try again.");
+                        request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                        return;
+                    }
+
+                    session.removeAttribute("tempName");
+                    session.removeAttribute("tempEmail");
+                    session.removeAttribute("tempPhone");
+                    session.removeAttribute("tempPassword");
+                    session.removeAttribute("generatedOTP");
+
+                    request.setAttribute("successMessage", "Verification successful! Your account is ready. Please log in.");
+                    request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
                 } catch (Exception e) {
+                    if (conn != null) {
+                        try { conn.rollback(); } catch (Exception ignored) {}
+                    }
                     request.setAttribute("errorMessage", "Database error: " + e.getMessage());
                     request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
                 } finally {
-                    try { if (psInsert != null) psInsert.close(); if (conn != null) conn.close(); } catch (Exception ex) {}
+                    try {
+                        if (psInsert != null) psInsert.close();
+                        if (psLock != null) psLock.close();
+                        if (conn != null) {
+                            conn.setAutoCommit(true);
+                            conn.close();
+                        }
+                    } catch (Exception ex) {}
                 }
             }
 
