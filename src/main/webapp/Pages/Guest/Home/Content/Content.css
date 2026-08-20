@@ -331,6 +331,11 @@ a {
     gap: 14px;
 }
 
+.detail-image-column {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 .detail-thumbnails {
     display: flex;
     flex-direction: column;
@@ -420,7 +425,7 @@ a {
 }
 
 .detail-description {
-    margin: 0 0 28px;
+    margin: 18px 0 0;
     color: #4b5563;
     line-height: 1.8;
     white-space: normal;

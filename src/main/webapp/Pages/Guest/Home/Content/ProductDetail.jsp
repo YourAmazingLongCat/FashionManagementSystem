@@ -20,15 +20,18 @@
                         </c:if>
                     </c:forEach>
                 </div>
-                <div class="detail-image-wrap">
-                <c:choose>
-                    <c:when test="${not empty product.primaryImageUrl}">
-                        <img id="detailMainImage" class="detail-image" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" />
-                    </c:when>
-                    <c:otherwise>
-                        <div id="detailMainImage" class="detail-image detail-image-empty">No image</div>
-                    </c:otherwise>
-                </c:choose>
+                <div class="detail-image-column">
+                    <div class="detail-image-wrap">
+                    <c:choose>
+                        <c:when test="${not empty product.primaryImageUrl}">
+                            <img id="detailMainImage" class="detail-image" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" />
+                        </c:when>
+                        <c:otherwise>
+                            <div id="detailMainImage" class="detail-image detail-image-empty">No image</div>
+                        </c:otherwise>
+                    </c:choose>
+                    </div>
+                    <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
                 </div>
             </div>
         </div>
@@ -58,7 +61,6 @@
             </div>
 
             <div class="detail-price" id="detailPrice"><fmt:formatNumber value="${displayPrice}" type="number" groupingUsed="true"/> đ</div>
-            <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
 
             <c:if test="${not empty param.message}">
                 <div class="detail-flash-message ${param.message eq 'added-to-cart' ? 'success' : 'error'}">
