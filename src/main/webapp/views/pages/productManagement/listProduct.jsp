@@ -205,19 +205,19 @@
                     <div class="brand">Staff</div>
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Orders</a>
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Payments</a>
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Manage Payments</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="${pageContext.request.contextPath}/staff/products">Products</a>
+                            <a class="nav-link active" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Warehouse</a>
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Manage Warehouse</a>
                         </li>
                         <li class="nav-item mt-auto">
                             <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>
@@ -329,8 +329,7 @@
                                         </table>
                                     </div>
                                     <c:if test="${totalPages > 1}">
-                                        <div class="pagination-bar">
-                                            <span class="pagination-summary">Showing ${products.size()} of ${totalProducts} products</span>
+                                        <div class="pagination-bar" style="justify-content: center;">
                                             <div class="pagination-controls">
                                                 <c:if test="${currentPage > 1}">
                                                     <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">‹</a>
@@ -394,8 +393,7 @@
                                         </table>
                                     </div>
                                     <c:if test="${totalPages > 1}">
-                                        <div class="pagination-bar">
-                                            <span class="pagination-summary">Showing ${categoryItems.size()} of ${totalCategories} categories</span>
+                                        <div class="pagination-bar" style="justify-content: center;">
                                             <div class="pagination-controls">
                                                 <c:if test="${currentPage > 1}">
                                                     <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">&#8249;</a>
@@ -465,8 +463,7 @@
                                         </table>
                                     </div>
                                     <c:if test="${totalPages > 1}">
-                                        <div class="pagination-bar">
-                                            <span class="pagination-summary">Showing ${colorItems.size()} of ${totalColors} colors</span>
+                                        <div class="pagination-bar" style="justify-content: center;">
                                             <div class="pagination-controls">
                                                 <c:if test="${currentPage > 1}">
                                                     <a class="page-link" href="?${productQuery}&page=${currentPage - 1}">&#8249;</a>

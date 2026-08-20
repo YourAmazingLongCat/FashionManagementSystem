@@ -79,6 +79,46 @@ public class ProductVariantDAO extends DBContext {
         return variants;
     }
 
+    /**
+     * Search/filter variants by keyword (matches product name, size name, color name)
+     * and/or category id. Pass null/blank for either to skip that filter.
+     */
+    public List<ProductVariant> searchVariants(String keyword, String categoryId) {
+        List<ProductVariant> variants = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+                "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
+                + "c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride, "
+                + "(SELECT TOP 1 imageUrl FROM ProductImages WHERE variantId = pv.variantId ORDER BY isPrimary DESC, imageId ASC) AS imageUrl, "
+                + "p.name AS productName, p.description AS productDescription, p.basePrice AS productBasePrice, "
+                + "cat.name AS categoryName "
+                + "FROM ProductVariants pv JOIN Products p ON pv.productId = p.productId "
+                + "JOIN Categories cat ON p.categoryId = cat.categoryId "
+                + "JOIN Sizes s ON pv.sizeId = s.sizeId JOIN Colors c ON pv.colorId = c.colorId "
+                + "WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append("AND (LOWER(p.name) LIKE ? OR LOWER(s.sizeName) LIKE ? OR LOWER(c.colorName) LIKE ?) ");
+            String kw = "%" + keyword.trim().toLowerCase() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (categoryId != null && !categoryId.isBlank()) {
+            sql.append("AND cat.categoryId = ? ");
+            params.add(categoryId);
+        }
+        sql.append("ORDER BY p.name, c.colorName, s.sizeName");
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) variants.add(mapVariant(rs));
+            }
+        } catch (SQLException e) {
+            System.out.println("searchVariants error: " + e.getMessage());
+        }
+        return variants;
+    }
+
     public boolean createVariant(ProductVariant variant) {
         if (variant == null || variant.getProductId() == null || variant.getSizeId() == null || variant.getColorId() == null) return false;
         String sql = "INSERT INTO ProductVariants (variantId, productId, sizeId, colorId, sku, stockQty, reservedQty, priceOverride, createdAt) "
