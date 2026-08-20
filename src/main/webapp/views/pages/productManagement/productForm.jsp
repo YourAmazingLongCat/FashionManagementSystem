@@ -129,25 +129,6 @@
                             </div>
                         </section>
 
-                        <section class="form-section">
-                            <div class="section-heading">
-                                <div>
-                                    <h3>Product variants</h3>
-                                    <p>Add each size/color option as a separate row. Stock quantity is managed through the Warehouse module.</p>
-                                </div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <c:if test="${formAction eq 'edit'}">
-                                        <a class="variant-add-btn" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);" href="${pageContext.request.contextPath}/staff/warehouse/inventory?productFilter=${product.productId}">Manage stock</a>
-                                    </c:if>
-                                    <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
-                                </div>
-                            </div>
-
-                            <div id="variantsList" class="variants-list"></div>
-                            <div id="variantsEmpty" class="variant-empty">No variants added yet. Click <strong>Add variant</strong> to create one.</div>
-                            <p class="inline-note">Each row represents one exact product option (Size + Color). The <strong>Stock</strong> badge shows current available quantity. Use <strong>Manage stock</strong> to import or export inventory.</p>
-                        </section>
-
                         <c:if test="${formAction eq 'edit'}">
                             <section class="form-section">
                                 <div class="section-heading"><h3>Inventory summary</h3></div>
@@ -174,7 +155,7 @@
                             <div class="form-grid image-section-grid">
                                 <div class="form-group">
                                     <label for="productImage">Upload image</label>
-                                    <input id="productImage" name="productImage" type="file" accept="image/*">
+                                    <input id="productImage" name="productImage" type="file" accept="image/*" ${formAction eq 'create' ? 'required' : ''}>
                                 </div>
                                 <div class="form-group image-preview-group">
                                     <label>Current image</label>
@@ -202,34 +183,13 @@
 
                         <div class="form-actions">
                             <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=products">Back to products</a>
+                            <c:if test="${formAction eq 'edit'}">
+                                <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?action=manageVariants&productId=${product.productId}">Manage Product Variants</a>
+                            </c:if>
                             <button type="submit" class="primary-btn">${formAction eq 'edit' ? 'Save changes' : 'Create product'}</button>
                         </div>
                     </form>
 
-                    <div id="variantOptionsData" style="display:none;">
-                        <div id="sizeOptionsData" data-selected-category-id="${product.categoryId}">
-                            <c:forEach var="size" items="${allSizes}">
-                                <div data-size-id="${size.sizeId}" data-size-name="${size.sizeName}" data-category-id="${size.categoryId}"></div>
-                            </c:forEach>
-                        </div>
-                        <div id="colorOptionsData">
-                            <c:forEach var="color" items="${colors}">
-                                <div data-color-id="${color.colorId}" data-color-name="${fn:escapeXml(color.colorName)}"></div>
-                            </c:forEach>
-                        </div>
-                        <div id="existingVariantsData">
-                            <c:forEach var="variant" items="${product.variants}">
-                                <div class="variant-data"
-                                     data-size-id="${variant.sizeId}"
-                                     data-color-id="${variant.colorId}"
-                                     data-sku="${variant.sku}"
-                                     data-variant-id="${variant.variantId}"
-                                     data-stock-qty="${variant.stockQty}"
-                                     data-available-qty="${variant.availableQty}"
-                                     data-price-override="${variant.priceOverride == null ? '' : variant.priceOverride.setScale(0, 0)}"></div>
-                            </c:forEach>
-                        </div>
-                    </div>
                 </div>
             </section>
         </div>
@@ -347,29 +307,6 @@
                 const categorySelect = document.getElementById('categoryId');
                 const productImageInput = document.getElementById('productImage');
                 const imagePreview = document.getElementById('imagePreview');
-                const variantsList = document.getElementById('variantsList');
-                const variantsEmpty = document.getElementById('variantsEmpty');
-                const addVariantBtn = document.getElementById('addVariantBtn');
-                const allSizeOptions = Array.from(document.querySelectorAll('#sizeOptionsData div')).map(node => ({
-                    id: node.dataset.sizeId,
-                    name: node.dataset.sizeName,
-                    categoryId: node.dataset.categoryId
-                }));
-                const colorOptions = Array.from(document.querySelectorAll('#colorOptionsData div')).map(node => ({
-                    id: node.dataset.colorId,
-                    name: node.dataset.colorName
-                }));
-                const existingVariants = Array.from(document.querySelectorAll('#existingVariantsData .variant-data')).map(node => ({
-                    variantId: node.dataset.variantId || '',
-                    sizeId: node.dataset.sizeId || '',
-                    colorId: node.dataset.colorId || '',
-                    sku: node.dataset.sku || '',
-                    stockQty: Number(node.dataset.stockQty || '0'),
-                    availableQty: Number(node.dataset.availableQty || '0'),
-                    priceOverride: node.dataset.priceOverride || ''
-                }));
-                let sizeOptions = [];
-
                 const getSizeOptionsByCategory = (categoryId) => {
                     if (!categoryId) {
                         return [];
@@ -517,12 +454,6 @@
                     refreshAllSizeSelects();
                 };
 
-                if (categorySelect) {
-                    categorySelect.addEventListener('change', () => {
-                        loadSizesByCategory(categorySelect.value);
-                    });
-                }
-
                 if (productImageInput && imagePreview) {
                     productImageInput.addEventListener('change', () => {
                         const file = productImageInput.files && productImageInput.files[0];
@@ -540,46 +471,7 @@
                     });
                 }
 
-                if (addVariantBtn) {
-                    addVariantBtn.addEventListener('click', () => addVariantRow());
-                }
-
-                // Load sizes BEFORE adding variant rows to ensure size values are preserved
-                loadSizesByCategory(categorySelect ? categorySelect.value : '');
-
-                if (existingVariants.length > 0) {
-                    existingVariants.forEach(addVariantRow);
-                } else {
-                    addVariantRow();
-                }
-
-                // Re-apply sizes after variants are added to ensure correct values are selected
-                loadSizesByCategory(categorySelect ? categorySelect.value : '');
-
                 setImagePreview(imagePreview && imagePreview.dataset.existingSrc ? ctx + imagePreview.dataset.existingSrc : '');
-                renumberVariantRows();
-                updateEmptyState();
-
-                // kiểm tra SKU trùng lặp trên form
-                const productForm = document.getElementById('productForm');
-                if (productForm) {
-                    productForm.addEventListener('submit', function (e) {
-                        const skuInputs = Array.from(variantsList.querySelectorAll('input[name="variantSku"]'));
-                        const skuValues = skuInputs
-                            .map(input => (input.value || '').trim().toUpperCase())
-                            .filter(sku => sku !== '');
-
-                        const seenSkus = new Set();
-                        for (const sku of skuValues) {
-                            if (seenSkus.has(sku)) {
-                                e.preventDefault();
-                                alert('Duplicate SKU: ' + sku + '. Each variant must have a unique SKU.');
-                                return false;
-                            }
-                            seenSkus.add(sku);
-                        }
-                    });
-                }
             })();
         </script>
     </body>

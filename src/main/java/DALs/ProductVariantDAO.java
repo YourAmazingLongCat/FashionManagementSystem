@@ -15,6 +15,21 @@ public class ProductVariantDAO extends DBContext {
 
     public ProductVariantDAO() {
         super();
+        ensureVariantImageTable();
+    }
+
+    private void ensureVariantImageTable() {
+        String sql = "IF OBJECT_ID('ProductVariantImages', 'U') IS NULL "
+                + "CREATE TABLE ProductVariantImages ("
+                + "imageId VARCHAR(40) NOT NULL PRIMARY KEY, "
+                + "variantId VARCHAR(40) NOT NULL UNIQUE, "
+                + "imageUrl VARCHAR(500) NOT NULL, "
+                + "createdAt DATETIME NOT NULL DEFAULT GETDATE())";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("ensureVariantImageTable error: " + e.getMessage());
+        }
     }
 
     public List<ProductVariant> getVariantsByProductId(String productId) {
@@ -24,10 +39,11 @@ public class ProductVariantDAO extends DBContext {
         }
 
         String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
-                + "c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride "
+                + "c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride, pvi.imageUrl "
                 + "FROM ProductVariants pv "
                 + "INNER JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "INNER JOIN Colors c ON pv.colorId = c.colorId "
+                + "LEFT JOIN ProductVariantImages pvi ON pv.variantId = pvi.variantId "
                 + "WHERE pv.productId = ? "
                 + "ORDER BY c.colorName, s.sizeName";
 
@@ -48,6 +64,7 @@ public class ProductVariantDAO extends DBContext {
                     variant.setStockQty(rs.getInt("stockQty"));
                     variant.setReservedQty(rs.getInt("reservedQty"));
                     variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
+                    variant.setImageUrl(rs.getString("imageUrl"));
                     variants.add(variant);
                 }
             }
@@ -56,6 +73,101 @@ public class ProductVariantDAO extends DBContext {
         }
 
         return variants;
+    }
+
+    public List<ProductVariant> getAllVariants() {
+        List<ProductVariant> variants = new ArrayList<>();
+        String sql = "SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
+                + "c.hexCode, pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride, pvi.imageUrl, "
+                + "p.name AS productName, p.description AS productDescription, p.basePrice AS productBasePrice, "
+                + "cat.name AS categoryName "
+                + "FROM ProductVariants pv JOIN Products p ON pv.productId = p.productId "
+                + "JOIN Categories cat ON p.categoryId = cat.categoryId "
+                + "JOIN Sizes s ON pv.sizeId = s.sizeId JOIN Colors c ON pv.colorId = c.colorId "
+                + "LEFT JOIN ProductVariantImages pvi ON pv.variantId = pvi.variantId "
+                + "ORDER BY p.name, c.colorName, s.sizeName";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) variants.add(mapVariant(rs));
+        } catch (SQLException e) {
+            System.out.println("getAllVariants error: " + e.getMessage());
+        }
+        return variants;
+    }
+
+    public boolean createVariant(ProductVariant variant) {
+        if (variant == null || variant.getProductId() == null || variant.getSizeId() == null || variant.getColorId() == null) return false;
+        String sql = "INSERT INTO ProductVariants (variantId, productId, sizeId, colorId, sku, stockQty, reservedQty, priceOverride, createdAt) "
+                + "VALUES (?, ?, ?, ?, ?, 0, 0, ?, GETDATE())";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, generateVariantId());
+            ps.setString(2, variant.getProductId());
+            ps.setString(3, variant.getSizeId());
+            ps.setString(4, variant.getColorId());
+            ps.setString(5, variant.getSku());
+            if (variant.getPriceOverride() == null) ps.setNull(6, java.sql.Types.DECIMAL);
+            else ps.setBigDecimal(6, variant.getPriceOverride());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("createVariant error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean hasVariantCombination(String productId, String sizeId, String colorId) {
+        if (productId == null || sizeId == null || colorId == null) return false;
+        String sql = "SELECT COUNT(*) FROM ProductVariants WHERE productId = ? AND sizeId = ? AND colorId = ?";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            ps.setString(2, sizeId);
+            ps.setString(3, colorId);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next() && rs.getInt(1) > 0; }
+        } catch (SQLException e) {
+            System.out.println("hasVariantCombination error: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public String getLatestVariantId(ProductVariant variant) {
+        String sql = "SELECT TOP 1 variantId FROM ProductVariants WHERE productId = ? AND sizeId = ? AND colorId = ? ORDER BY createdAt DESC";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, variant.getProductId());
+            ps.setString(2, variant.getSizeId());
+            ps.setString(3, variant.getColorId());
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getString(1); }
+        } catch (SQLException e) { System.out.println("getLatestVariantId error: " + e.getMessage()); }
+        return null;
+    }
+
+    public boolean upsertVariantImage(String variantId, String imageUrl) {
+        if (variantId == null || variantId.isBlank() || imageUrl == null || imageUrl.isBlank()) return false;
+        String sql = "MERGE ProductVariantImages AS target USING (SELECT ? AS variantId, ? AS imageUrl) AS source "
+                + "ON target.variantId = source.variantId WHEN MATCHED THEN UPDATE SET imageUrl = source.imageUrl "
+                + "WHEN NOT MATCHED THEN INSERT (imageId, variantId, imageUrl) VALUES (?, source.variantId, source.imageUrl);";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, variantId); ps.setString(2, imageUrl); ps.setString(3, "VIMG" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { System.out.println("upsertVariantImage error: " + e.getMessage()); return false; }
+    }
+
+    private ProductVariant mapVariant(ResultSet rs) throws SQLException {
+        ProductVariant variant = new ProductVariant();
+        variant.setVariantId(rs.getString("variantId"));
+        variant.setProductId(rs.getString("productId"));
+        variant.setSizeId(rs.getString("sizeId"));
+        variant.setSizeName(rs.getString("sizeName"));
+        variant.setColorId(rs.getString("colorId"));
+        variant.setColorName(rs.getString("colorName"));
+        variant.setColorHexCode(rs.getString("hexCode"));
+        variant.setSku(rs.getString("sku"));
+        variant.setStockQty(rs.getInt("stockQty"));
+        variant.setReservedQty(rs.getInt("reservedQty"));
+        variant.setPriceOverride(rs.getBigDecimal("priceOverride"));
+        variant.setImageUrl(rs.getString("imageUrl"));
+        variant.setProductName(rs.getString("productName"));
+        variant.setProductDescription(rs.getString("productDescription"));
+        variant.setProductBasePrice(rs.getBigDecimal("productBasePrice"));
+        variant.setCategoryName(rs.getString("categoryName"));
+        return variant;
     }
 
     

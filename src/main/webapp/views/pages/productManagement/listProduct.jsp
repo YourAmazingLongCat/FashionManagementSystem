@@ -132,6 +132,44 @@
             .data-table .action-group { display: flex; gap: 8px; }
             .data-table .table-btn { min-width: 70px; padding: 8px 12px; font-size: 0.8rem; }
 
+            /* Keep product rows readable while allowing the table to scroll on small screens. */
+            .product-table-wrapper { overflow-x: hidden; border: 1px solid #d9dee5; }
+            .product-table { width: 100%; table-layout: fixed; color: #111827; }
+            .product-table th, .product-table td { text-align: center; vertical-align: middle; border: 1px solid #d9dee5; }
+            .product-table th { height: 66px; padding: 12px 10px; background: #f1f1f1; color: #111827; font-size: 0.86rem; line-height: 1.35; }
+            .product-table td { height: 136px; padding: 10px 14px; font-size: 1rem; }
+            .product-table tbody tr:nth-child(even) { background: #fafbfc; }
+            .product-table tbody tr:hover { background: #f1f5f9; }
+            .product-table th:nth-child(1), .product-table td:nth-child(1) { width: 9%; }
+            .product-table th:nth-child(2), .product-table td:nth-child(2) { width: 11%; }
+            .product-table th:nth-child(3), .product-table td:nth-child(3) { width: 11%; }
+            .product-table th:nth-child(4), .product-table td:nth-child(4) { width: 11%; }
+            .product-table th:nth-child(5), .product-table td:nth-child(5) { width: 27%; }
+            .product-table th:nth-child(6), .product-table td:nth-child(6) { width: 11%; }
+            .product-table th:nth-child(7), .product-table td:nth-child(7) { width: 12%; }
+            .product-table th:nth-child(8), .product-table td:nth-child(8) { width: 8%; }
+            .product-image-cell { padding: 10px !important; }
+            .product-image { display: block; width: min(125px, 100%); height: auto; aspect-ratio: 1; margin: 0 auto; object-fit: contain; }
+            .product-image-empty { width: min(125px, 100%); aspect-ratio: 1; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #94a3b8; font-size: 0.8rem; }
+            .product-name-cell { line-height: 1.45; font-weight: 500 !important; }
+            .product-id-cell { overflow-wrap: anywhere; word-break: break-word; line-height: 1.3; }
+            .product-price-cell { white-space: nowrap; }
+            .product-description-cell { overflow: hidden; line-height: 1.45; }
+            .product-description-text { display: -webkit-box; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+            .product-category-cell { line-height: 1.45; text-transform: uppercase; }
+            .product-status { display: inline-flex; align-items: center; justify-content: center; min-width: 92px; padding: 8px 10px; border-radius: 4px; font-size: 0.82rem; font-weight: 700; }
+            .product-status.visible { background: #dcfce7; color: #166534; }
+            .product-status.hidden { background: #fee2e2; color: #991b1b; }
+            .product-actions-cell .action-group { justify-content: center; flex-direction: column; }
+
+            @media (max-width: 1200px) {
+                .product-table th, .product-table td { padding: 8px 6px; font-size: 0.86rem; }
+                .product-table th { font-size: 0.72rem; }
+                .product-table td { height: 112px; }
+                .product-table .table-btn { min-width: 0; width: 100%; padding: 7px 4px; font-size: 0.72rem; }
+                .product-status { min-width: 0; width: 100%; padding: 7px 3px; font-size: 0.7rem; }
+            }
+
             /* Category group styles for Sizes table */
             .size-group-list { display: flex; flex-direction: column; gap: 12px; }
             .size-group { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
@@ -174,6 +212,9 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link active" href="${pageContext.request.contextPath}/staff/products">Products</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Warehouse</a>
@@ -240,74 +281,52 @@
                                     <div class="empty-state"><h4>No products found</h4><p>Add your first product to start building the catalog.</p></div>
                                 </c:when>
                                 <c:otherwise>
-                                    <div class="product-list">
-                                        <c:forEach var="product" items="${products}">
-                                            <article class="product-card">
-                                                <div class="product-main">
-                                                    <c:choose>
-                                                        <c:when test="${not empty product.primaryImageUrl}">
-                                                            <img class="thumb" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                                                            <div class="thumb-empty" style="display:none;">No image</div>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <div class="thumb-empty">No image</div>
-                                                        </c:otherwise>
-                                                    </c:choose>
-                                                    <div class="product-copy">
-                                                        <div class="product-head">
-                                                            <span class="id-badge">${product.productId}</span>
-                                                            <h4 class="product-name">${product.name}</h4>
-                                                        </div>
-                                                        <p class="product-description">${empty product.description ? 'No description available' : product.description}</p>
-                                                        <div class="product-meta">
-                                                            <div class="meta-card">
-                                                                <p class="meta-label">Category</p>
-                                                                <p class="meta-copy"><strong>${product.categoryName}</strong></p>
-                                                            </div>
-                                                            <div class="meta-card">
-                                                                <p class="meta-label">Colors</p>
-                                                                <div class="summary-pill-list">
-                                                                    <c:forEach var="colorName" items="${product.colorNames}">
-                                                                        <span class="summary-pill">${colorName}</span>
-                                                                    </c:forEach>
-                                                                </div>
-                                                            </div>
-                                                            <div class="meta-card">
-                                                                <p class="meta-label">Sizes</p>
-                                                                <div class="summary-pill-list">
-                                                                    <c:forEach var="sizeName" items="${product.sizeNames}">
-                                                                        <span class="summary-pill">${sizeName}</span>
-                                                                    </c:forEach>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="product-side">
-                                                    <div class="info-card">
-                                                        <p class="info-copy">Stock</p>
-                                                        <strong>
+                                    <div class="product-table-wrapper">
+                                        <table class="data-table product-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="product-id-column">ID<br>PRODUCT</th>
+                                                    <th class="product-image-column">IMAGE</th>
+                                                    <th>PRODUCT<br>NAME</th>
+                                                    <th>PRODUCT<br>PRICE</th>
+                                                    <th class="product-description-column">DESCRIPTION</th>
+                                                    <th>CATEGORY<br>NAME</th>
+                                                    <th>STATUS<br>(VISIBLE/HIDDEN)</th>
+                                                    <th class="product-actions-column">ACTIONS</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="product" items="${products}">
+                                                    <tr>
+                                                        <td class="cell-id product-id-cell">${product.productId}</td>
+                                                        <td class="product-image-cell">
                                                             <c:choose>
-                                                                <c:when test="${product.totalStockQty <= 0}">
-                                                                    <span style="color: #b45309;">Out of Stock</span>
+                                                                <c:when test="${not empty product.primaryImageUrl}">
+                                                                    <img class="product-image" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${empty product.name ? 'Product image' : product.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                                                    <span class="product-image-empty" style="display:none;">No image</span>
                                                                 </c:when>
                                                                 <c:otherwise>
-                                                                    ${product.totalStockQty}
+                                                                    <span class="product-image-empty">No image</span>
                                                                 </c:otherwise>
                                                             </c:choose>
-                                                        </strong>
-                                                    </div>
-                                                    <div class="info-card"><p class="info-copy">Price</p><strong><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> đ</strong></div>
-                                                </div>
-                                                <div class="product-actions">
-                                                    <span class="status-badge status-${product.status}">${product.status}</span>
-                                                    <div class="action-group">
-                                                        <a class="table-btn edit" href="javascript:void(0)" data-open-edit data-product-id="${product.productId}">Edit</a>
-                                                        <a class="table-btn delete" href="javascript:void(0)" onclick="openDeleteModal('product','${product.productId}','${fn:escapeXml(product.name)}')">Delete</a>
-                                                    </div>
-                                                </div>
-                                            </article>
-                                        </c:forEach>
+                                                        </td>
+                                                        <td class="cell-name product-name-cell">${empty product.name ? '-' : product.name}</td>
+                                                        <td class="product-price-cell"><fmt:formatNumber value="${product.basePrice}" type="number" groupingUsed="true" /> VND</td>
+                                                        <td class="cell-description product-description-cell" title="${product.description}"><span class="product-description-text">${empty product.description ? 'No description available' : product.description}</span></td>
+                                                        <td class="product-category-cell">${empty product.categoryName ? '-' : product.categoryName}</td>
+                                                        <td class="product-status-cell">
+                                                            <span class="product-status ${product.status eq 'Available' ? 'visible' : 'hidden'}">${product.status eq 'Available' ? 'VISIBLE' : 'HIDDEN'}</span>
+                                                        </td>
+                                                        <td class="cell-actions product-actions-cell">
+                                                            <div class="action-group">
+                                                                <a class="table-btn edit" href="javascript:void(0)" data-open-edit data-product-id="${product.productId}">Edit</a>
+                                                                <a class="table-btn delete" href="javascript:void(0)" onclick="openDeleteModal('product','${product.productId}','${fn:escapeXml(product.name)}')">Delete</a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
                                     </div>
                                     <c:if test="${totalPages > 1}">
                                         <div class="pagination-bar">
@@ -722,24 +741,6 @@
                         </div>
                     </div>
 
-                    <div class="modal-section-heading">
-                        <h4>Product variants</h4>
-                        <p>Add each size/color option as a separate row. Stock is managed in the Warehouse module.</p>
-                    </div>
-                    <div id="modalVariantsList" class="variants-list"></div>
-                    <button type="button" id="modalAddVariantBtn" class="variant-add-btn">+ Add variant</button>
-
-                    <!-- Source data for JS (sizes by category, colors, existing variants) -->
-                    <div id="modalSizeData" style="display:none;">
-                        <c:forEach var="size" items="${allSizes}">
-                            <div data-size-id="${size.sizeId}" data-size-name="${size.sizeName}" data-category-id="${size.categoryId}"></div>
-                        </c:forEach>
-                    </div>
-                    <div id="modalColorData" style="display:none;">
-                        <c:forEach var="color" items="${colors}">
-                            <div data-color-id="${color.colorId}" data-color-name="${fn:escapeXml(color.colorName)}"></div>
-                        </c:forEach>
-                    </div>
                 </form>
             </div>
             <footer class="product-modal-footer">
@@ -806,21 +807,8 @@
             const descriptionInput = document.getElementById('modalDescription');
             const imageInput = document.getElementById('modalImage');
             const imagePreview = document.getElementById('modalImagePreview');
-            const variantsList = document.getElementById('modalVariantsList');
-            const addVariantBtn = document.getElementById('modalAddVariantBtn');
             const alertBox = document.getElementById('productModalAlert');
             const submitBtn = document.getElementById('productModalSubmit');
-
-            const allSizeOptions = Array.from(document.querySelectorAll('#modalSizeData div')).map(node => ({
-                id: node.dataset.sizeId,
-                name: node.dataset.sizeName,
-                categoryId: node.dataset.categoryId
-            }));
-            const colorOptions = Array.from(document.querySelectorAll('#modalColorData div')).map(node => ({
-                id: node.dataset.colorId,
-                name: node.dataset.colorName
-            }));
-            let sizeOptions = [];
 
             const formatPrice = (value) => {
                 // Accept both string and number (priceOverride from JSON can be a number)
@@ -828,11 +816,6 @@
                 const digits = str.replace(/\D/g, '');
                 if (!digits) return '';
                 return Number(digits).toLocaleString('vi-VN');
-            };
-
-            const getSizesByCategory = (categoryId) => {
-                if (!categoryId) return [];
-                return allSizeOptions.filter(item => item.categoryId === categoryId);
             };
 
             const showAlert = (msg, type) => {
@@ -870,146 +853,18 @@
                 }
             };
 
-            const buildVariantRow = (variant) => {
-                const row = document.createElement('div');
-                row.className = 'variant-row';
-                if (variant && variant.variantId) row.dataset.variantId = variant.variantId;
-
-                // Hidden variantId so servlet knows old (keep stock) vs new variant
-                const hiddenVariantId = document.createElement('input');
-                hiddenVariantId.type = 'hidden';
-                hiddenVariantId.name = 'variantId';
-                hiddenVariantId.value = (variant && variant.variantId) ? variant.variantId : '';
-                row.appendChild(hiddenVariantId);
-
-                const header = document.createElement('div');
-                header.className = 'variant-row-header';
-                const titleWrap = document.createElement('div');
-                titleWrap.className = 'variant-row-title-wrap';
-                const title = document.createElement('div');
-                title.className = 'variant-row-title';
-                title.textContent = 'Variant';
-                titleWrap.appendChild(title);
-
-                if (variant && variant.variantId) {
-                    row.dataset.variantId = variant.variantId;
-                    const stockNum = Number(variant.availableQty || 0);
-                    const badge = document.createElement('span');
-                    badge.className = 'variant-stock-badge ' + (stockNum > 0 ? 'in-stock' : 'out-of-stock');
-                    badge.textContent = 'Stock: ' + stockNum;
-                    titleWrap.appendChild(badge);
-                }
-
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'variant-remove-btn';
-                removeBtn.textContent = 'Remove';
-                removeBtn.addEventListener('click', () => row.remove());
-                header.appendChild(titleWrap);
-                header.appendChild(removeBtn);
-
-                const grid = document.createElement('div');
-                grid.className = 'variant-row-grid';
-
-                // Size select
-                const sizeWrap = document.createElement('div');
-                const sizeLabel = document.createElement('label');
-                sizeLabel.textContent = 'Size';
-                const sizeSelect = document.createElement('select');
-                sizeSelect.name = 'variantSizeId';
-                sizeSelect.required = true;
-                sizeSelect.innerHTML = '<option value="">-- Select size --</option>';
-                sizeOptions.forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt.id;
-                    o.textContent = opt.name;
-                    if (variant && variant.sizeId === opt.id) o.selected = true;
-                    sizeSelect.appendChild(o);
-                });
-                sizeWrap.appendChild(sizeLabel);
-                sizeWrap.appendChild(sizeSelect);
-
-                // Color select
-                const colorWrap = document.createElement('div');
-                const colorLabel = document.createElement('label');
-                colorLabel.textContent = 'Color';
-                const colorSelect = document.createElement('select');
-                colorSelect.name = 'variantColorId';
-                colorSelect.required = true;
-                colorSelect.innerHTML = '<option value="">-- Select color --</option>';
-                colorOptions.forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt.id;
-                    o.textContent = opt.name;
-                    if (variant && variant.colorId === opt.id) o.selected = true;
-                    colorSelect.appendChild(o);
-                });
-                colorWrap.appendChild(colorLabel);
-                colorWrap.appendChild(colorSelect);
-
-                // SKU input
-                const skuWrap = document.createElement('div');
-                const skuLabel = document.createElement('label');
-                skuLabel.textContent = 'SKU';
-                const skuInput = document.createElement('input');
-                skuInput.type = 'text';
-                skuInput.name = 'variantSku';
-                skuInput.placeholder = 'Required SKU';
-                skuInput.value = (variant && variant.sku) || '';
-                skuWrap.appendChild(skuLabel);
-                skuWrap.appendChild(skuInput);
-
-                // Price override input
-                const priceWrap = document.createElement('div');
-                const priceLabel = document.createElement('label');
-                priceLabel.textContent = 'Price override';
-                const priceInput = document.createElement('input');
-                priceInput.type = 'text';
-                priceInput.name = 'variantPriceOverride';
-                priceInput.inputMode = 'numeric';
-                priceInput.placeholder = 'Optional';
-                priceInput.value = (variant && variant.priceOverride) ? formatPrice(variant.priceOverride) : '';
-                priceInput.addEventListener('input', function () { this.value = formatPrice(this.value); });
-                priceWrap.appendChild(priceLabel);
-                priceWrap.appendChild(priceInput);
-
-                grid.appendChild(sizeWrap);
-                grid.appendChild(colorWrap);
-                grid.appendChild(skuWrap);
-                grid.appendChild(priceWrap);
-                row.appendChild(header);
-                row.appendChild(grid);
-                return row;
-            };
-
-            const refreshVariantRowsSizes = () => {
-                const selects = variantsList.querySelectorAll('select[name="variantSizeId"]');
-                selects.forEach(select => {
-                    const current = select.value;
-                    select.innerHTML = '<option value="">-- Select size --</option>';
-                    sizeOptions.forEach(opt => {
-                        const o = document.createElement('option');
-                        o.value = opt.id;
-                        o.textContent = opt.name;
-                        if (current === opt.id) o.selected = true;
-                        select.appendChild(o);
-                    });
-                });
-            };
-
             const openModal = (mode, productId, productData) => {
                 form.reset();
-                variantsList.innerHTML = '';
                 showAlert('', 'error');
                 actionInput.value = mode;
                 productIdInput.value = productId || '';
                 titleEl.textContent = mode === 'edit' ? 'Update Product' : 'Add Product';
                 submitBtn.textContent = mode === 'edit' ? 'Save changes' : 'Create product';
+                imageInput.required = mode === 'create';
 
                 if (mode === 'edit' && productData) {
                     nameInput.value = productData.name || '';
                     categorySelect.value = productData.categoryId || '';
-                    sizeOptions = getSizesByCategory(productData.categoryId);
                     basePriceInput.value = formatPrice(productData.basePrice);
                     statusSelect.value = productData.status || 'Available';
                     // Fallback to Available if status not in dropdown (e.g. OutOfStock)
@@ -1017,14 +872,9 @@
                     descriptionInput.value = productData.description || '';
                     existingImageInput.value = productData.primaryImageUrl || '';
                     setImagePreview(productData.primaryImageUrl || '');
-                    (productData.variants || []).forEach(v => variantsList.appendChild(buildVariantRow(v)));
                 } else {
-                    sizeOptions = getSizesByCategory(categorySelect.value);
                     existingImageInput.value = '';
                     setImagePreview('');
-                    if (colorOptions.length === 0 || allSizeOptions.length === 0) {
-                        variantsList.appendChild(buildVariantRow({}));
-                    }
                 }
                 modal.classList.add('open');
                 modal.setAttribute('aria-hidden', 'false');
@@ -1048,12 +898,6 @@
             });
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
 
-            // On category change: update sizeOptions
-            categorySelect.addEventListener('change', () => {
-                sizeOptions = getSizesByCategory(categorySelect.value);
-                refreshVariantRowsSizes();
-            });
-
             // Preview image when file is selected
             imageInput.addEventListener('change', () => {
                 const file = imageInput.files && imageInput.files[0];
@@ -1069,15 +913,6 @@
             // Currency formatter cho base price
             basePriceInput.addEventListener('input', function () { this.value = formatPrice(this.value); });
 
-            // Add variant
-            addVariantBtn.addEventListener('click', () => {
-                if (sizeOptions.length === 0) {
-                    showAlert('Please choose a category first.', 'error');
-                    return;
-                }
-                variantsList.appendChild(buildVariantRow({}));
-            });
-
             // NÚT "Add product" trong trang
             document.querySelectorAll('[data-open-create]').forEach(btn => {
                 btn.addEventListener('click', (e) => { e.preventDefault(); openModal('create', null, null); });
@@ -1091,7 +926,6 @@
                     titleEl.textContent = 'Loading...';
                     // Clear form first to avoid showing stale data
                     form.reset();
-                    variantsList.innerHTML = '';
                     showAlert('', 'error');
                     modal.classList.add('open');
                     modal.setAttribute('aria-hidden', 'false');
@@ -1122,28 +956,15 @@
                 });
             });
 
-            // Validation: block duplicate SKU and missing size/color
+            // Validate the product fields before submitting.
             form.addEventListener('submit', function (e) {
                 showAlert('', 'error');
                 if (!nameInput.value.trim()) { e.preventDefault(); showAlert('Product name is required.', 'error'); return; }
                 if (!categorySelect.value) { e.preventDefault(); showAlert('Please select a category.', 'error'); return; }
                 if (!basePriceInput.value.trim()) { e.preventDefault(); showAlert('Base price is required.', 'error'); return; }
-                const skus = Array.from(variantsList.querySelectorAll('input[name="variantSku"]'))
-                    .map(i => (i.value || '').trim().toUpperCase()).filter(Boolean);
-                const seen = new Set();
-                for (const sku of skus) {
-                    if (seen.has(sku)) { e.preventDefault(); showAlert('Duplicate SKU: ' + sku, 'error'); return; }
-                    seen.add(sku);
-                }
-                // Check each variant has size + color
-                const sizes = Array.from(variantsList.querySelectorAll('select[name="variantSizeId"]')).map(s => s.value);
-                const colors = Array.from(variantsList.querySelectorAll('select[name="variantColorId"]')).map(s => s.value);
-                for (let i = 0; i < sizes.length; i++) {
-                    if (!sizes[i] || !colors[i]) {
-                        e.preventDefault();
-                        showAlert('Each variant must have size and color selected.', 'error');
-                        return;
-                    }
+                if (actionInput.value === 'create' && (!imageInput.files || imageInput.files.length === 0)) {
+                    e.preventDefault();
+                    showAlert('Please choose a product image.', 'error');
                 }
             });
 
