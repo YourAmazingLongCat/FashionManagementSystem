@@ -5,22 +5,38 @@
 <div class="content-page product-detail-page">
     <section class="product-detail-shell">
         <div class="detail-gallery-card">
-            <div class="detail-image-wrap">
+            <div class="detail-gallery">
+                <div class="detail-thumbnails" id="detailThumbnails">
+                    <c:if test="${not empty product.primaryImageUrl}">
+                        <button type="button" class="detail-thumbnail active" data-image-url="${pageContext.request.contextPath.concat(product.primaryImageUrl)}">
+                            <img src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" />
+                        </button>
+                    </c:if>
+                    <c:forEach var="variant" items="${product.variants}">
+                        <c:if test="${not empty variant.imageUrl}">
+                            <button type="button" class="detail-thumbnail" data-image-url="${pageContext.request.contextPath.concat(variant.imageUrl)}">
+                                <img src="${pageContext.request.contextPath.concat(variant.imageUrl)}" alt="${product.name} ${variant.colorName} ${variant.sizeName}" />
+                            </button>
+                        </c:if>
+                    </c:forEach>
+                </div>
+                <div class="detail-image-wrap">
                 <c:choose>
                     <c:when test="${not empty product.primaryImageUrl}">
-                        <img class="detail-image" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" />
+                        <img id="detailMainImage" class="detail-image" src="${pageContext.request.contextPath.concat(product.primaryImageUrl)}" alt="${product.name}" />
                     </c:when>
                     <c:otherwise>
-                        <div class="detail-image detail-image-empty">No image</div>
+                        <div id="detailMainImage" class="detail-image detail-image-empty">No image</div>
                     </c:otherwise>
                 </c:choose>
+                </div>
             </div>
         </div>
 
         <div class="detail-content-card">
-            <a class="detail-back-link" href="${pageContext.request.contextPath}/home">← Back to home</a>
             <p class="detail-category">${product.categoryName}</p>
             <h1 class="detail-title">${product.name}</h1>
+            <span id="commentCountBadge" style="display:none;">0</span>
             <div class="detail-rating-row">
                 <c:choose>
                     <c:when test="${not empty ratingSummary && ratingSummary[1] > 0}">
@@ -44,11 +60,6 @@
             <div class="detail-price" id="detailPrice"><fmt:formatNumber value="${displayPrice}" type="number" groupingUsed="true"/> đ</div>
             <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
 
-            <button type="button" class="detail-comment-btn" id="openCommentsBtn">
-                💬 View comments
-                <span class="comment-count-badge" id="commentCountBadge" style="display:none;">0</span>
-            </button>
-
             <c:if test="${not empty param.message}">
                 <div class="detail-flash-message ${param.message eq 'added-to-cart' ? 'success' : 'error'}">
                     ${param.message eq 'added-to-cart' ? 'Added to cart successfully.' : 'Selected variant is unavailable.'}
@@ -65,7 +76,7 @@
 
                 <div class="detail-options-grid single-column-mobile">
                     <div class="detail-option-card">
-                        <span class="detail-option-label">Choose color</span>
+                        <span class="detail-option-label">Color: <strong id="selectedColorText">Choose color</strong></span>
                         <div class="detail-chip-list selectable-list" id="colorOptions">
                             <c:forEach var="colorName" items="${product.colorNames}">
                                 <button type="button" class="detail-chip detail-chip-button" data-color-name="${colorName}">${colorName}</button>
@@ -73,7 +84,7 @@
                         </div>
                     </div>
                     <div class="detail-option-card">
-                        <span class="detail-option-label">Choose size</span>
+                        <span class="detail-option-label">Size: <strong id="selectedSizeText">Choose size</strong></span>
                         <div class="detail-chip-list selectable-list" id="sizeOptions">
                             <c:forEach var="sizeName" items="${product.sizeNames}">
                                 <button type="button" class="detail-chip detail-chip-button" data-size-name="${sizeName}">${sizeName}</button>
@@ -85,11 +96,10 @@
                 <div class="detail-selection-summary">
                     <div class="summary-info">
                         <strong id="selectedVariantLabel">Choose color and size</strong>
-                        <span id="selectedVariantStock">Available stock will appear here.</span>
+                        <span id="selectedVariantStock">Select color and size</span>
                     </div>
                     <div class="summary-actions">
                         <div class="detail-quantity-wrap">
-                            <label for="quantity">Qty</label>
                             <div class="qty-control">
                                 <button type="button" class="qty-btn qty-minus" onclick="adjustQty(-1)">−</button>
                                 <input id="quantity" name="quantity" type="number" min="1" value="1" class="detail-quantity-input" onchange="validateQty(this)" />
@@ -105,7 +115,7 @@
             <script>
                 window.__VARIANT_DATA__ = [
                     <c:forEach var="variant" items="${product.variants}" varStatus="vs">
-                        {variantId: "${variant.variantId}", colorName: "${variant.colorName}", sizeName: "${variant.sizeName}", stockQty: ${variant.availableQty}, price: ${variant.priceOverride != null ? variant.priceOverride : product.basePrice}}${vs.last ? '' : ','}
+                        {variantId: "${variant.variantId}", colorName: "${variant.colorName}", sizeName: "${variant.sizeName}", colorHex: "${variant.colorHexCode}", imageUrl: "${empty variant.imageUrl ? '' : pageContext.request.contextPath.concat(variant.imageUrl)}", stockQty: ${variant.availableQty}, price: ${variant.priceOverride != null ? variant.priceOverride : product.basePrice}}${vs.last ? '' : ','}
                     </c:forEach>
                 ];
             </script>
@@ -209,6 +219,20 @@
         const quantityInput = document.getElementById('quantity');
         const detailPrice = document.getElementById('detailPrice');
         const addToCartForm = document.getElementById('addToCartForm');
+        const selectedColorText = document.getElementById('selectedColorText');
+        const selectedSizeText = document.getElementById('selectedSizeText');
+        const mainImage = document.getElementById('detailMainImage');
+        const thumbnailNodes = Array.from(document.querySelectorAll('.detail-thumbnail'));
+        const seenImageUrls = new Set();
+        thumbnailNodes.forEach(thumbnail => {
+            const imageUrl = thumbnail.dataset.imageUrl || '';
+            if (!imageUrl || seenImageUrls.has(imageUrl)) {
+                thumbnail.remove();
+                return;
+            }
+            seenImageUrls.add(imageUrl);
+        });
+        const thumbnails = Array.from(document.querySelectorAll('.detail-thumbnail'));
 
         let selectedColor = '';
         let selectedSize = '';
@@ -227,6 +251,32 @@
                 button.classList.toggle('active', button.dataset[attr] === value);
             });
         };
+
+        const setMainImage = (imageUrl) => {
+            if (!mainImage || !imageUrl || mainImage.tagName !== 'IMG') return;
+            mainImage.src = imageUrl;
+            thumbnails.forEach(thumbnail => thumbnail.classList.toggle('active', thumbnail.dataset.imageUrl === imageUrl));
+        };
+
+        thumbnails.forEach(thumbnail => {
+            const showThumbnailImage = () => setMainImage(thumbnail.dataset.imageUrl);
+            thumbnail.addEventListener('click', showThumbnailImage);
+            thumbnail.addEventListener('mouseenter', showThumbnailImage);
+        });
+
+        const colorHexByName = {};
+        variantData.forEach(variant => {
+            if (variant.colorHex && !colorHexByName[variant.colorName]) colorHexByName[variant.colorName] = variant.colorHex;
+        });
+        colorButtons.forEach(button => {
+            const hex = colorHexByName[button.dataset.colorName];
+            if (hex) {
+                button.style.background = hex;
+                button.title = button.dataset.colorName;
+                button.textContent = '';
+                button.classList.add('color-swatch');
+            }
+        });
 
         const variantMap = {};
         variantData.forEach(v => {
@@ -257,6 +307,9 @@
         const refreshVariantSelection = () => {
             const matched = (variantMap[selectedColor] || {})[selectedSize];
 
+            if (selectedColorText) selectedColorText.textContent = selectedColor || 'Choose color';
+            if (selectedSizeText) selectedSizeText.textContent = selectedSize || 'Choose size';
+
             if (!matched) {
                 selectedVariantId.value = '';
                 addToCartButton.disabled = true;
@@ -273,6 +326,7 @@
             const stockQty = matched.stockQty || 0;
             selectedVariantId.value = matched.variantId;
             detailPrice.textContent = formatPrice(matched.price);
+            if (matched.imageUrl) setMainImage(matched.imageUrl);
             selectedVariantLabel.textContent = matched.colorName + ' / ' + matched.sizeName;
             if (stockQty > 0) {
                 selectedVariantStock.textContent = stockQty + ' items available';
