@@ -14,8 +14,6 @@
     </div>
 
     <nav class="quick-nav">
-        <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
-
         <c:if test="${not empty sessionScope.USER}">
             <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
         </c:if>
@@ -24,37 +22,6 @@
             <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
         </c:if>
     </nav>
-
-    <div class="categories-dropdown">
-        <button class="categories-btn">
-            <span class="material-symbols-outlined">menu</span>
-            <span>CATEGORIES</span>
-            <span class="material-symbols-outlined chevron">expand_more</span>
-        </button>
-
-        <div class="mega-menu">
-            <div class="mega-grid">
-                <c:forEach var="c" items="${categories}" varStatus="status">
-                    <c:if test="${status.index % 5 == 0}">
-                        <div>
-                            <ul class="mega-list">
-                            </c:if>
-                            <li>
-                                <a class="category-card" href="${pageContext.request.contextPath}/home/search?category=${c.categoryId}">
-                                    <div class="category-content">
-                                        <span class="material-symbols-outlined category-icon">local_mall</span>
-                                        <span class="category-name">${c.name}</span>
-                                    </div>
-                                </a>
-                            </li>
-                            <c:if test="${status.index % 5 == 4 || status.last}">
-                            </ul>
-                        </div>
-                    </c:if>
-                </c:forEach>
-            </div>
-        </div>
-    </div>
 
     <div class="search-container">
         <form id="headerSearchForm" class="search-form" method="get" action="${pageContext.request.contextPath}/home/search">
@@ -98,27 +65,6 @@
 </header>
 
 <script>
-    const btn = document.querySelector(".categories-btn");
-    const menu = document.querySelector(".mega-menu");
-    let isOpen = false;
-
-    if (btn && menu) {
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            isOpen = !isOpen;
-            menu.style.display = isOpen ? "block" : "none";
-        };
-
-        document.addEventListener("click", () => {
-            menu.style.display = "none";
-            isOpen = false;
-        });
-
-        menu.onclick = (e) => {
-            e.stopPropagation();
-        };
-    }
-
     const headerSearchForm = document.getElementById('headerSearchForm');
     const headerSearchInput = document.getElementById('headerSearchInput');
     const userMenuButton = document.querySelector('.user-menu-button');
