@@ -265,11 +265,11 @@ public class ProductDAO extends DBContext {
 
         String sql = """
             SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, cl.colorName, cl.hexCode,
-                   pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride, pvi.imageUrl
+                   pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride,
+                   (SELECT TOP 1 imageUrl FROM ProductImages WHERE variantId = pv.variantId ORDER BY isPrimary DESC, imageId ASC) AS imageUrl
             FROM ProductVariants pv
             INNER JOIN Sizes s ON pv.sizeId = s.sizeId
             INNER JOIN Colors cl ON pv.colorId = cl.colorId
-            LEFT JOIN ProductVariantImages pvi ON pv.variantId = pvi.variantId
             WHERE pv.variantId = ?
             """;
 
@@ -441,11 +441,11 @@ public class ProductDAO extends DBContext {
         List<ProductVariant> variants = new ArrayList<>();
         String sql = """
                  SELECT pv.variantId, pv.productId, pv.sizeId, s.sizeName, pv.colorId, cl.colorName, cl.hexCode,
-                     pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride, pvi.imageUrl
+                     pv.sku, pv.stockQty, pv.reservedQty, pv.priceOverride,
+                     (SELECT TOP 1 imageUrl FROM ProductImages WHERE variantId = pv.variantId ORDER BY isPrimary DESC, imageId ASC) AS imageUrl
             FROM ProductVariants pv
             INNER JOIN Sizes s ON pv.sizeId = s.sizeId
             INNER JOIN Colors cl ON pv.colorId = cl.colorId
-                 LEFT JOIN ProductVariantImages pvi ON pv.variantId = pvi.variantId
             WHERE pv.productId = ?
             ORDER BY cl.colorName, s.sizeName
             """;

@@ -264,8 +264,8 @@ public class ProductManagementServlet extends HttpServlet {
             String variantId = variantDAO.getLatestVariantId(variant);
             if (imagePart != null && imagePart.getSize() > 0 && variantId != null) {
                 String imageUrl = saveImageFile(request, imagePart);
-                if (imageUrl != null && !variantDAO.upsertVariantImage(variantId, imageUrl)) {
-                    System.out.println("Variant saved, but image metadata could not be saved for " + variantId);
+                if (imageUrl != null && !imageDAO.addVariantImage(productId, variantId, imageUrl)) {
+                    System.out.println("Variant saved, but image metadata could not be saved for variant " + variantId);
                 }
             }
             response.sendRedirect(request.getContextPath() + "/staff/products?action=manageVariants&productId="
