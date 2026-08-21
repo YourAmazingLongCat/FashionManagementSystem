@@ -65,7 +65,7 @@
 
             <c:if test="${not empty param.message}">
                 <div class="detail-flash-message ${param.message eq 'added-to-cart' ? 'success' : 'error'}">
-                    ${param.message eq 'added-to-cart' ? 'Added to cart successfully.' : 'Selected variant is unavailable.'}
+                    ${param.message eq 'added-to-cart' ? 'Added to cart successfully.' : 'The product has reached the maximum limit in the cart.'}
                 </div>
             </c:if>
 
