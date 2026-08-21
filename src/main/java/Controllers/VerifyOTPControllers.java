@@ -61,8 +61,7 @@ public class VerifyOTPControllers extends HttpServlet {
         } else {
             generatedOTP = (String) session.getAttribute("generatedOTP");
             if (generatedOTP == null) {
-                request.setAttribute("errorMessage", "Session expired. Please register again!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Session expired. Please register again!", "/Pages/Authentication/Register/VerifyOTP.jsp");
                 return;
             }
         }
@@ -138,8 +137,7 @@ public class VerifyOTPControllers extends HttpServlet {
 
                     if (newAccountId == null) {
                         conn.rollback();
-                        request.setAttribute("errorMessage", "Unable to generate a unique account ID after multiple attempts. Please try again.");
-                        request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                        sendResponse(request, response, isAjax, false, "Unable to generate a unique account ID after multiple attempts. Please try again.", "/Pages/Authentication/Register/VerifyOTP.jsp");
                         return;
                     }
 
@@ -149,14 +147,13 @@ public class VerifyOTPControllers extends HttpServlet {
                     session.removeAttribute("tempPassword");
                     session.removeAttribute("generatedOTP");
 
-                    request.setAttribute("successMessage", "Verification successful! Your account is ready. Please log in.");
-                    request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
+                    sendResponse(request, response, isAjax, true, "Registration successful! You can now login.", "/Pages/Authentication/Login/Login.jsp");
+
                 } catch (Exception e) {
                     if (conn != null) {
                         try { conn.rollback(); } catch (Exception ignored) {}
                     }
-                    request.setAttribute("errorMessage", "Database error: " + e.getMessage());
-                    request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                    sendResponse(request, response, isAjax, false, "Database error: " + e.getMessage(), "/Pages/Authentication/Register/VerifyOTP.jsp");
                 } finally {
                     try {
                         if (psInsert != null) psInsert.close();
@@ -173,8 +170,7 @@ public class VerifyOTPControllers extends HttpServlet {
             if (isForgotPassword) {
                 sendResponse(request, response, isAjax, false, "OTP is incorrect. Please check your inbox!", "/auth/verify-otp?mode=forgot");
             } else {
-                request.setAttribute("errorMessage", "OTP is incorrect. Please check your inbox!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "OTP is incorrect. Please check your inbox!", "/Pages/Authentication/Register/VerifyOTP.jsp");
             }
         }
     }
@@ -186,16 +182,22 @@ public class VerifyOTPControllers extends HttpServlet {
             if (success) {
                 response.getWriter().write("{\"success\":true, \"redirectUrl\":\"" + redirectUrl + "\"}");
             } else {
-                response.getWriter().write("{\"success\":false, \"message\":\"" + message + "\"}");
+                String safeMessage = message != null ? message.replace("\"", "\\\"") : "";
+                response.getWriter().write("{\"success\":false, \"message\":\"" + safeMessage + "\"}");
             }
         } else {
             if (success) {
-                response.sendRedirect(redirectUrl);
+                if (redirectUrl != null && !redirectUrl.endsWith(".jsp")) {
+                    response.sendRedirect(redirectUrl);
+                } else if (redirectUrl != null) {
+                    request.setAttribute("successMessage", message);
+                    request.getRequestDispatcher(redirectUrl).forward(request, response);
+                }
             } else {
                 request.setAttribute("errorMessage", message);
-                if (redirectUrl.endsWith(".jsp")) {
+                if (redirectUrl != null && redirectUrl.endsWith(".jsp")) {
                     request.getRequestDispatcher(redirectUrl).forward(request, response);
-                } else {
+                } else if (redirectUrl != null) {
                     response.sendRedirect(request.getContextPath() + redirectUrl);
                 }
             }

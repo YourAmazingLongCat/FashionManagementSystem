@@ -15,7 +15,6 @@
         color: #fdb913;
     }
     
-    /* KHỐI TRÊN CÙNG: LIÊN HỆ, ĐĂNG KÝ, MXH */
     .footer-top {
         display: flex;
         flex-wrap: wrap;
@@ -97,14 +96,13 @@
         align-items: center;
         justify-content: center;
         transition: all 0.3s;
-        color: #ffffff; /* Sửa màu chữ cho SVG */
+        color: #ffffff; 
     }
     .social-btn:hover {
         background-color: #ffffff;
         color: #0b1426;
     }
     
-    /* KHỐI DƯỚI CÙNG: THÔNG TIN BẢN QUYỀN */
     .footer-bottom {
         color: #a0a4ab;
         font-size: 0.8rem;
@@ -155,7 +153,14 @@
             <div class="footer-col-social">
                 <a href="#" class="social-btn" title="Zalo"><span class="material-symbols-outlined">forum</span></a>
                 <a href="#" class="social-btn" title="Messenger"><span class="material-symbols-outlined">chat</span></a>
-                <a href="#" class="social-btn" title="Tiktok"><span class="material-symbols-outlined">music_note</span></a>
+                
+                <!-- ĐÃ THAY ĐỔI ICON TIKTOK BẰNG SVG CHUẨN -->
+                <a href="#" class="social-btn" title="Tiktok">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3V0Z"/>
+                    </svg>
+                </a>
+                
                 <a href="#" class="social-btn" title="Youtube"><span class="material-symbols-outlined">play_arrow</span></a>
                 
                 <a href="#" class="social-btn" title="Instagram">
