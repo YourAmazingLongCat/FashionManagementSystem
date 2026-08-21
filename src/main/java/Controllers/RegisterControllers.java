@@ -30,26 +30,32 @@ public class RegisterControllers extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
-        // 1. Read form data
-        String fullName = request.getParameter("name");
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
+        String fullName = request.getParameter("fullName");
+        if (fullName == null || fullName.trim().isEmpty()) {
+            fullName = request.getParameter("name");
+        }
+        
         String email = request.getParameter("email");
-        String phone = request.getParameter("phoneNumber");
+        
+        String phone = request.getParameter("phone");
+        if (phone == null || phone.trim().isEmpty()) {
+            phone = request.getParameter("phoneNumber");
+        }
+        
         String password = request.getParameter("password");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        // 2. Check confirm password match
         if (password != null && !password.equals(confirmPassword)) {
-            request.setAttribute("errorMessage", "Passwords do not match!");
-            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Passwords do not match!");
             return;
         }
 
-        // Check password strength: starts with uppercase, has digit and special char
         String passwordPattern = "^[A-Z](?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).+$";
 
         if (password == null || !password.matches(passwordPattern)) {
-            request.setAttribute("errorMessage", "Password must start with uppercase letter and contain at least 1 digit and 1 special character!");
-            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Password must start with uppercase letter and contain at least 1 digit and 1 special character!");
             return;
         }
 
@@ -59,9 +65,7 @@ public class RegisterControllers extends HttpServlet {
 
         try {
             connection = new DBContext().getConnection();
-            System.out.println("Connection = " + connection);
 
-            // 3. Check duplicate (email or phone) - check both Customers and Employees.
             String checkSQL = "SELECT email FROM ("
                     + "SELECT email, phone FROM Customers "
                     + "UNION ALL "
@@ -73,20 +77,16 @@ public class RegisterControllers extends HttpServlet {
             rs = psCheck.executeQuery();
 
             if (rs.next()) {
-                request.setAttribute("errorMessage", "Email or phone is already registered!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Email or phone is already registered!");
                 return;
             }
 
-            // 4. Generate random 6-digit OTP
             Random rand = new Random();
             String otpCode = String.format("%06d", rand.nextInt(999999));
 
-            // 5. Send OTP email via EmailUtils
             boolean mailSent = EmailUtils.sendOTP(email, otpCode);
 
             if (mailSent) {
-                // Save temp data in session for the OTP verify step
                 HttpSession session = request.getSession();
                 session.setAttribute("tempName", fullName);
                 session.setAttribute("tempEmail", email);
@@ -94,17 +94,20 @@ public class RegisterControllers extends HttpServlet {
                 session.setAttribute("tempPassword", password);
                 session.setAttribute("generatedOTP", otpCode);
 
-                // Redirect to OTP input page
-                response.sendRedirect(request.getContextPath() + "/auth/verify-otp");
+                if (isAjax) {
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"success\":true}");
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/auth/verify-otp");
+                }
             } else {
-                request.setAttribute("errorMessage", "Cannot send OTP email. Please check SMTP config or network!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Cannot send OTP email. Please check SMTP config or network!");
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("errorMessage", "System error: " + e.getMessage());
-            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "System error: " + e.getMessage());
         } finally {
             try {
                 if (rs != null) rs.close();
@@ -113,6 +116,18 @@ public class RegisterControllers extends HttpServlet {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private void sendResponse(HttpServletRequest request, HttpServletResponse response, boolean isAjax, boolean success, String message) throws ServletException, IOException {
+        if (isAjax) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            String safeMessage = message.replace("\"", "\\\""); 
+            response.getWriter().write("{\"success\":" + success + ", \"message\":\"" + safeMessage + "\"}");
+        } else {
+            request.setAttribute("errorMessage", message);
+            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
         }
     }
 }
