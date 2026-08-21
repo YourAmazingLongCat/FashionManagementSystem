@@ -391,10 +391,13 @@ public class OrderDAO extends DBContext {
                 + "(orderId, customerId, orderStatus, shippingAddress, shippingPhone, placedAt, totalAmount) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        String reserveQuery = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
-                + "SET reservedQty = reservedQty + ? "
-                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
-
+        // Stock is intentionally NOT touched at checkout time. The Pending
+        // order just records what the customer wants to buy; reserving or
+        // deducting stock here would make the variant look out-of-stock to
+        // other shoppers even though the customer hasn't actually placed
+        // the order yet. Reservation only happens when the customer presses
+        // Place order (see CustomerOrderDetailServlet#placeOrder), and the
+        // real deduction happens when staff confirms the order.
         String itemQuery = "INSERT INTO OrderItems "
                 + "(orderItemId, orderId, variantId, quantity, unitPrice, discountAmount) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
@@ -422,20 +425,6 @@ public class OrderDAO extends DBContext {
                 }
 
                 ps.executeUpdate();
-            }
-
-            Map<String, Integer> quantitiesByVariant = aggregateQuantities(orderItems);
-            try (PreparedStatement ps = connection.prepareStatement(reserveQuery)) {
-                for (Map.Entry<String, Integer> entry : quantitiesByVariant.entrySet()) {
-                    int quantity = entry.getValue();
-                    ps.setInt(1, quantity);
-                    ps.setString(2, entry.getKey());
-                    ps.setInt(3, quantity);
-
-                    if (ps.executeUpdate() != 1) {
-                        throw new SQLException("Insufficient available stock for variant " + entry.getKey());
-                    }
-                }
             }
 
             try (PreparedStatement ps = connection.prepareStatement(itemQuery)) {
@@ -483,6 +472,63 @@ public class OrderDAO extends DBContext {
             System.out.println("createOrder error: " + e.getMessage());
             return false;
 
+        } finally {
+            restoreAutoCommit();
+        }
+    }
+
+    /**
+     * Reserves stock for an existing Pending order. Called when the customer
+     * presses Place order on the order detail page. Stock is intentionally
+     * not touched at Cart Checkout (see {@link #createOrderFromCart}); this
+     * method closes the gap so the chosen variants are no longer visible to
+     * other shoppers.
+     */
+    public boolean reserveStockForOrder(String orderId) {
+        if (isBlank(orderId)) {
+            return false;
+        }
+
+        Map<String, Integer> quantities;
+        try {
+            quantities = getOrderQuantities(orderId);
+        } catch (SQLException ex) {
+            System.out.println("reserveStockForOrder: failed to load order quantities - " + ex.getMessage());
+            return false;
+        }
+        if (quantities.isEmpty()) {
+            return false;
+        }
+
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET reservedQty = reservedQty + ? "
+                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
+
+        try {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                for (Map.Entry<String, Integer> entry : quantities.entrySet()) {
+                    int quantity = entry.getValue();
+                    ps.setInt(1, quantity);
+                    ps.setString(2, entry.getKey());
+                    ps.setInt(3, quantity);
+
+                    if (ps.executeUpdate() != 1) {
+                        rollback();
+                        System.out.println("reserveStockForOrder: insufficient available stock for variant "
+                                + entry.getKey() + " in order " + orderId);
+                        return false;
+                    }
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback();
+            System.out.println("reserveStockForOrder error: " + e.getMessage());
+            return false;
         } finally {
             restoreAutoCommit();
         }
@@ -798,14 +844,6 @@ public class OrderDAO extends DBContext {
     }
 
 
-    private Map<String, Integer> aggregateQuantities(List<OrderItem> orderItems) {
-        Map<String, Integer> quantities = new TreeMap<>();
-        for (OrderItem item : orderItems) {
-            quantities.merge(item.getVariantId(), item.getQuantity(), Integer::sum);
-        }
-        return quantities;
-    }
-
     private Map<String, Integer> getOrderQuantities(String orderId) throws SQLException {
         Map<String, Integer> quantities = new TreeMap<>();
         String sql = "SELECT variantId, SUM(quantity) AS quantity "
@@ -830,10 +868,13 @@ public class OrderDAO extends DBContext {
     }
 
     private boolean releaseReservedStock(String orderId) throws SQLException {
+        // Lenient version: a Pending order created via Cart Checkout before
+        // Place order no longer holds any reservation. Releasing zero is a
+        // no-op rather than an error so cancellation still succeeds.
         String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
                 + "SET reservedQty = reservedQty - ? "
                 + "WHERE variantId = ? AND reservedQty >= ?";
-        return updateInventoryForOrder(orderId, sql, InventoryOperation.RELEASE_RESERVED);
+        return updateInventoryForOrderLenient(orderId, sql, InventoryOperation.RELEASE_RESERVED);
     }
 
     private boolean restoreCommittedStock(String orderId) throws SQLException {
@@ -851,6 +892,22 @@ public class OrderDAO extends DBContext {
 
     private boolean updateInventoryForOrder(String orderId, String sql,
             InventoryOperation operation) throws SQLException {
+        return updateInventoryForOrderInternal(orderId, sql, operation, false);
+    }
+
+    /**
+     * Same as {@link #updateInventoryForOrder} but treats an affected-row
+     * count of 0 as success. Used by release flows where stock may have
+     * never been reserved (e.g. a Pending order that never reached Place
+     * order under the new reservation flow).
+     */
+    private boolean updateInventoryForOrderLenient(String orderId, String sql,
+            InventoryOperation operation) throws SQLException {
+        return updateInventoryForOrderInternal(orderId, sql, operation, true);
+    }
+
+    private boolean updateInventoryForOrderInternal(String orderId, String sql,
+            InventoryOperation operation, boolean lenient) throws SQLException {
         Map<String, Integer> quantities = getOrderQuantities(orderId);
         if (quantities.isEmpty()) {
             return false;
@@ -887,7 +944,8 @@ public class OrderDAO extends DBContext {
                         return false;
                 }
 
-                if (ps.executeUpdate() != 1) {
+                int affected = ps.executeUpdate();
+                if (!lenient && affected != 1) {
                     return false;
                 }
             }

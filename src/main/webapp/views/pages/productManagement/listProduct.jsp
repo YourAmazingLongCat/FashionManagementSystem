@@ -262,8 +262,8 @@
                                 <input id="productKeywordInput" class="filter-input" type="text" name="keyword" value="${param.keyword}" placeholder="Search product name, SKU, size, color..." autocomplete="off" />
                                 <select class="filter-select" name="statusFilter" onchange="submitProductFilterForm()">
                                     <option value="">All status</option>
-                                    <option value="Available" ${param.statusFilter eq 'Available' ? 'selected' : ''}>Available</option>
-                                    <option value="Inactive" ${param.statusFilter eq 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                    <option value="Available" ${param.statusFilter eq 'Available' ? 'selected' : ''}>Visible</option>
+                                    <option value="Inactive" ${param.statusFilter eq 'Inactive' ? 'selected' : ''}>Hidden</option>
                                 </select>
                                 <select class="filter-select" name="categoryFilter" onchange="submitProductFilterForm()">
                                     <option value="">All categories</option>
@@ -718,11 +718,17 @@
                             <input id="modalBasePrice" name="basePrice" type="text" inputmode="numeric" required placeholder="e.g. 500000">
                         </div>
                         <div class="form-group">
-                            <label for="modalStatus">Status *</label>
+                            <label for="modalStatus">Visibility *</label>
                             <select id="modalStatus" name="status" required>
                                 <c:forEach var="status" items="${statuses}">
                                     <c:if test="${status != 'OutOfStock'}">
-                                        <option value="${status}">${status}</option>
+                                        <option value="${status}">
+                                            <c:choose>
+                                                <c:when test="${status == 'Available'}">Visible</c:when>
+                                                <c:when test="${status == 'Inactive'}">Hidden</c:when>
+                                                <c:otherwise>${status}</c:otherwise>
+                                            </c:choose>
+                                        </option>
                                     </c:if>
                                 </c:forEach>
                             </select>
