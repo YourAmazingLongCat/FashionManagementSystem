@@ -121,10 +121,16 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="status">Status</label>
+                                    <label for="status">Visibility</label>
                                     <select id="status" name="status" required>
                                         <c:forEach var="item" items="${statuses}">
-                                            <option value="${item}" ${product.status eq item ? 'selected' : ''}>${item}</option>
+                                            <option value="${item}" ${product.status eq item ? 'selected' : ''}>
+                                                <c:choose>
+                                                    <c:when test="${item == 'Available'}">Visible</c:when>
+                                                    <c:when test="${item == 'Inactive'}">Hidden</c:when>
+                                                    <c:otherwise>${item}</c:otherwise>
+                                                </c:choose>
+                                            </option>
                                         </c:forEach>
                                     </select>
                                 </div>
@@ -144,8 +150,14 @@
                                         <strong style="display: block; margin-top: 8px; font-size: 1.6rem; color: #15803d;">${product.totalStockQty}</strong>
                                     </div>
                                     <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
-                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">Status</p>
-                                        <strong style="display: block; margin-top: 8px; font-size: 1.1rem;">${product.status}</strong>
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">Visibility</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.1rem;">
+                                            <c:choose>
+                                                <c:when test="${product.status == 'Available'}">Visible</c:when>
+                                                <c:when test="${product.status == 'Inactive'}">Hidden</c:when>
+                                                <c:otherwise>${product.status}</c:otherwise>
+                                            </c:choose>
+                                        </strong>
                                     </div>
                                 </div>
                                 <p class="inline-note" style="margin-top: 14px;">Stock quantity is the total physical units in warehouse. Use <strong>Manage stock</strong> above to import new inventory.</p>

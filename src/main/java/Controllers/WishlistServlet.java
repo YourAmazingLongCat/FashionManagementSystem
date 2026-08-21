@@ -43,7 +43,11 @@ public class WishlistServlet extends HttpServlet {
         List<Product> allWishlistProducts = new ArrayList<>();
         for (String productId : wishlistProductIds) {
             Product product = productDAO.getProductById(productId);
-            if (product != null) {
+            // Skip hidden (Inactive) products. The DAO already filters these
+            // out, but keeping a guard here means a future DAO refactor
+            // cannot accidentally leak hidden products into the customer's
+            // wishlist view.
+            if (product != null && !"Inactive".equalsIgnoreCase(product.getStatus())) {
                 allWishlistProducts.add(product);
             }
         }

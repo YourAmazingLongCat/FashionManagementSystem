@@ -38,7 +38,7 @@
         </div>
 
         <div class="detail-content-card">
-            <p class="detail-category">${product.categoryName}</p>
+            
             <h1 class="detail-title">${product.name}</h1>
             <span id="commentCountBadge" style="display:none;">0</span>
             <div class="detail-rating-row">
@@ -197,12 +197,37 @@
     function adjustQty(delta) {
         const input = document.getElementById('quantity');
         const max = parseInt(input.max, 10);
+        const min = 1;
         const cur = parseInt(input.value, 10);
         let val = isNaN(cur) ? 1 : cur + delta;
-        if (val < 1) val = 1;
-        if (!isNaN(max) && max > 0 && val > max) val = max;
-        input.value = val;
+
         clearQtyValidity(input);
+
+        if (delta > 0) {
+            // User pressed '+'. If we are already at the max
+            if (!isNaN(max) && max > 0 && val > max) {
+                input.value = String(max);
+                input.setCustomValidity(
+                    'You have reached the maximum quantity (' + max + ') for this variant.'
+                );
+                input.reportValidity();
+                return;
+            }
+        } else if (delta < 0) {
+            // User pressed '-'. If we are already at the min
+            if (val < min) {
+                input.value = String(min);
+                input.setCustomValidity(
+                    'You have reached the minimum quantity (' + min + ').'
+                );
+                input.reportValidity();
+                return;
+            }
+        }
+
+        if (val < min) val = min;
+        if (!isNaN(max) && max > 0 && val > max) val = max;
+        input.value = String(val);
     }
 
     function validateQty(input) {

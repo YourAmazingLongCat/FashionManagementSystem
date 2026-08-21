@@ -220,6 +220,10 @@ public class OrderExpirationDAO {
         Map<String, Integer> quantities = new TreeMap<>();
         String selectSql = "SELECT variantId, SUM(quantity) AS quantity "
                 + "FROM OrderItems WHERE orderId = ? GROUP BY variantId ORDER BY variantId";
+        // Allow the UPDATE to affect 0 rows when reservedQty is already 0 —
+        // older Pending orders (or orders where stock was never reserved at
+        // checkout) must not block the auto-expiry path. The presence of a
+        // matching row in ProductVariants is still required.
         String updateSql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
                 + "SET reservedQty = reservedQty - ? "
                 + "WHERE variantId = ? AND reservedQty >= ?";
@@ -243,9 +247,7 @@ public class OrderExpirationDAO {
                 ps.setInt(1, quantity);
                 ps.setString(2, entry.getKey());
                 ps.setInt(3, quantity);
-                if (ps.executeUpdate() != 1) {
-                    return false;
-                }
+                ps.executeUpdate();
             }
         }
 

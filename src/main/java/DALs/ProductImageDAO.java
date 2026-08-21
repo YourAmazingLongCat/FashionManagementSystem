@@ -76,13 +76,18 @@ public class ProductImageDAO extends DBContext {
         }
     }
 
+    /**
+     * Replace the primary image of a product. Only touches the primary image
+     * row (isPrimary = 1) so we never wipe out variant images that share
+     * the same productId but are stored with isPrimary = 0 and a variantId.
+     */
     public boolean upsertPrimaryImage(String productId, String imageUrl) {
         if (connection == null || productId == null || productId.isBlank() || imageUrl == null || imageUrl.isBlank()) {
             return false;
         }
 
         String getExistingSql = "SELECT imageId, imageUrl FROM ProductImages WHERE productId = ? AND isPrimary = 1";
-        String deleteSql = "DELETE FROM ProductImages WHERE productId = ?";
+        String deleteSql = "DELETE FROM ProductImages WHERE productId = ? AND isPrimary = 1";
         String insertSql = "INSERT INTO ProductImages (imageId, productId, imageUrl, isPrimary) VALUES (?, ?, ?, 1)";
 
         try {
@@ -103,6 +108,8 @@ public class ProductImageDAO extends DBContext {
                 deleteOldImageFile(oldImageUrl);
             }
 
+            // Only delete the primary image row. Variant images have
+            // isPrimary = 0 and a variantId, so this filter keeps them safe.
             try (PreparedStatement psDelete = connection.prepareStatement(deleteSql)) {
                 psDelete.setString(1, productId);
                 psDelete.executeUpdate();

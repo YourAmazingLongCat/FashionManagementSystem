@@ -6,6 +6,7 @@ import DALs.ProductDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItemView;
+import Models.Product;
 import Models.ProductVariant;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -52,6 +53,15 @@ public class AddToCartServlet extends HttpServlet {
         ProductVariant variant = productDAO.getVariantById(variantId);
         if (variant == null) {
             response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
+            return;
+        }
+
+        // Block adding a hidden (Inactive) product to the cart. Even if a
+        // stale variant link still exists in the cart from before the
+        // product was hidden, the user must not be able to add new items.
+        Product product = productDAO.getProductById(variant.getProductId());
+        if (product == null || "Inactive".equalsIgnoreCase(product.getStatus())) {
+            response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=product-unavailable");
             return;
         }
 

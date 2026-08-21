@@ -1,5 +1,6 @@
 package Controllers;
 
+import DALs.OrderDAO;
 import Models.Account;
 import Models.Order;
 import Models.OrderItem;
@@ -26,11 +27,13 @@ public class CustomerOrderDetailServlet extends HttpServlet {
 
     private OrderService orderService;
     private PaymentService paymentService;
+    private OrderDAO orderDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
         paymentService = new PaymentService();
+        orderDAO = new OrderDAO();
     }
 
     @Override
@@ -133,6 +136,18 @@ public class CustomerOrderDetailServlet extends HttpServlet {
         if (!deliveryUpdated) {
             session.setAttribute("errorMessage",
                     "Shipping information could not be saved because the order status changed.");
+            response.sendRedirect(detailUrl);
+            return;
+        }
+
+        // Place order is the moment the customer's intent becomes a real
+        // claim on the inventory. Reserve the variant quantities here so
+        // other shoppers can no longer see them as available. The actual
+        // stockQty deduction only happens later, when staff confirms the
+        // order (see OrderDAO.changeOrderStatusWithInventory).
+        if (!orderDAO.reserveStockForOrder(orderId)) {
+            session.setAttribute("errorMessage",
+                    "One or more items no longer have enough stock. Please review your order and try again.");
             response.sendRedirect(detailUrl);
             return;
         }

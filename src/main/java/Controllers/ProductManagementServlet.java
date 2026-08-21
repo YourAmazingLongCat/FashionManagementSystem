@@ -1382,14 +1382,9 @@ public class ProductManagementServlet extends HttpServlet {
         return null;
     }
 
-    /**
-     * Parse SQL error and return user-friendly message.
-     * Special: UNIQUE constraint -> "already exists".
-     */
+    
     private String translateDbError(java.sql.SQLException ex, String entityLabel) {
         String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
-        // SQL Server: "Violation of UNIQUE KEY constraint ... Cannot insert duplicate key ..."
-        // MySQL: "Duplicate entry 'xxx' for key 'yyy'"
         if (msg.contains("unique") || msg.contains("duplicate") || msg.contains("uq_") || msg.contains("pk_")) {
             return entityLabel.substring(0, 1).toUpperCase() + entityLabel.substring(1)
                     + " name already exists. Please choose a different name.";

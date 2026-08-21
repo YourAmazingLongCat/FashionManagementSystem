@@ -168,7 +168,7 @@ public class CartItemDAO extends DBContext {
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "WHERE ci.customerId = ?";
+                + "WHERE ci.customerId = ? AND ISNULL(p.status, '') <> 'Inactive'";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, customerId);
@@ -237,7 +237,22 @@ public class CartItemDAO extends DBContext {
         String customerId = customerIdFromCartId(cartId);
         if (customerId == null) return 0;
 
-        String sql = "DELETE FROM Cart WHERE customerId = ? AND variantId NOT IN (SELECT variantId FROM ProductVariants)";
+        // Drop cart rows whose underlying variant no longer exists OR whose
+        // product has been hidden (status = 'Inactive'). Hidden products
+        // must not keep haunting the customer's cart.
+        String sql = """
+                DELETE FROM Cart
+                WHERE customerId = ?
+                  AND (
+                    variantId NOT IN (SELECT variantId FROM ProductVariants)
+                    OR variantId IN (
+                        SELECT pv.variantId
+                        FROM ProductVariants pv
+                        INNER JOIN Products p ON pv.productId = p.productId
+                        WHERE ISNULL(p.status, '') = 'Inactive'
+                    )
+                  )
+                """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, customerId);
             return ps.executeUpdate();
@@ -259,7 +274,7 @@ public class CartItemDAO extends DBContext {
                 + "FROM Cart ci "
                 + "JOIN ProductVariants pv ON ci.variantId = pv.variantId "
                 + "JOIN Products p ON pv.productId = p.productId "
-                + "WHERE ci.customerId = ?";
+                + "WHERE ci.customerId = ? AND ISNULL(p.status, '') <> 'Inactive'";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, customerId);
@@ -299,7 +314,7 @@ public class CartItemDAO extends DBContext {
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "WHERE ci.customerId = ? AND ci.cartId IN (" + placeholders + ")";
+                + "WHERE ci.customerId = ? AND ISNULL(p.status, '') <> 'Inactive' AND ci.cartId IN (" + placeholders + ")";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, customerId);
