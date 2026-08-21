@@ -15,13 +15,12 @@
         
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
         
-        <style>
-            <%@ include file="/Pages/Guest/Home/Layout/Layout.css" %>
-            <%@ include file="/Pages/Guest/Home/Header/Header.css" %>
-            <%@ include file="/Pages/Guest/Home/Content/Content.css" %>
-            <%@ include file="/Pages/Guest/Home/Order/Order.css" %>
-            <%@ include file="/Pages/Guest/Home/Payment/WalletPayment.css" %>
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Layout/Layout.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Header/Header.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Content/Content.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css?v=20260729v10-4col">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Order/Order.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Payment/WalletPayment.css">
     </head>
     <body>
         <c:set var="displaySuccessMessage" value="${not empty successMessage ? successMessage : sessionScope.successMessage}" />
@@ -76,19 +75,7 @@
             </main>
         </div>
 
-        <div class="scrolling-ticker">
-            <div class="ticker-content">
-                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
-                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
-                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
-                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
-                
-                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
-                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
-                <span>FREESHIP ON ALL ORDERS FASHION STORE 2026</span>
-                <span>DISCOVER OUR VIBE FASHION STORE 2026</span>
-            </div>
-        </div>
+        <!-- Đã xóa dải chữ scrolling-ticker ở vị trí này -->
 
         <footer>
             <div class="footer-container">
@@ -100,7 +87,6 @@
 
         <c:if test="${hideStaffHeader == 'true'}">
             <style>
-                .scrolling-ticker { display: none !important; }
                 footer { display: none !important; }
                 .main-container { padding-top: 0 !important; }
                 body { background: #f6f7fb !important; }
