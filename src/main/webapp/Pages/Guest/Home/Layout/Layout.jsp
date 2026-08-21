@@ -75,19 +75,11 @@
             </main>
         </div>
 
-        <!-- Đã xóa dải chữ scrolling-ticker ở vị trí này -->
-
-        <footer>
-            <div class="footer-container">
-                <p class="copyright">
-                    © 2026 FASHION MANAGEMENT SYSTEM.<br>ALL RIGHTS RESERVED.
-                </p>
-            </div>
-        </footer>
+        <jsp:include page="/Pages/Guest/Home/Footer/Footer.jsp" />
 
         <c:if test="${hideStaffHeader == 'true'}">
             <style>
-                footer { display: none !important; }
+                .yody-footer { display: none !important; }
                 .main-container { padding-top: 0 !important; }
                 body { background: #f6f7fb !important; }
             </style>

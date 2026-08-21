@@ -21,7 +21,6 @@ public class ChangePasswordController extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Check login (security)
         HttpSession session = request.getSession();
         if (session.getAttribute("USER") == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
@@ -37,55 +36,43 @@ public class ChangePasswordController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 1. Get current user from session
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
         HttpSession session = request.getSession();
         Account currentUser = (Account) session.getAttribute("USER");
 
         if (currentUser == null) {
-            response.sendRedirect(request.getContextPath() + "/auth/login");
+            if (isAjax) {
+                sendJsonResponse(response, false, "Session expired. Please log in again.");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/auth/login");
+            }
             return;
         }
 
-        // 2. Read form data
         String oldPassword = request.getParameter("oldPassword");
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        // 3. Check empty fields
         if (oldPassword == null || oldPassword.isBlank()
                 || newPassword == null || newPassword.isBlank()
                 || confirmPassword == null || confirmPassword.isBlank()) {
-            request.setAttribute("error", "Please fill in all fields!");
-            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            handleResponse(request, response, isAjax, false, "Please fill in all fields!");
             return;
         }
 
-        // 4. Check confirm password match
         if (!newPassword.equals(confirmPassword)) {
-            request.setAttribute("error", "Passwords do not match!");
-            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            handleResponse(request, response, isAjax, false, "Passwords do not match!");
             return;
         }
 
-        // 5. Check new password != old password
         if (newPassword.equals(oldPassword)) {
-            request.setAttribute("error", "New password must be different from current password!");
-            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            handleResponse(request, response, isAjax, false, "New password must be different from current password!");
             return;
         }
 
-        // 6. Check password strength (min 8 chars + uppercase + lowercase + digit)
         if (newPassword.length() < 8) {
-            request.setAttribute("error", "New password must be at least 8 characters!");
-            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            handleResponse(request, response, isAjax, false, "New password must be at least 8 characters!");
             return;
         }
         boolean hasUpper = false, hasLower = false, hasDigit = false;
@@ -95,41 +82,50 @@ public class ChangePasswordController extends HttpServlet {
             else if (Character.isDigit(c)) hasDigit = true;
         }
         if (!hasUpper || !hasLower || !hasDigit) {
-            request.setAttribute("error", "New password must contain at least 1 uppercase, 1 lowercase and 1 digit!");
-            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            handleResponse(request, response, isAjax, false, "New password must contain at least 1 uppercase, 1 lowercase and 1 digit!");
             return;
         }
 
-        // 7. Get hashed password from DB to compare
         AccountDAO accountDAO = new AccountDAO();
         Account accountInDb = accountDAO.getAccountById(currentUser.getAccountId());
 
         if (accountInDb == null || accountInDb.getPassword() == null
                 || !BCrypt.checkpw(oldPassword, accountInDb.getPassword())) {
-            request.setAttribute("error", "Current password is incorrect!");
-            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            handleResponse(request, response, isAjax, false, "Current password is incorrect!");
             return;
         }
 
-        // 8. Update new password into database
         String hashedPassword = passwordUtil.hashPassword(newPassword);
         boolean isUpdated = accountDAO.updatePassword(currentUser.getAccountId(), hashedPassword);
 
         if (isUpdated) {
-            request.setAttribute("success", "Password changed successfully!");
             currentUser.setPassword(hashedPassword);
             session.setAttribute("USER", currentUser);
+            handleResponse(request, response, isAjax, true, "Password changed successfully!");
         } else {
-            request.setAttribute("error", "Database error while updating password!");
+            handleResponse(request, response, isAjax, false, "Database error while updating password!");
         }
+    }
 
-        // 9. Always return to the JSP to show message
-        request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
-        request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
-        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+    private void handleResponse(HttpServletRequest request, HttpServletResponse response, boolean isAjax, boolean success, String message) throws ServletException, IOException {
+        if (isAjax) {
+            sendJsonResponse(response, success, message);
+        } else {
+            if (success) {
+                request.setAttribute("success", message);
+            } else {
+                request.setAttribute("error", message);
+            }
+            request.setAttribute("categories", new DALs.CategoryDAO().getAllCategories());
+            request.setAttribute("contentPage", "/Pages/Customer/ChangePassword.jsp");
+            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+        }
+    }
+
+    private void sendJsonResponse(HttpServletResponse response, boolean success, String message) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        String safeMessage = message.replace("\"", "\\\""); 
+        response.getWriter().write("{\"success\":" + success + ", \"message\":\"" + safeMessage + "\"}");
     }
 }

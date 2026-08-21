@@ -22,7 +22,6 @@ public class VerifyOTPControllers extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Show OTP input page
         request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
     }
 
@@ -30,33 +29,33 @@ public class VerifyOTPControllers extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 1. Read OTP from user
-        String inputOTP = request.getParameter("otpCode");
+        String inputOTP = request.getParameter("otp");
+        if (inputOTP == null) {
+            inputOTP = request.getParameter("otpCode");
+        }
+        
         HttpSession session = request.getSession();
 
-        // 2. Check mode: forgot or register
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
         String mode = request.getParameter("mode");
         boolean isForgotPassword = "forgot".equals(mode);
 
-        // 3. Get OTP stored in session
         String generatedOTP;
         if (isForgotPassword) {
             generatedOTP = (String) session.getAttribute("forgotPasswordOTP");
             Long expiryTime = (Long) session.getAttribute("forgotPasswordOTPExpiry");
 
             if (generatedOTP == null) {
-                request.setAttribute("errorMessage", "Session expired. Please start again!");
-                request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Session expired. Please start again!", "/Pages/Authentication/ForgotPassword/ForgotPassword.jsp");
                 return;
             }
 
-            // Check OTP expiry
             if (expiryTime != null && System.currentTimeMillis() > expiryTime) {
                 session.removeAttribute("forgotPasswordOTP");
                 session.removeAttribute("forgotPasswordEmail");
                 session.removeAttribute("forgotPasswordOTPExpiry");
-                request.setAttribute("errorMessage", "OTP expired. Please request a new one!");
-                request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "OTP expired. Please request a new one!", "/Pages/Authentication/ForgotPassword/ForgotPassword.jsp");
                 return;
             }
         } else {
@@ -68,21 +67,17 @@ public class VerifyOTPControllers extends HttpServlet {
             }
         }
 
-        // 4. Compare OTPs
         if (inputOTP != null && inputOTP.equals(generatedOTP)) {
 
             if (isForgotPassword) {
-                // Forgot password: mark verified, redirect to reset password
                 session.setAttribute("forgotPasswordOTPVerified", true);
-                // Remove used OTP to prevent reuse
+                session.setAttribute("allowResetPassword", true); 
+                
                 session.removeAttribute("forgotPasswordOTP");
                 session.removeAttribute("forgotPasswordOTPExpiry");
 
-                response.sendRedirect(request.getContextPath() + "/auth/reset-password");
+                sendResponse(request, response, isAjax, true, null, request.getContextPath() + "/auth/reset-password");
             } else {
-                // Register: OTP matched, save new account to DB
-
-                // Get temp data from session
                 String fullName = (String) session.getAttribute("tempName");
                 String email = (String) session.getAttribute("tempEmail");
                 String phone = (String) session.getAttribute("tempPhone");
@@ -100,7 +95,6 @@ public class VerifyOTPControllers extends HttpServlet {
                     int maxRetries = 5;
 
                     for (int attempt = 0; attempt < maxRetries; attempt++) {
-                        // Lock the Customers table with UPDLOCK to prevent concurrent reads
                         psLock = conn.prepareStatement(
                             "SELECT TOP 1 customerId FROM Customers WITH (UPDLOCK) ORDER BY customerId DESC");
                         ResultSet rsLock = psLock.executeQuery();
@@ -117,7 +111,6 @@ public class VerifyOTPControllers extends HttpServlet {
                         long nextNum = numericPart.isEmpty() ? 1 : Long.parseLong(numericPart) + 1;
                         newAccountId = "ACC" + String.format("%05d", nextNum);
 
-                        // Try to insert — if duplicate key, loop will retry with next ID
                         String insertSQL = "INSERT INTO Customers (customerId, username, email, passwordHash, fullName, status, phone) VALUES (?, ?, ?, ?, ?, 'Active', ?)";
                         psInsert = conn.prepareStatement(insertSQL);
                         psInsert.setString(1, newAccountId);
@@ -137,7 +130,7 @@ public class VerifyOTPControllers extends HttpServlet {
                             psInsert.close();
                             psInsert = null;
                             if (insertEx.getMessage() != null && insertEx.getMessage().contains("duplicate key")) {
-                                continue; // Retry with next ID
+                                continue; 
                             }
                             throw insertEx;
                         }
@@ -177,13 +170,34 @@ public class VerifyOTPControllers extends HttpServlet {
             }
 
         } else {
-            // Wrong OTP: stay on OTP page with error
             if (isForgotPassword) {
-                request.setAttribute("errorMessage", "OTP is incorrect. Please check your inbox!");
-                response.sendRedirect(request.getContextPath() + "/auth/verify-otp?mode=forgot");
+                sendResponse(request, response, isAjax, false, "OTP is incorrect. Please check your inbox!", "/auth/verify-otp?mode=forgot");
             } else {
                 request.setAttribute("errorMessage", "OTP is incorrect. Please check your inbox!");
                 request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+            }
+        }
+    }
+
+    private void sendResponse(HttpServletRequest request, HttpServletResponse response, boolean isAjax, boolean success, String message, String redirectUrl) throws ServletException, IOException {
+        if (isAjax) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            if (success) {
+                response.getWriter().write("{\"success\":true, \"redirectUrl\":\"" + redirectUrl + "\"}");
+            } else {
+                response.getWriter().write("{\"success\":false, \"message\":\"" + message + "\"}");
+            }
+        } else {
+            if (success) {
+                response.sendRedirect(redirectUrl);
+            } else {
+                request.setAttribute("errorMessage", message);
+                if (redirectUrl.endsWith(".jsp")) {
+                    request.getRequestDispatcher(redirectUrl).forward(request, response);
+                } else {
+                    response.sendRedirect(request.getContextPath() + redirectUrl);
+                }
             }
         }
     }
