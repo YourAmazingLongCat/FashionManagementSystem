@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <div class="content-page">
     <section class="hero-section">
@@ -46,8 +47,8 @@
                 VIEW ALL <span class="material-symbols-outlined">arrow_forward</span>
             </a>
         </div>
-        <div class="products-grid">
-            <c:forEach var="p" items="${newArrivals}">
+        <div class="products-grid new-arrivals-grid" id="newArrivalsGrid">
+            <c:forEach var="p" items="${newArrivals}" varStatus="arrivalStatus">
                 <a href="${pageContext.request.contextPath}/home/view-detail-product?productId=${p.productId}" class="product-link">
                     <div class="product-card">
                         <div class="product-image-container">
@@ -82,6 +83,17 @@
                 </a>
             </c:forEach>
         </div>
+        <c:if test="${fn:length(newArrivals) > 4}">
+            <div class="new-arrivals-pagination" aria-label="New arrivals pagination">
+                <button type="button" class="arrival-page-btn" id="newArrivalsPrev" aria-label="Previous products">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <span class="arrival-page-number" id="newArrivalsPage">1 / ${(fn:length(newArrivals) + 3) div 4}</span>
+                <button type="button" class="arrival-page-btn" id="newArrivalsNext" aria-label="Next products">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+            </div>
+        </c:if>
     </section>
 </div>
 
@@ -112,4 +124,37 @@
             console.error('Wishlist toggle error:', error);
         });
     }
+</script>
+
+<script>
+    (function () {
+        const grid = document.getElementById('newArrivalsGrid');
+        const prev = document.getElementById('newArrivalsPrev');
+        const next = document.getElementById('newArrivalsNext');
+        const pageLabel = document.getElementById('newArrivalsPage');
+        if (!grid || !prev || !next || !pageLabel) return;
+
+        const cards = Array.from(grid.querySelectorAll('.product-link'));
+        const pageSize = 4;
+        const totalPages = Math.ceil(cards.length / pageSize);
+        let currentPage = 1;
+
+        const renderPage = () => {
+            cards.forEach((card, index) => {
+                const first = (currentPage - 1) * pageSize;
+                card.hidden = index < first || index >= first + pageSize;
+            });
+            pageLabel.textContent = currentPage + ' / ' + totalPages;
+            prev.disabled = currentPage === 1;
+            next.disabled = currentPage === totalPages;
+        };
+
+        prev.addEventListener('click', () => {
+            if (currentPage > 1) { currentPage--; renderPage(); }
+        });
+        next.addEventListener('click', () => {
+            if (currentPage < totalPages) { currentPage++; renderPage(); }
+        });
+        renderPage();
+    })();
 </script>

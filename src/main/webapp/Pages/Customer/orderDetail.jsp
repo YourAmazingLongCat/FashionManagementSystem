@@ -426,14 +426,27 @@
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
-                            </c:otherwise>
-                        </c:choose>
-                    </aside>
+
+                                <c:if test="${canCancel}">
+                                    <div class="co-cancel-section">
+                                        <p class="co-cancel-warning">Are you sure you want to cancel this order? This action cannot be undone.</p>
+                                        <form action="${pageContext.request.contextPath}/customer/cancel-order" method="post" onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                                            <input type="hidden" name="orderId" value="${order.orderId}" />
+                                            <button type="submit" class="co-cancel-btn">
+                                                <span class="material-symbols-outlined">cancel</span>
+                                                Cancel Order
+                                            </button>
+                                        </form>
+                                    </div>
+                                </c:if>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
-            </c:otherwise>
-        </c:choose>
-    </div>
-</section>
+            </div>
+        </c:otherwise>
+    </c:choose>
+</div>
 
 <script>
 (function () {

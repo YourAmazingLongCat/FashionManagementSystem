@@ -11,7 +11,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Cart | Shopee Style</title>
-
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
@@ -108,6 +108,20 @@
             height: 18px;
             cursor: pointer;
         }
+
+        .delete-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 6px;
+        }
+
+        .delete-btn .material-symbols-outlined {
+            font-size: 20px;
+        }
     </style>
 </head>
 
@@ -177,9 +191,11 @@
                                     <fmt:formatNumber value="${item.subtotal}" pattern="#,##0"/> VND
                                 </div>
 
-                                <a class="btn btn-sm btn-outline-danger"
-                                   href="${pageContext.request.contextPath}/cart/delete?id=${item.cartItemId}">
-                                    Delete
+                                <a class="btn btn-sm btn-outline-danger delete-btn"
+                                   href="${pageContext.request.contextPath}/cart/delete?id=${item.cartItemId}"
+                                   title="Remove from cart"
+                                   onclick="return confirm('Remove this item from cart?')">
+                                    <span class="material-symbols-outlined">delete</span>
                                 </a>
 
                             </div>
@@ -246,13 +262,47 @@ function saveCheckedItems() {
 function updateQty(id, qty) {
     saveCheckedItems();
 
+    qty = parseInt(qty);
+
+    if (isNaN(qty) || qty < 1) {
+        alert("Quantity must be at least 1.");
+        location.reload();
+        return;
+    }
+
     fetch('${pageContext.request.contextPath}/cart/update', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: 'cartItemId=' + id + '&quantity=' + qty
-    }).then(() => {
+        body: 'cartItemId=' + encodeURIComponent(id)
+            + '&quantity=' + encodeURIComponent(qty)
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.success) {
+
+            if (data.adjusted) {
+                alert(
+                    "You have reached the maximum available stock.\n\n"
+                    + "Only " + data.stock + " item(s) are available.\n"
+                    + "The quantity has been automatically adjusted to "
+                    + data.quantity + "."
+                );
+            }
+
+            location.reload();
+
+        } else {
+            alert(data.message || "Unable to update cart.");
+            location.reload();
+        }
+
+    })
+    .catch(error => {
+        console.error("Update cart error:", error);
+        alert("An error occurred while updating the cart.");
         location.reload();
     });
 }

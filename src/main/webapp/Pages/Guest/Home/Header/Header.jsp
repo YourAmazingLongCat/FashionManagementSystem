@@ -14,48 +14,14 @@
     </div>
 
     <nav class="quick-nav">
-        <a class="quick-nav-link" href="${pageContext.request.contextPath}/home">HOME</a>
-
         <c:if test="${not empty sessionScope.USER}">
             <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/order-history">MY ORDERS</a>
-            <a class="quick-nav-link" href="${pageContext.request.contextPath}/customer/wallet">WALLET</a>
         </c:if>
 
         <c:if test="${not empty sessionScope.USER and sessionScope.USER.role eq 'Admin'}">
             <a class="quick-nav-link quick-nav-link--accent" href="${pageContext.request.contextPath}/admin/products">PRODUCT MANAGEMENT</a>
         </c:if>
     </nav>
-
-    <div class="categories-dropdown">
-        <button class="categories-btn">
-            <span class="material-symbols-outlined">menu</span>
-            <span>CATEGORIES</span>
-            <span class="material-symbols-outlined chevron">expand_more</span>
-        </button>
-
-        <div class="mega-menu">
-            <div class="mega-grid">
-                <c:forEach var="c" items="${categories}" varStatus="status">
-                    <c:if test="${status.index % 5 == 0}">
-                        <div>
-                            <ul class="mega-list">
-                            </c:if>
-                            <li>
-                                <a class="category-card" href="${pageContext.request.contextPath}/home/search?category=${c.categoryId}">
-                                    <div class="category-content">
-                                        <span class="material-symbols-outlined category-icon">local_mall</span>
-                                        <span class="category-name">${c.name}</span>
-                                    </div>
-                                </a>
-                            </li>
-                            <c:if test="${status.index % 5 == 4 || status.last}">
-                            </ul>
-                        </div>
-                    </c:if>
-                </c:forEach>
-            </div>
-        </div>
-    </div>
 
     <div class="search-container">
         <form id="headerSearchForm" class="search-form" method="get" action="${pageContext.request.contextPath}/home/search">
@@ -92,34 +58,51 @@
                 </div>
             </c:when>
             <c:otherwise>
-                <a class="login-btn" href="${pageContext.request.contextPath}/auth/login">LOGIN</a>
+                <a class="login-btn" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#loginModal">LOGIN</a>
             </c:otherwise>
         </c:choose>
     </div>
 </header>
 
+<!-- ================= KHUNG MODAL POPUP ĐĂNG NHẬP ================= -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 0; border: 2px solid #000; box-shadow: 4px 4px 0px rgba(0,0,0,1); background-color: #fff;">
+            <div class="modal-header" style="border-bottom: 2px solid #000; padding: 15px 20px;">
+                <h5 class="modal-title" id="loginModalLabel" style="font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.2rem;">
+                    WELCOME BACK
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 25px;">
+                <!-- Vùng thông báo lỗi khi đăng nhập sai -->
+                <div id="loginErrorMsg" class="alert alert-danger" style="display: none; border-radius: 0; font-size: 0.9rem; margin-bottom: 20px;"></div>
+
+                <form id="popupLoginForm">
+                    <div class="form-group mb-3" style="margin-bottom: 15px;">
+                        <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">Email <span style="color:red;">*</span></label>
+                        <input type="email" name="email" class="form-control" style="border-radius: 0; border: 1px solid #ccc; padding: 10px 12px; width: 100%;" required>
+                    </div>
+                    <div class="form-group mb-4" style="margin-bottom: 20px;">
+                        <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">Password <span style="color:red;">*</span></label>
+                        <input type="password" name="password" class="form-control" style="border-radius: 0; border: 1px solid #ccc; padding: 10px 12px; width: 100%;" required>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100" style="border-radius: 0; font-weight: 700; padding: 12px; background-color: #000; color: #fff; width: 100%; border: none; cursor: pointer;">
+                        LOGIN
+                    </button>
+
+                    <div class="mt-3 text-center" style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; margin-top: 15px;">
+                        <a href="${pageContext.request.contextPath}/auth/forgot-password" style="color: #555; text-decoration: none;">Forgot password?</a>
+                        <a href="${pageContext.request.contextPath}/auth/register" style="color: #555; text-decoration: none;">Register new account</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ================= END MODAL ================= -->
+
 <script>
-    const btn = document.querySelector(".categories-btn");
-    const menu = document.querySelector(".mega-menu");
-    let isOpen = false;
-
-    if (btn && menu) {
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            isOpen = !isOpen;
-            menu.style.display = isOpen ? "block" : "none";
-        };
-
-        document.addEventListener("click", () => {
-            menu.style.display = "none";
-            isOpen = false;
-        });
-
-        menu.onclick = (e) => {
-            e.stopPropagation();
-        };
-    }
-
     const headerSearchForm = document.getElementById('headerSearchForm');
     const headerSearchInput = document.getElementById('headerSearchInput');
     const userMenuButton = document.querySelector('.user-menu-button');
@@ -148,4 +131,37 @@
             event.stopPropagation();
         });
     }
+
+    // --- XỬ LÝ GỬI FORM ĐĂNG NHẬP NGẦM BẰNG AJAX ---
+    document.addEventListener('DOMContentLoaded', function () {
+        const loginForm = document.getElementById('popupLoginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function (e) {
+                e.preventDefault(); // Chặn tải lại trang
+
+                const formData = new URLSearchParams(new FormData(this));
+
+                fetch('${pageContext.request.contextPath}/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest' // Báo cho Controller biết đây là request AJAX
+                    },
+                    body: formData
+                })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                window.location.href = data.redirectUrl; // Đăng nhập đúng -> chuyển hướng theo phân quyền
+                            } else {
+                                // Đăng nhập sai -> hiện thông báo lỗi màu đỏ ngay trong popup
+                                const errorDiv = document.getElementById('loginErrorMsg');
+                                errorDiv.textContent = data.message;
+                                errorDiv.style.display = 'block';
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+            });
+        }
+    });
 </script>

@@ -8,7 +8,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${pageTitle}</title>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/views/pages/productManagement/product-management.css?v=20260609-product-manual-variants-4">
+        <style>
+            <%@ include file="/views/pages/productManagement/product-management.css" %>
+        </style>
         <style>
             body { margin: 0; font-family: 'Inter', sans-serif; color: #0f172a; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
             .form-shell { width: min(1340px, calc(100% - 40px)); margin: 28px auto; }
@@ -19,6 +21,7 @@
             .form-body { padding: 30px; display: grid; gap: 24px; }
             .alert { padding: 16px 18px; border-radius: 18px; font-weight: 600; }
             .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
+            .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
             .product-form { display: grid; gap: 24px; }
             .form-section { background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%); border: 1px solid #e2e8f0; border-radius: 26px; padding: 24px; }
             .section-heading { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -41,7 +44,11 @@
             .variants-list { display: grid; gap: 16px; }
             .variant-row { border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; background: #ffffff; display: grid; gap: 16px; }
             .variant-row-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+            .variant-row-title-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
             .variant-row-title { font-weight: 800; color: #334155; }
+            .variant-stock-badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+            .variant-stock-badge.in-stock { background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.25); }
+            .variant-stock-badge.out-of-stock { background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: 1px solid rgba(220, 38, 38, 0.25); }
             .variant-row-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: end; }
             .variant-remove-btn, .variant-add-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 14px; font-weight: 700; border: none; cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
             .variant-add-btn { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 12px 24px rgba(124, 58, 237, 0.2); }
@@ -67,11 +74,14 @@
                 </div>
 
                 <div class="form-body">
+                    <c:if test="${not empty success}">
+                        <div class="alert alert-success">${success}</div>
+                    </c:if>
                     <c:if test="${not empty error}">
                         <div class="alert alert-error">${error}</div>
                     </c:if>
 
-                    <form method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
+                    <form id="productForm" method="post" action="${pageContext.request.contextPath}/staff/products" class="product-form" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="${formAction}">
                         <input type="hidden" name="existingImageUrl" value="${product.primaryImageUrl}">
                         <c:if test="${formAction eq 'edit'}">
@@ -89,25 +99,12 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="categoryId">Category</label>
-                                    <c:choose>
-                                        <c:when test="${hasOrders}">
-                                            <select id="categoryId" name="categoryId" required disabled>
-                                                <c:forEach var="category" items="${categories}">
-                                                    <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
-                                                </c:forEach>
-                                            </select>
-                                            <input type="hidden" name="categoryId" value="${product.categoryId}">
-                                            <small style="color: #b45309; font-size: 0.8rem;">Category locked: product has existing orders</small>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <select id="categoryId" name="categoryId" required>
-                                                <option value="">-- Select category --</option>
-                                                <c:forEach var="category" items="${categories}">
-                                                    <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
-                                                </c:forEach>
-                                            </select>
-                                        </c:otherwise>
-                                    </c:choose>
+                                    <select id="categoryId" name="categoryId" required>
+                                        <option value="">-- Select category --</option>
+                                        <c:forEach var="category" items="${categories}">
+                                            <option value="${category.categoryId}" ${product.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
+                                        </c:forEach>
+                                    </select>
                                 </div>
                             </div>
                         </section>
@@ -120,8 +117,7 @@
                                 <div class="form-group">
                                     <label for="basePrice">Base price</label>
                                     <div class="price-input-wrap">
-                                        <input id="basePrice" name="basePrice" type="text" inputmode="numeric" value="${empty product.basePrice ? '' : product.basePrice.setScale(0, 0)}" placeholder="650.000" required>
-                                        <span class="price-suffix">đ</span>
+                                        <input id="basePrice" name="basePrice" type="text" inputmode="numeric" value="${empty product.basePrice ? '' : product.basePrice.setScale(0, 0)}" placeholder="650.000" required class="base-price-input">
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -135,33 +131,33 @@
                             </div>
                         </section>
 
-                        <section class="form-section">
-                            <div class="section-heading">
-                                <div>
-                                    <h3>Product variants</h3>
-                                    <p>Add each size/color option as a separate row. Stock quantity is managed through the Warehouse module.</p>
+                        <c:if test="${formAction eq 'edit'}">
+                            <section class="form-section">
+                                <div class="section-heading"><h3>Inventory summary</h3></div>
+                                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+                                    <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">Total variants</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.6rem;">${fn:length(product.variants)}</strong>
+                                    </div>
+                                    <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">In stock</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.6rem; color: #15803d;">${product.totalStockQty}</strong>
+                                    </div>
+                                    <div class="meta-card" style="padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                        <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;">Status</p>
+                                        <strong style="display: block; margin-top: 8px; font-size: 1.1rem;">${product.status}</strong>
+                                    </div>
                                 </div>
-                                <c:choose>
-                                    <c:when test="${hasOrders}">
-                                        <span style="color: #b45309; font-size: 0.85rem; font-weight: 600;">Variants locked: product has existing orders</span>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <button type="button" class="variant-add-btn" id="addVariantBtn">Add variant</button>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-
-                            <div id="variantsList" class="variants-list"></div>
-                            <div id="variantsEmpty" class="variant-empty">No variants added yet. Click <strong>Add variant</strong> to create one.</div>
-                            <p class="inline-note">Each row represents one exact product option (Size + Color). Stock quantity will be managed through Warehouse after product creation.</p>
-                        </section>
+                                <p class="inline-note" style="margin-top: 14px;">Stock quantity is the total physical units in warehouse. Use <strong>Manage stock</strong> above to import new inventory.</p>
+                            </section>
+                        </c:if>
 
                         <section class="form-section">
                             <div class="section-heading"><h3>Image</h3></div>
                             <div class="form-grid image-section-grid">
                                 <div class="form-group">
                                     <label for="productImage">Upload image</label>
-                                    <input id="productImage" name="productImage" type="file" accept="image/*">
+                                    <input id="productImage" name="productImage" type="file" accept="image/*" ${formAction eq 'create' ? 'required' : ''}>
                                 </div>
                                 <div class="form-group image-preview-group">
                                     <label>Current image</label>
@@ -189,31 +185,13 @@
 
                         <div class="form-actions">
                             <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=products">Back to products</a>
+                            <c:if test="${formAction eq 'edit'}">
+                                <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?action=manageVariants&productId=${product.productId}">Manage Product Variants</a>
+                            </c:if>
                             <button type="submit" class="primary-btn">${formAction eq 'edit' ? 'Save changes' : 'Create product'}</button>
                         </div>
                     </form>
 
-                    <div id="variantOptionsData" style="display:none;">
-                        <div id="sizeOptionsData" data-selected-category-id="${product.categoryId}">
-                            <c:forEach var="size" items="${allSizes}">
-                                <div data-size-id="${size.sizeId}" data-size-name="${size.sizeName}" data-category-id="${size.categoryId}"></div>
-                            </c:forEach>
-                        </div>
-                        <div id="colorOptionsData">
-                            <c:forEach var="color" items="${colors}">
-                                <div data-color-id="${color.colorId}" data-color-name="${fn:escapeXml(color.colorName)}"></div>
-                            </c:forEach>
-                        </div>
-                        <div id="existingVariantsData">
-                            <c:forEach var="variant" items="${product.variants}">
-                                <div class="variant-data"
-                                     data-size-id="${variant.sizeId}"
-                                     data-color-id="${variant.colorId}"
-                                     data-sku="${variant.sku}"
-                                     data-price-override="${variant.priceOverride == null ? '' : variant.priceOverride.setScale(0, 0)}"></div>
-                            </c:forEach>
-                        </div>
-                    </div>
                 </div>
             </section>
         </div>
@@ -331,26 +309,6 @@
                 const categorySelect = document.getElementById('categoryId');
                 const productImageInput = document.getElementById('productImage');
                 const imagePreview = document.getElementById('imagePreview');
-                const variantsList = document.getElementById('variantsList');
-                const variantsEmpty = document.getElementById('variantsEmpty');
-                const addVariantBtn = document.getElementById('addVariantBtn');
-                const allSizeOptions = Array.from(document.querySelectorAll('#sizeOptionsData div')).map(node => ({
-                    id: node.dataset.sizeId,
-                    name: node.dataset.sizeName,
-                    categoryId: node.dataset.categoryId
-                }));
-                const colorOptions = Array.from(document.querySelectorAll('#colorOptionsData div')).map(node => ({
-                    id: node.dataset.colorId,
-                    name: node.dataset.colorName
-                }));
-                const existingVariants = Array.from(document.querySelectorAll('#existingVariantsData .variant-data')).map(node => ({
-                    sizeId: node.dataset.sizeId || '',
-                    colorId: node.dataset.colorId || '',
-                    sku: node.dataset.sku || '',
-                    priceOverride: node.dataset.priceOverride || ''
-                }));
-                let sizeOptions = [];
-
                 const getSizeOptionsByCategory = (categoryId) => {
                     if (!categoryId) {
                         return [];
@@ -371,7 +329,30 @@
 
                 const refreshAllSizeSelects = () => {
                     Array.from(variantsList.querySelectorAll('select[name="variantSizeId"]')).forEach(select => {
-                        replaceSelectOptions(select, sizeOptions, select.value, '-- Select size --');
+                        if (sizeOptions.length > 0) {
+                            const currentVal = select.value;
+                            select.innerHTML = '';
+                            const placeholderOption = document.createElement('option');
+                            placeholderOption.value = '';
+                            placeholderOption.textContent = '-- Select size --';
+                            select.appendChild(placeholderOption);
+
+                            let hasSelectedValue = false;
+                            sizeOptions.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.id;
+                                option.textContent = item.name;
+                                if ((currentVal || '') === item.id) {
+                                    option.selected = true;
+                                    hasSelectedValue = true;
+                                }
+                                select.appendChild(option);
+                            });
+
+                            if (!hasSelectedValue) {
+                                select.value = '';
+                            }
+                        }
                         select.disabled = sizeOptions.length === 0;
                     });
                 };
@@ -380,68 +361,89 @@
                     const removeBtn = row.querySelector('.variant-remove-btn');
                     const priceInput = row.querySelector('input[name="variantPriceOverride"]');
                     const sizeSelect = row.querySelector('select[name="variantSizeId"]');
+                    const colorSelect = row.querySelector('select[name="variantColorId"]');
+
                     if (removeBtn) {
                         removeBtn.addEventListener('click', () => {
                             row.remove();
                             renumberVariantRows();
                             updateEmptyState();
                         });
-                        // Disable remove button if product has orders
-                        if (hasOrdersFlag) {
-                            removeBtn.disabled = true;
-                            removeBtn.style.opacity = '0.5';
-                            removeBtn.style.cursor = 'not-allowed';
-                            removeBtn.title = 'Cannot remove variant: product has existing orders';
-                        }
                     }
+
                     if (sizeSelect) {
-                        sizeSelect.disabled = sizeOptions.length === 0 || hasOrdersFlag;
+                        sizeSelect.disabled = sizeOptions.length === 0;
                     }
                     bindCurrencyInput(priceInput);
                 };
 
-                // Pass hasOrders flag from server to JavaScript
-                const hasOrdersFlag = ${hasOrders != null ? hasOrders : false};
-
                 const addVariantRow = (variant = {}) => {
                     const row = document.createElement('div');
                     row.className = 'variant-row';
+                    if (variant.variantId) row.dataset.variantId = variant.variantId;
 
                     const header = document.createElement('div');
                     header.className = 'variant-row-header';
 
+                    const titleWrap = document.createElement('div');
+                    titleWrap.className = 'variant-row-title-wrap';
                     const title = document.createElement('div');
                     title.className = 'variant-row-title';
                     title.textContent = 'Variant';
+                    titleWrap.appendChild(title);
+
+                    // Hiển thị stockQty hiện tại (chỉ khi edit - có variantId)
+                    if (variant.variantId) {
+                        const stockBadge = document.createElement('span');
+                        const stockNum = Number(variant.availableQty || 0);
+                        stockBadge.className = 'variant-stock-badge ' + (stockNum > 0 ? 'in-stock' : 'out-of-stock');
+                        stockBadge.textContent = 'Stock: ' + stockNum;
+                        stockBadge.title = 'Current available stock (managed in Warehouse module)';
+                        titleWrap.appendChild(stockBadge);
+                    }
 
                     const removeBtn = document.createElement('button');
                     removeBtn.type = 'button';
                     removeBtn.className = 'variant-remove-btn';
                     removeBtn.textContent = 'Remove';
 
-                    header.appendChild(title);
+                    header.appendChild(titleWrap);
                     header.appendChild(removeBtn);
 
                     const grid = document.createElement('div');
                     grid.className = 'variant-row-grid';
 
                     const sizeSelect = createSelect('variantSizeId', sizeOptions, variant.sizeId || '', '-- Select size --');
+                    const colorSelect = createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --');
                     sizeSelect.disabled = sizeOptions.length === 0;
 
                     grid.appendChild(createField('Size', sizeSelect));
-                    grid.appendChild(createField('Color', createSelect('variantColorId', colorOptions, variant.colorId || '', '-- Select color --')));
+                    grid.appendChild(createField('Color', colorSelect));
                     grid.appendChild(createField('SKU', createInput({ name: 'variantSku', value: variant.sku || '', placeholder: 'Required SKU' })));
                     grid.appendChild(createField('Price override', createInput({ name: 'variantPriceOverride', value: variant.priceOverride || '', placeholder: 'Optional', inputMode: 'numeric' })));
-                    // Stock is managed through Warehouse module, default to 0 on create
 
                     const enabledInput = document.createElement('input');
                     enabledInput.type = 'hidden';
                     enabledInput.name = 'variantEnabled';
                     enabledInput.value = 'true';
 
+                    // Preserve existing variantId so the server can UPDATE the
+                    // row instead of inserting a brand new one. Without this
+                    // hidden input the server would treat every save as a
+                    // fresh variant and wipe out any warehouse import history
+                    // (variantId changes -> FK references are lost).
+                    let variantIdInput = null;
+                    if (variant.variantId) {
+                        variantIdInput = document.createElement('input');
+                        variantIdInput.type = 'hidden';
+                        variantIdInput.name = 'variantId';
+                        variantIdInput.value = variant.variantId;
+                    }
+
                     row.appendChild(header);
                     row.appendChild(grid);
                     row.appendChild(enabledInput);
+                    if (variantIdInput) row.appendChild(variantIdInput);
 
                     variantsList.appendChild(row);
                     attachVariantRowEvents(row);
@@ -453,12 +455,6 @@
                     sizeOptions = getSizeOptionsByCategory(categoryId);
                     refreshAllSizeSelects();
                 };
-
-                if (categorySelect) {
-                    categorySelect.addEventListener('change', () => {
-                        loadSizesByCategory(categorySelect.value);
-                    });
-                }
 
                 if (productImageInput && imagePreview) {
                     productImageInput.addEventListener('change', () => {
@@ -477,28 +473,7 @@
                     });
                 }
 
-                if (addVariantBtn) {
-                    addVariantBtn.disabled = hasOrdersFlag;
-                    if (hasOrdersFlag) {
-                        addVariantBtn.style.opacity = '0.5';
-                        addVariantBtn.style.cursor = 'not-allowed';
-                        addVariantBtn.title = 'Cannot add variant: product has existing orders';
-                    } else {
-                        addVariantBtn.addEventListener('click', () => addVariantRow());
-                    }
-                }
-
-                loadSizesByCategory(categorySelect ? categorySelect.value : '');
-
-                if (existingVariants.length > 0) {
-                    existingVariants.forEach(addVariantRow);
-                } else {
-                    addVariantRow();
-                }
-
                 setImagePreview(imagePreview && imagePreview.dataset.existingSrc ? ctx + imagePreview.dataset.existingSrc : '');
-                renumberVariantRows();
-                updateEmptyState();
             })();
         </script>
     </body>

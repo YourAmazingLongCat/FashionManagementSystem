@@ -115,6 +115,7 @@
                                                 </c:choose>
                                                 <span class="material-symbols-outlined">arrow_forward</span>
                                             </a>
+                                            
                                         </td>
                                     </tr>
                                 </c:forEach>

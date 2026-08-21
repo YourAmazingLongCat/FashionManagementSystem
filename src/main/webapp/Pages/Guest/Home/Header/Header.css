@@ -203,18 +203,22 @@ a {
 .login-btn {
     background-color: #ffffff;
     color: #000000;
-    padding: 8px 25px;
+    padding: 8px 14px;
+    font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
-    font-size: 0.9rem;
-    border: 1px solid #ffffff;
-    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border: 1.5px solid #ffffff;
+    border-radius: 0;
+    transition: all 0.2s ease;
+    text-decoration: none;
 }
 
 .login-btn:hover {
     background-color: transparent;
-    color: #ffce00;
-    border-color: #ff5a00;
-    filter: drop-shadow(0 0 8px rgba(255, 90, 0, 0.6));
+    color: #ffffff;
+    border-color: #ffffff;
 }
 
 /* ================= ICON GIỎ HÀNG ================= */
@@ -267,31 +271,42 @@ a {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 16px;
-    background: #ffffff;
-    color: #000000;
-    border: none;
-    border-radius: 999px;
+    padding: 8px 14px;
+    background: transparent;
+    color: #ffffff;
+    border: 1.5px solid #ffffff;
+    border-radius: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
     font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .user-menu-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    background: #ffffff;
+    color: #000000;
+}
+
+.user-menu-button .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .user-greeting {
-    font-size: 0.75rem;
-    letter-spacing: 0.12em;
-    color: #555555;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    color: inherit;
 }
 
 .user-name {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.6px;
+    color: inherit;
 }
 
 .user-dropdown {
@@ -299,13 +314,14 @@ a {
     position: absolute;
     right: 0;
     top: calc(100% + 10px);
-    background: #111827;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 18px;
-    padding: 12px 0;
+    background: #000000;
+    border: 1px solid #ffffff;
+    border-radius: 0;
+    padding: 0;
     min-width: 180px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    box-shadow: 5px 5px 0px rgba(0, 0, 0, 1);
     z-index: 1000;
+    font-family: 'Space Grotesk', sans-serif;
 }
 
 .user-dropdown.visible {
@@ -316,30 +332,193 @@ a {
     display: block;
     padding: 12px 20px;
     color: #ffffff;
-    font-size: 0.9rem;
-    font-weight: 600;
-    transition: background 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    transition: background 0.2s ease, color 0.2s ease;
     text-decoration: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-dropdown a:last-child {
+    border-bottom: none;
 }
 
 .user-dropdown a:hover {
-    background: rgba(255, 255, 255, 0.08);
-}
-
-@media (max-width: 992px) {
-    .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .user-menu-button {
-        padding: 8px 12px;
-    }
+    background: #ffffff;
+    color: #000000;
 }
 
 .header-actions {
     display: flex;
     align-items: center;
     gap: 15px;
+    flex-wrap: nowrap;
 }
+
+.wishlist-icon-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: 1.5px solid #ffffff;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.wishlist-icon-btn:hover {
+    background: #ffffff;
+    color: #000000;
+}
+
+.wishlist-icon-btn .material-symbols-outlined {
+    font-size: 22px;
+}
+
+@media (max-width: 992px) {
+    .header-guest-page {
+        padding: 12px 20px;
+        gap: 12px;
+    }
+
+    .search-input {
+        width: 180px;
+    }
+
+    .header-actions {
+        gap: 10px;
+    }
+
+    .user-menu-button {
+        padding: 8px 12px;
+    }
+
+    .quick-nav-link {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-guest-page {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .search-container {
+        order: 99;
+        width: 100%;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .quick-nav {
+        order: 1;
+    }
+}
+
+/* YODY-style header finish */
+.header-guest-page {
+    background: #ffffff;
+    color: #111827;
+    padding: 12px 32px;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 0 0 18px 18px;
+}
+.quick-nav-link {
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    padding: 9px 15px;
+}
+.quick-nav-link:hover { background: #f3f4f6; color: #111827; }
+.quick-nav-link--accent { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+.peak-logo .logo-text { color: #172554; }
+.search-input {
+    background: #ffffff;
+    color: #111827;
+    border-color: #e5e7eb;
+    border-radius: 999px 0 0 999px;
+}
+.search-submit {
+    color: #111827;
+    border-color: #e5e7eb;
+    border-left: 0;
+    border-radius: 0 999px 999px 0;
+}
+.login-btn {
+    border-color: #111827;
+    border-radius: 999px;
+}
+.login-btn:hover { background: #111827; color: #ffffff; border-color: #111827; }
+.cart-icon-btn, .wishlist-icon-btn {
+    background: #ffffff;
+    color: #111827;
+    border-color: #e5e7eb;
+    border-radius: 50%;
+}
+.cart-icon-btn:hover, .wishlist-icon-btn:hover { background: #f3f4f6; color: #111827; }
+.cart-badge { border-radius: 999px; }
+.user-menu-button {
+    background: #ffffff;
+    color: #111827;
+    border-color: #e5e7eb;
+    border-radius: 999px;
+}
+.user-menu-button:hover { background: #f3f4f6; color: #111827; }
+/* Black header theme */
+.header-guest-page { background: #000000; color: #ffffff; border-bottom-color: #252525; }
+.peak-logo .logo-text { color: #ffffff; }
+.quick-nav-link { color: #ffffff; border-color: #4b5563; }
+.quick-nav-link:hover { background: #ffffff; color: #111827; }
+.quick-nav-link--accent { background: #dc2626; border-color: #dc2626; color: #ffffff; }
+.search-form { border-color: #4b5563; background: #ffffff; }
+.search-input { color: #111827; }
+.search-submit { color: #111827; }
+.cart-icon-btn, .wishlist-icon-btn, .user-menu-button { background: transparent; color: #ffffff; border-color: #4b5563; }
+.cart-icon-btn:hover, .wishlist-icon-btn:hover, .user-menu-button:hover { background: #ffffff; color: #111827; }
+.login-btn { background: #ffffff; color: #111827; border-color: #ffffff; }
+.login-btn:hover { background: transparent; color: #ffffff; border-color: #ffffff; }
+.search-container { display: flex; align-items: center; justify-content: center; }
+.search-form {
+    display: flex;
+    align-items: center;
+    width: min(300px, 100%);
+    height: 42px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #ffffff;
+}
+.search-input {
+    flex: 1 1 auto;
+    width: auto;
+    height: 100%;
+    min-width: 0;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #111827;
+}
+.search-input:focus { border: 0; outline: none; background: transparent; }
+.search-submit {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #111827;
+}
+.search-submit .material-symbols-outlined { line-height: 1; font-size: 25px; }
+.search-submit:hover { background: #f3f4f6; }
