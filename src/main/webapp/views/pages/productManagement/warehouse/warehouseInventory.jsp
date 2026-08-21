@@ -113,16 +113,19 @@ body { background: #f8f9fa; }
             <div class="brand">Staff</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Orders</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Payments</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Manage Payments</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Products</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Warehouse</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Manage Warehouse</a>
                 </li>
                 <li class="nav-item mt-auto">
                     <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>
@@ -241,8 +244,7 @@ body { background: #f8f9fa; }
                     </div>
 
                     <c:if test="${invTotalPages > 1}">
-                        <div class="pagination-bar">
-                            <span class="pagination-summary">Showing ${inventory.size()} of ${invTotalRecords} variants</span>
+                        <div class="pagination-bar" style="justify-content: center;">
                             <div class="pagination-controls">
                                 <c:if test="${invPage > 1}">
                                     <a class="page-link-inv" href="?activeTab=inventory&invPage=${invPage - 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}">&#8249; Prev</a>

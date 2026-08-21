@@ -71,25 +71,31 @@
                 <li class="nav-item">
                     <a class="nav-link ${param.currentPage == null || param.currentPage == 'orders' ? 'active' : ''}"
                        href="${pageContext.request.contextPath}/staff/orders">
-                        <i class="fas fa-shopping-cart"></i> Orders
+                        <i class="fas fa-shopping-cart"></i> Manage Orders
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link ${param.currentPage == 'payments' ? 'active' : ''}"
                        href="${pageContext.request.contextPath}/staff/payments">
-                        <i class="fas fa-wallet"></i> Payments
+                        <i class="fas fa-wallet"></i> Manage Payments
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link ${param.currentPage == 'products' ? 'active' : ''}"
                        href="${pageContext.request.contextPath}/staff/products">
-                        <i class="fas fa-boxes"></i> Products
+                        <i class="fas fa-boxes"></i> Manage Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link ${param.currentPage == 'manageVariants' ? 'active' : ''}"
+                       href="${pageContext.request.contextPath}/staff/products?action=manageVariants">
+                        <i class="fas fa-tags"></i> Manage Variants
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link ${param.currentPage == 'warehouse' ? 'active' : ''}"
                        href="${pageContext.request.contextPath}/staff/warehouse/inventory">
-                        <i class="fas fa-warehouse"></i> Warehouse
+                        <i class="fas fa-warehouse"></i> Manage Warehouse
                     </a>
                 </li>
                 <li class="nav-item mt-auto">

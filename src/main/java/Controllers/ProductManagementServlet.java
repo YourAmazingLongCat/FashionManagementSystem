@@ -203,7 +203,15 @@ public class ProductManagementServlet extends HttpServlet {
         List<Product> products = productDAO.getAllProducts();
         String selectedProductId = getTrimmedParam(request, "productId", "");
         Product selectedProduct = findProduct(products, selectedProductId);
-        List<ProductVariant> allVariants = variantDAO.getAllVariants();
+        String keyword = getTrimmedParam(request, "keyword", "");
+        String categoryId = getTrimmedParam(request, "categoryId", "");
+        List<ProductVariant> allVariants;
+        boolean isFiltering = !keyword.isBlank() || !categoryId.isBlank();
+        if (isFiltering) {
+            allVariants = variantDAO.searchVariants(keyword, categoryId);
+        } else {
+            allVariants = variantDAO.getAllVariants();
+        }
         int pageSize = 8;
         int currentPage = parsePositiveInt(request.getParameter("page"), 1);
         PageSlice<ProductVariant> variantPage = paginate(allVariants, currentPage, pageSize);
@@ -217,7 +225,10 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("sizes", selectedProduct == null ? List.of() : sizeDAO.getSizesByCategoryId(selectedProduct.getCategoryId()));
         request.setAttribute("allSizes", sizeDAO.getAllSizes());
         request.setAttribute("colors", colorDAO.getAllColors());
+        request.setAttribute("categories", categoryDAO.getAllCategories());
         request.setAttribute("selectedProductId", selectedProductId);
+        request.setAttribute("keyword", keyword);
+        request.setAttribute("selectedCategoryId", categoryId);
         request.getRequestDispatcher("/views/pages/productManagement/manageProductVariants.jsp").forward(request, response);
     }
 
@@ -264,8 +275,8 @@ public class ProductManagementServlet extends HttpServlet {
             String variantId = variantDAO.getLatestVariantId(variant);
             if (imagePart != null && imagePart.getSize() > 0 && variantId != null) {
                 String imageUrl = saveImageFile(request, imagePart);
-                if (imageUrl != null && !variantDAO.upsertVariantImage(variantId, imageUrl)) {
-                    System.out.println("Variant saved, but image metadata could not be saved for " + variantId);
+                if (imageUrl != null && !imageDAO.addVariantImage(productId, variantId, imageUrl)) {
+                    System.out.println("Variant saved, but image metadata could not be saved for variant " + variantId);
                 }
             }
             response.sendRedirect(request.getContextPath() + "/staff/products?action=manageVariants&productId="

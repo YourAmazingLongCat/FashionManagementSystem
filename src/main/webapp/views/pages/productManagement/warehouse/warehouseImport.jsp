@@ -104,16 +104,19 @@
             <div class="brand">Staff</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Orders</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Payments</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Manage Payments</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Products</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Warehouse</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Manage Warehouse</a>
                 </li>
                 <li class="nav-item mt-auto">
                     <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>
@@ -234,10 +237,7 @@
                             </table>
                         </div>
                     <c:if test="${invTotalPages > 1}">
-                        <div class="pagination-wrapper" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding: 0 4px;">
-                            <span style="font-size: 0.85rem; color: #64748b;">
-                                Showing ${inventory.size()} of ${invTotalRecords} variants
-                            </span>
+                        <div class="pagination-wrapper" style="display: flex; justify-content: center; align-items: center; margin-top: 16px; padding: 0 4px;">
                             <div class="pagination" style="display: flex; gap: 4px;">
                                 <c:if test="${invPage > 1}">
                                     <a href="?tab=import&invPage=${invPage - 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}&importProductFilter=${importProductFilter}&importImporterFilter=${importImporterFilter}&importDateFrom=${importDateFrom}&importDateTo=${importDateTo}&importSearch=${fn:escapeXml(importSearch)}&importPage=${importPage}"

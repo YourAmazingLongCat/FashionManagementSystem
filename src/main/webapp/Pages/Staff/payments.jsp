@@ -68,16 +68,19 @@
             <div class="brand">Staff</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Orders</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/payments">Payments</a>
+                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/payments">Manage Payments</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Products</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Warehouse</a>
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Manage Warehouse</a>
                 </li>
                 <li class="nav-item mt-auto">
                     <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>

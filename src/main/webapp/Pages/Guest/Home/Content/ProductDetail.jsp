@@ -31,6 +31,7 @@
                         </c:otherwise>
                     </c:choose>
                     </div>
+                    <h2 class="detail-description-heading">PRODUCT DESCRIPTION</h2>
                     <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
                 </div>
             </div>
@@ -64,7 +65,7 @@
 
             <c:if test="${not empty param.message}">
                 <div class="detail-flash-message ${param.message eq 'added-to-cart' ? 'success' : 'error'}">
-                    ${param.message eq 'added-to-cart' ? 'Added to cart successfully.' : 'Selected variant is unavailable.'}
+                    ${param.message eq 'added-to-cart' ? 'Added to cart successfully.' : 'The product has reached the maximum limit in the cart.'}
                 </div>
             </c:if>
 
@@ -112,6 +113,25 @@
                     </div>
                 </div>
             </form>
+
+            <section class="product-service-highlights" aria-label="Product service highlights">
+                <div class="service-highlight-item">
+                    <span class="service-highlight-icon" aria-hidden="true">✓</span>
+                    <span>Quality Product</span>
+                </div>
+                <div class="service-highlight-item">
+                    <span class="service-highlight-icon" aria-hidden="true">▣</span>
+                    <span>Free Shipping</span>
+                </div>
+                <div class="service-highlight-item">
+                    <span class="service-highlight-icon" aria-hidden="true">⇆</span>
+                    <span>14-Day Return</span>
+                </div>
+                <div class="service-highlight-item">
+                    <span class="service-highlight-icon" aria-hidden="true">☎</span>
+                    <span>24/7 Support</span>
+                </div>
+            </section>
 
             <c:if test="${not empty product.variants}">
             <script>
