@@ -17,57 +17,64 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "LoginControllers", urlPatterns = {"/auth/login"})
 public class LoginControllers extends HttpServlet {
 
-    /**
-     * Handle GET: show login page.
-     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Forward to Login.jsp
         request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
     }
 
-    /**
-     * Handle POST: process login form submit.
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 1. Read form data (matches name="email" and name="password" in JSP)
         String email = request.getParameter("email");
         String password = request.getParameter("password");
 
-        // 2. Call DAO to check DB
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
         AccountDAO dao = new AccountDAO();
         Account acc = dao.checkLogin(email, password);
 
-        // 3. Handle result
         if (acc != null) {
-
-            // If status is not null and NOT "Active" (case-insensitive)
             if (acc.getStatus() != null && !acc.getStatus().equalsIgnoreCase("Active")) {
+                if (isAjax) {
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"success\":false, \"message\":\"Your account is locked or not activated!\"}");
+                    return;
+                }
                 request.setAttribute("errorMessage", "Your account is locked or not activated!");
                 request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
                 return;
             }
 
-            // Login success: store Account in session
             HttpSession session = request.getSession();
             session.setAttribute("USER", acc);
 
-            // Redirect by role: Staff -> Product Mgmt, Admin -> Dashboard, Customer -> Home
+            String redirectUrl = request.getContextPath() + "/home";
             String role = acc.getRole();
             if (role != null && role.equalsIgnoreCase("Staff")) {
-                response.sendRedirect(request.getContextPath() + "/staff/products");
+                redirectUrl = request.getContextPath() + "/staff/products";
             } else if (role != null && role.equalsIgnoreCase("Admin")) {
-                response.sendRedirect(request.getContextPath() + "/Admin");
-            } else {
-                response.sendRedirect(request.getContextPath() + "/home");
+                redirectUrl = request.getContextPath() + "/Admin";
             }
 
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":true, \"redirectUrl\":\"" + redirectUrl + "\"}");
+                return;
+            }
+            
+            response.sendRedirect(redirectUrl);
+
         } else {
-            // Login failed: show error message
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false, \"message\":\"Email or password is incorrect!\"}");
+                return;
+            }
             request.setAttribute("errorMessage", "Email or password is incorrect!");
             request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
         }

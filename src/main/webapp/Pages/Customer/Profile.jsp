@@ -1,192 +1,211 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <style>
-    body { background: #f3f4f6; }
-    header.header-guest-page {
-        display: none !important;
+    .profile-wrapper {
+        padding: 40px 0;
+        background-color: #f3f4f6;
+        font-family: 'Space Grotesk', 'Inter', sans-serif;
+        min-height: 85vh;
     }
-    .account-page {
-        width: min(960px, calc(100% - 40px));
-        margin: 60px auto 40px;
-    }
-    .account-title {
-        text-align: center;
-        font-size: 2.6rem;
-        font-weight: 800;
-        color: #111827;
-        margin-bottom: 28px;
-    }
-    .account-card {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 24px;
-        max-width: 700px;
-        margin: 0 auto;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 24px;
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
-        overflow: hidden;
-    }
-    .account-panel {
-        padding: 32px;
-    }
-    .panel-heading {
-        display: block;
-        margin-bottom: 8px;
-        text-align: center;
-    }
-    .panel-heading h3 {
-        margin: 0 0 6px 0;
-        font-size: 1.05rem;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-        color: #111827;
-    }
-    .panel-heading .status-pill { display: none; }
-
-    .actions-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: center;
-        margin: 12px 0;
-    }
-    .actions-wrapper .action-pill {
-        width: 90%;
-        max-width: 640px;
-        padding: 14px 20px;
-        border-radius: 999px;
-        text-align: center;
-        text-decoration: none;
-        font-weight: 700;
-    }
-    .actions-wrapper .action-pill.primary { background: #eef2ff; color: #1d4ed8; }
-    .actions-wrapper .action-pill.secondary { background: #111827; color: #fff; }
-    .history-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 14px;
-    }
-    .history-item {
-        padding: 16px 18px;
-        border-radius: 18px;
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        color: #475569;
-        min-height: 68px;
-    }
-    .history-item span {
-        display: block;
-        color: #0f172a;
-        font-weight: 700;
-        margin-bottom: 6px;
-    }
-    .account-detail {
-        display: grid;
-        gap: 18px;
-    }
-    .detail-row {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 6px;
-    }
-    .detail-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #6b7280;
-        letter-spacing: 0.12em;
-    }
-    .detail-value,
-    .detail-input {
-        width: 100%;
+    
+    /* STYLE CHO SIDEBAR (CỘT TRÁI) */
+    .profile-sidebar {
+        background: #fff;
         border-radius: 16px;
-        border: 1px solid #d1d5db;
-        background: #f8fafc;
-        color: #111827;
-        padding: 14px 16px;
-        font-size: 0.95rem;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
     }
-    .detail-input { background: #ffffff; }
-    .detail-value { cursor: default; }
-    .account-actions {
+    .profile-sidebar .user-info {
+        text-align: center;
+        border-bottom: 1px solid #f3f4f6;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+    .profile-sidebar .avatar-circle {
+        width: 72px;
+        height: 72px;
+        background-color: #111827;
+        color: #fff;
+        border-radius: 50%;
         display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 16px;
-    }
-    .btn-primary,
-    .btn-secondary,
-    .btn-logout {
-        display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        width: 100%;
-        padding: 14px 20px;
-        border-radius: 999px;
-        font-weight: 700;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        transition: transform 0.2s ease, background-color 0.2s ease;
+        font-size: 28px;
+        font-weight: 800;
+        margin: 0 auto 12px;
     }
-    .btn-primary { background: #111827; color: #ffffff; }
-    .btn-primary:hover { background: #1f2937; transform: translateY(-1px); }
-    .btn-secondary { background: #eef2ff; color: #1d4ed8; }
-    .btn-secondary:hover { background: #dbeafe; transform: translateY(-1px); }
-    .btn-logout { background: #ef4444; color: #ffffff; }
-    .btn-logout:hover { background: #dc2626; transform: translateY(-1px); }
-    @media (max-width: 880px) {
-        .account-card { grid-template-columns: 1fr; }
+    .profile-sidebar .nav-link {
+        color: #475569;
+        font-weight: 600;
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+    .profile-sidebar .nav-link:hover, .profile-sidebar .nav-link.active {
+        background-color: #f8fafc;
+        color: #111827;
+    }
+    .profile-sidebar .nav-link span.material-symbols-outlined {
+        margin-right: 12px;
+        font-size: 22px;
+    }
+    .profile-sidebar .logout-link {
+        color: #ef4444;
+        margin-top: 10px;
+    }
+    .profile-sidebar .logout-link:hover {
+        background-color: #fef2f2;
+        color: #dc2626;
+    }
+    
+    /* STYLE CHO FORM BÊN PHẢI */
+    .profile-content-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 32px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    }
+    .profile-content-card h3 {
+        font-weight: 800;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f3f4f6;
+        color: #111827;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 1.25rem;
+    }
+    .form-label {
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.1em;
+        margin-bottom: 8px;
+    }
+    .form-control {
+        border-radius: 12px;
+        padding: 14px 16px;
+        border: 1px solid #d1d5db;
+        background-color: #f8fafc;
+        color: #111827;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+    .form-control:focus {
+        background-color: #ffffff;
+        border-color: #111827;
+        box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.1);
+    }
+    .form-control:disabled, .form-control[readonly] {
+        background-color: #e5e7eb;
+        color: #6b7280;
+        cursor: not-allowed;
+    }
+    .btn-save {
+        background-color: #111827;
+        color: #fff;
+        padding: 14px 32px;
+        font-weight: 700;
+        border-radius: 999px;
+        border: none;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .btn-save:hover {
+        background-color: #374151;
+        transform: translateY(-1px);
     }
 </style>
 
-<div class="account-page">
-    <h1 class="account-title">Account</h1>
-    <div class="account-card">
-        <section class="account-panel">
-            <c:set var="homeUrl" value="${pageContext.request.contextPath}/home" />
-            <c:if test="${sessionScope.USER.role eq 'Staff'}">
-                <c:set var="homeUrl" value="${pageContext.request.contextPath}/staff/products" />
-            </c:if>
-            <c:if test="${sessionScope.USER.role eq 'Admin'}">
-                <c:set var="homeUrl" value="${pageContext.request.contextPath}/Admin" />
-            </c:if>
-            <div class="panel-heading">
-                <h3>Account details</h3>
-            </div>
-            <div class="actions-wrapper">
-                <a class="action-pill action-pill-primary action-pill primary" href="${pageContext.request.contextPath}/change-password">Change Password</a>
-                <a class="action-pill action-pill-secondary action-pill secondary" href="${homeUrl}">Back to Home</a>
-            </div>
-            <form action="${pageContext.request.contextPath}/profile/update" method="post" class="account-detail">
-                <div class="detail-row">
-                    <label class="detail-label">Full name</label>
-                    <input class="detail-input" type="text" name="fullName" value="${sessionScope.USER.fullName}" required>
-                </div>
-                <div class="detail-row">
-                    <label class="detail-label">Email</label>
-                    <div class="detail-value">${sessionScope.USER.email}</div>
-                </div>
-                <div class="detail-row">
-                    <label class="detail-label">Phone</label>
-                    <input class="detail-input" type="tel" name="phone" value="${sessionScope.USER.phone}" pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)">
-                </div>
-                <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
-                    <div class="detail-row">
-                        <label class="detail-label">Shipping address</label>
-                        <input class="detail-input" type="text" name="address" value="${sessionScope.USER.address}">
+<div class="profile-wrapper">
+    <div class="container" style="max-width: 1100px;">
+        <div class="row">
+            
+            <!-- CỘT TRÁI: SIDEBAR MENU -->
+            <div class="col-lg-3 col-md-4 mb-4">
+                <div class="profile-sidebar">
+                    <div class="user-info">
+                        <div class="avatar-circle">
+                            ${empty sessionScope.USER.avatar ? sessionScope.USER.fullName.substring(0,1).toUpperCase() : '<img src="'.concat(sessionScope.USER.avatar).concat('" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">')}
+                        </div>
+                        <h5 class="mb-1" style="font-weight: 800; font-size: 1.1rem;">${sessionScope.USER.fullName}</h5>
+                        <small style="color: #6b7280; font-weight: 600;">${sessionScope.USER.role}</small>
                     </div>
-                </c:if>
-                <div class="account-actions">
-                    <button type="submit" class="btn-primary">Save Change</button>
-                    <a class="btn-logout" href="${pageContext.request.contextPath}/auth/logout">Log Out</a>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="${pageContext.request.contextPath}/profile">
+                            <span class="material-symbols-outlined">person</span> Account Details
+                        </a>
+                        
+                        <!-- Chỉ hiện Đơn hàng và Yêu thích cho Customer -->
+                        <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/customer/order-history">
+                                <span class="material-symbols-outlined">receipt_long</span> My Orders
+                            </a>
+                            <a class="nav-link" href="${pageContext.request.contextPath}/wishlist">
+                                <span class="material-symbols-outlined">favorite</span> Wishlist
+                            </a>
+                        </c:if>
+
+                        <a class="nav-link" href="${pageContext.request.contextPath}/change-password">
+                            <span class="material-symbols-outlined">lock</span> Change Password
+                        </a>
+                        
+                        <hr style="border-color: #e5e7eb; margin: 10px 0;">
+                        
+                        <a class="nav-link logout-link" href="${pageContext.request.contextPath}/auth/logout">
+                            <span class="material-symbols-outlined">logout</span> Log Out
+                        </a>
+                    </nav>
                 </div>
-            </form>
-        </section>
+            </div>
+
+            <!-- CỘT PHẢI: FORM CHỈNH SỬA THÔNG TIN -->
+            <div class="col-lg-9 col-md-8">
+                <div class="profile-content-card">
+                    <h3>Account Details</h3>
+                    
+                    <form action="${pageContext.request.contextPath}/profile/update" method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="fullName" class="form-control" value="${sessionScope.USER.fullName}" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-control" value="${sessionScope.USER.email}" disabled>
+                            </div>
+                            
+                            <div class="col-md-12 mb-4">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" name="phone" class="form-control" value="${sessionScope.USER.phone}" pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)">
+                            </div>
+                            
+                            <!-- Chỉ hiện Địa chỉ giao hàng nếu không phải là Staff/Admin -->
+                            <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
+                                <div class="col-md-12 mb-4">
+                                    <label class="form-label">Shipping Address</label>
+                                    <input type="text" name="address" class="form-control" value="${sessionScope.USER.address}" placeholder="Enter your full address">
+                                </div>
+                            </c:if>
+                        </div>
+                        
+                        <div class="text-end mt-2">
+                            <button type="submit" class="btn-save">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
     </div>
 </div>

@@ -34,6 +34,8 @@ public class ProfileController extends HttpServlet {
 
         // 2. Get categories for Header.jsp
         request.setAttribute("categories", new CategoryDAO().getAllCategories());
+        
+        // Đảm bảo đường dẫn này khớp với vị trí file Profile.jsp trong project của bạn
         request.setAttribute("contentPage", "/Pages/Customer/Profile.jsp");
 
         // 3. Forward to shared layout
@@ -63,12 +65,13 @@ public class ProfileController extends HttpServlet {
         // 2. Validate
         AccountDAO dao = new AccountDAO();
         if (fullName == null || fullName.isBlank()) {
-            session.setAttribute("toastError", "Full name cannot be empty!");
+            // Đã đổi thành errorMessage cho khớp với Layout.jsp
+            session.setAttribute("errorMessage", "Full name cannot be empty!");
             response.sendRedirect(request.getContextPath() + "/profile");
             return;
         }
         if (phone != null && !phone.isBlank() && dao.phoneExistsForOtherAccount(phone, user.getAccountId())) {
-            session.setAttribute("toastError", "Phone number is already used by another account!");
+            session.setAttribute("errorMessage", "Phone number is already used by another account!");
             response.sendRedirect(request.getContextPath() + "/profile");
             return;
         }
@@ -76,7 +79,11 @@ public class ProfileController extends HttpServlet {
         // 3. Update Account object
         user.setFullName(fullName);
         user.setPhone(phone);
-        user.setAddress(address);
+        
+        // Tránh tình trạng Staff/Admin bị mất địa chỉ cũ do form ẩn trường address
+        if (address != null) {
+            user.setAddress(address);
+        }
 
         // 4. Call DAO to update database
         boolean isSuccess = dao.updateProfile(user);
@@ -84,9 +91,10 @@ public class ProfileController extends HttpServlet {
         if (isSuccess) {
             // Refresh session so header updates immediately
             session.setAttribute("USER", user);
-            session.setAttribute("toastMsg", "Profile updated successfully!");
+            // Đã đổi thành successMessage cho khớp với Layout.jsp
+            session.setAttribute("successMessage", "Profile updated successfully!");
         } else {
-            session.setAttribute("toastError", "Error while saving data!");
+            session.setAttribute("errorMessage", "Error while saving data!");
         }
 
         // 5. Redirect back to profile
