@@ -4,7 +4,7 @@
  */
 package Controllers;
 
-import DALs.CartItemDAO;
+import DALs.CartDAO;
 import java.io.IOException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -29,8 +29,7 @@ public class DeleteCartItemServlet extends HttpServlet {
         String cartItemId =
                 request.getParameter("id");
 
-        CartItemDAO dao =
-                new CartItemDAO();
+        CartDAO dao = new CartDAO();
 
         dao.deleteItem(cartItemId);
 

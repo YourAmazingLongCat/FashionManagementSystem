@@ -1,7 +1,6 @@
 package Controllers;
 
 import DALs.CartDAO;
-import DALs.CartItemDAO;
 import DALs.ProductDAO;
 import Models.Account;
 import Models.Cart;
@@ -29,18 +28,39 @@ public class AddToCartServlet extends HttpServlet {
             throws ServletException, IOException {
 
         Account acc = (Account) request.getSession().getAttribute("USER");
-
         if (acc == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
         String variantId = trim(request.getParameter("variantId"));
-        String quantityStr = trim(request.getParameter("quantity"));
         String productId = trim(request.getParameter("productId"));
+        String colorId = trim(request.getParameter("colorId"));
+        String sizeId = trim(request.getParameter("sizeId"));
+        String quantityStr = trim(request.getParameter("quantity"));
 
+        
+        if ((variantId == null || variantId.isBlank()) && productId != null && !productId.isBlank()) {
+            ProductDAO productDAO = new ProductDAO();
+            Product product = productDAO.getProductById(productId);
+            if (product != null && product.getVariants() != null) {
+                for (ProductVariant v : product.getVariants()) {
+                    boolean colorMatch = (colorId == null || colorId.isBlank()) ||
+                                         (colorId.equals(v.getColorId()));
+                    boolean sizeMatch = (sizeId == null || sizeId.isBlank()) ||
+                                        (sizeId.equals(v.getSizeId()));
+                    if (colorMatch && sizeMatch) {
+                        variantId = v.getVariantId();
+                        break;
+                    }
+                }
+            }
+        }
+
+        
         if (variantId == null || variantId.isBlank()) {
-            response.sendRedirect(request.getHeader("referer"));
+            String redirectUrl = request.getContextPath() + "/home/view-detail-product?productId=" + (productId != null ? productId : "") + "&message=variant-required";
+            response.sendRedirect(redirectUrl);
             return;
         }
 
@@ -52,17 +72,15 @@ public class AddToCartServlet extends HttpServlet {
         ProductDAO productDAO = new ProductDAO();
         ProductVariant variant = productDAO.getVariantById(variantId);
         if (variant == null) {
-            response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
-            return;
-        }
-
-        // Block adding a hidden (Inactive) product to the cart. Even if a
-        // stale variant link still exists in the cart from before the
-        // product was hidden, the user must not be able to add new items.
-        Product product = productDAO.getProductById(variant.getProductId());
-        if (product == null || "Inactive".equalsIgnoreCase(product.getStatus())) {
-            response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=product-unavailable");
-            return;
+            
+            Product product = productDAO.getProductById(productId);
+            if (product != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
+                variant = product.getVariants().get(0);
+                variantId = variant.getVariantId();
+            } else {
+                response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
+                return;
+            }
         }
 
         int availableStock = variant.getAvailableQty();
@@ -81,9 +99,7 @@ public class AddToCartServlet extends HttpServlet {
             cartId = cart.getCartId();
         }
 
-        CartItemDAO itemDAO = new CartItemDAO();
-
-        int currentCartQty = itemDAO.getQuantityInCart(cartId, variantId);
+        int currentCartQty = cartDAO.getQuantityInCart(cartId, variantId);
         int totalRequestedQty = currentCartQty + quantity;
 
         if (totalRequestedQty > availableStock) {
@@ -95,13 +111,13 @@ public class AddToCartServlet extends HttpServlet {
             quantity = maxCanAdd;
         }
 
-        if (itemDAO.existsItem(cartId, variantId)) {
-            itemDAO.increaseQuantity(cartId, variantId, quantity);
+        if (cartDAO.existsItem(cartId, variantId)) {
+            cartDAO.increaseQuantity(cartId, variantId, quantity);
         } else {
-            itemDAO.addItem(cartId, variantId, quantity);
+            cartDAO.addItem(cartId, variantId, quantity);
         }
 
-        List<CartItemView> items = itemDAO.getCartItems(cartId);
+        List<CartItemView> items = cartDAO.getCartItems(cartId);
         int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
         request.getSession().setAttribute("cartCount", cartCount);
 

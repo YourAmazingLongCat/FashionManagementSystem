@@ -1,6 +1,6 @@
 package Controllers;
 
-import DALs.CartItemDAO;
+import DALs.CartDAO;
 import DALs.ProductDAO;
 import Models.ProductVariant;
 import java.io.IOException;
@@ -46,10 +46,10 @@ public class UpdateCartServlet extends HttpServlet {
                 quantity = 1;
             }
 
-            CartItemDAO cartItemDAO = new CartItemDAO();
+            CartDAO cartDAO = new CartDAO();
             ProductDAO productDAO = new ProductDAO();
 
-            String variantId = cartItemDAO.getVariantIdByCartItemId(cartItemId);
+            String variantId = cartDAO.getVariantIdByCartItemId(cartItemId);
 
             boolean adjusted = false;
             int availableStock = 0;
@@ -77,7 +77,7 @@ public class UpdateCartServlet extends HttpServlet {
                 return;
             }
 
-            cartItemDAO.updateQuantity(cartItemId, quantity);
+            cartDAO.updateQuantity(cartItemId, quantity);
 
             response.getWriter().write(
                     "{"

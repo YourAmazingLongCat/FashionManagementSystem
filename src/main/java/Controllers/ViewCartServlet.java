@@ -1,7 +1,6 @@
 package Controllers;
 
 import DALs.CartDAO;
-import DALs.CartItemDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItemView;
@@ -32,14 +31,12 @@ public class ViewCartServlet extends HttpServlet {
         CartDAO cartDAO = new CartDAO();
         Cart cart = cartDAO.getActiveCart(acc.getAccountId());
 
-        CartItemDAO itemDAO = new CartItemDAO();
-
         if (cart != null) {
-            itemDAO.cleanupInvalidItems(cart.getCartId());
+            cartDAO.cleanupInvalidItems(cart.getCartId());
 
-            List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+            List<CartItemView> items = cartDAO.getCartItems(cart.getCartId());
             request.setAttribute("cartItems", items);
-            request.setAttribute("total", itemDAO.getCartTotal(cart.getCartId()));
+            request.setAttribute("total", cartDAO.getCartTotal(cart.getCartId()));
 
             int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
             request.getSession().setAttribute("cartCount", cartCount);

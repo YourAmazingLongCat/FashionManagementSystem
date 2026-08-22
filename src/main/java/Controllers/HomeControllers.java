@@ -1,7 +1,6 @@
 package Controllers;
 
 import DALs.CartDAO;
-import DALs.CartItemDAO;
 import DALs.CategoryDAO;
 import DALs.CommentDAO;
 import DALs.WishlistDAO;
@@ -151,8 +150,7 @@ public class HomeControllers extends HttpServlet {
             CartDAO cartDAO = new CartDAO();
             Cart cart = cartDAO.getActiveCart(user.getAccountId());
             if (cart != null) {
-                CartItemDAO itemDAO = new CartItemDAO();
-                List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+                List<CartItemView> items = cartDAO.getCartItems(cart.getCartId());
                 return items.stream().mapToInt(CartItemView::getQuantity).sum();
             }
             return 0;

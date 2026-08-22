@@ -1,7 +1,6 @@
 package Controllers;
 
 import DALs.CartDAO;
-import DALs.CartItemDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItem;
@@ -64,9 +63,8 @@ public class CartCheckoutServlet extends HttpServlet {
             return;
         }
 
-        CartItemDAO cartItemDAO = new CartItemDAO();
         List<CartItemView> selectedCartItems
-                = cartItemDAO.getCartItemsByIds(cart.getCartId(), selectedItems);
+                = cartDAO.getCartItemsByIds(cart.getCartId(), selectedItems);
 
         if (selectedCartItems == null || selectedCartItems.isEmpty()) {
             session.setAttribute("errorMessage",
@@ -110,7 +108,7 @@ public class CartCheckoutServlet extends HttpServlet {
         }
 
         // Refresh the header badge using only the products still in the cart.
-        List<CartItemView> remainingItems = cartItemDAO.getCartItems(cart.getCartId());
+        List<CartItemView> remainingItems = cartDAO.getCartItems(cart.getCartId());
         int remainingCount = remainingItems.stream()
                 .mapToInt(CartItemView::getQuantity)
                 .sum();

@@ -4,7 +4,6 @@ import DALs.CategoryDAO;
 import DALs.WishlistDAO;
 import DALs.ProductDAO;
 import DALs.CartDAO;
-import DALs.CartItemDAO;
 import Models.CartItem;
 import Models.CartItemView;
 import Models.Cart;
@@ -148,15 +147,13 @@ public class ProductExperienceServlet extends HttpServlet {
 
         String productId = trim(request.getParameter("productId"));
         WishlistDAO wishlistDAO = new WishlistDAO();
-        boolean inWishlist = wishlistDAO.isInWishlist(user.getAccountId(), productId);
-        if (inWishlist) {
+        boolean inWishlist;
+        if (wishlistDAO.isInWishlist(user.getAccountId(), productId)) {
             wishlistDAO.removeFromWishlist(user.getAccountId(), productId);
             inWishlist = false;
         } else {
-            // addToWishlist now refuses hidden (Inactive) products and
-            // returns false. Reflect that accurately in the JSON response
-            // so the heart icon does not appear filled for hidden products.
-            inWishlist = wishlistDAO.addToWishlist(user.getAccountId(), productId);
+            wishlistDAO.addToWishlist(user.getAccountId(), productId);
+            inWishlist = true;
         }
 
         Set<String> wishlist = wishlistDAO.getWishlistProductIdsByAccountId(user.getAccountId());
@@ -298,8 +295,7 @@ public class ProductExperienceServlet extends HttpServlet {
             CartDAO cartDAO = new CartDAO();
             Cart cart = cartDAO.getActiveCart(user.getAccountId());
             if (cart != null) {
-                CartItemDAO itemDAO = new CartItemDAO();
-                List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+                List<CartItemView> items = cartDAO.getCartItems(cart.getCartId());
                 return items.stream().mapToInt(CartItemView::getQuantity).sum();
             }
             return 0;
