@@ -5,7 +5,6 @@ import Models.Account;
 import Models.Order;
 import Models.OrderItem;
 import Models.Payment;
-import Models.Wallet;
 import Services.OrderService;
 import Services.PaymentService;
 import Utils.OrderStatus;
@@ -153,15 +152,7 @@ public class CustomerOrderDetailServlet extends HttpServlet {
         }
 
         boolean placed;
-        if (PaymentMethod.WALLET.equals(paymentMethod)) {
-            placed = paymentService.payOrderByWallet(customerId, orderId);
-            if (!placed) {
-                session.setAttribute("errorMessage",
-                        "Wallet payment was not completed. Deposit enough balance and place the order again.");
-                response.sendRedirect(detailUrl);
-                return;
-            }
-        } else if (PaymentMethod.VNPAY.equals(paymentMethod)) {
+        if (PaymentMethod.VNPAY.equals(paymentMethod)) {
             Payment vnPayPayment = paymentService.getOrCreateVNPayPaymentForOrder(
                     customerId, orderId);
             if (vnPayPayment == null) {
@@ -229,12 +220,10 @@ public class CustomerOrderDetailServlet extends HttpServlet {
         List<OrderItem> orderItems
                 = orderService.viewOrderItemsForCustomer(customerId, orderId);
         Payment payment = paymentService.getPaymentByOrderId(orderId);
-        Wallet wallet = paymentService.getOrCreateWallet(customerId);
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
         request.setAttribute("payment", payment);
-        request.setAttribute("wallet", wallet);
         request.setAttribute("orderPlaced", payment != null);
         request.setAttribute("canEditDelivery",
                 orderService.canEditDeliveryInformation(order));
@@ -262,9 +251,6 @@ public class CustomerOrderDetailServlet extends HttpServlet {
     }
 
     private String normalizePaymentMethod(String value) {
-        if (PaymentMethod.WALLET.equals(value)) {
-            return PaymentMethod.WALLET;
-        }
         if (PaymentMethod.VNPAY.equals(value)) {
             return PaymentMethod.VNPAY;
         }

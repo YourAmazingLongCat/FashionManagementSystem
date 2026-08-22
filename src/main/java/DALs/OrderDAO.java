@@ -89,17 +89,14 @@ public class OrderDAO extends DBContext {
     }
 
     /**
-     * "orderPlaced" now means Orders has a non-null paymentMethod AND a
-     * non-Pending WalletTransactions row. To stay simple, we check that the
-     * Orders row already has a payment method recorded (PaymentService mirrors
-     * the payment method onto Orders whenever a Purchase transaction is
-     * created).
+     * An order is considered placed after the customer has selected a payment
+     * method and a purchase payment record exists.
      */
     private static final String ORDER_PLACED_EXPR
             = "CAST(CASE WHEN o.paymentMethod IS NOT NULL "
-            + "          AND EXISTS (SELECT 1 FROM WalletTransactions wt "
-            + "                       WHERE wt.orderId = o.orderId "
-            + "                         AND wt.transactionType = 'Purchase') "
+            + "          AND EXISTS (SELECT 1 FROM Payments p "
+            + "                       WHERE p.orderId = o.orderId "
+            + "                         AND p.paymentType = 'Purchase') "
             + "          THEN 1 ELSE 0 END AS BIT)";
 
     public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {

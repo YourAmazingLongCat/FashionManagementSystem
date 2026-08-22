@@ -4,7 +4,6 @@ import DALs.OrderExpirationDAO;
 import Models.ExpiredOrderInfo;
 import Utils.EmailUtils;
 import java.util.List;
-import java.util.Random;
 
 public class OrderExpirationService {
 
@@ -19,15 +18,11 @@ public class OrderExpirationService {
         int deletedCount = 0;
 
         for (ExpiredOrderInfo order : expiredOrders) {
-            boolean deleted = expirationDAO.expirePendingOrder(
-                    order.getOrderId(), generateRefundPaymentId());
-
-            if (!deleted) {
+            if (!expirationDAO.expirePendingOrder(order.getOrderId())) {
                 continue;
             }
 
             deletedCount++;
-
             if (order.getCustomerEmail() != null
                     && !order.getCustomerEmail().trim().isEmpty()) {
                 EmailUtils.sendOrderExpiredNotification(
@@ -39,12 +34,6 @@ public class OrderExpirationService {
                 );
             }
         }
-
         return deletedCount;
-    }
-
-    private String generateRefundPaymentId() {
-        int number = new Random().nextInt(900) + 100;
-        return "RF" + System.currentTimeMillis() + number;
     }
 }

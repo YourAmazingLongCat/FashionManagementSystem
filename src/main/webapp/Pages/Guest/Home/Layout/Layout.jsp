@@ -20,7 +20,6 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Content/Content.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css?v=20260729v10-4col">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Order/Order.css">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Payment/WalletPayment.css">
     </head>
     <body>
         <c:set var="displaySuccessMessage" value="${not empty successMessage ? successMessage : sessionScope.successMessage}" />

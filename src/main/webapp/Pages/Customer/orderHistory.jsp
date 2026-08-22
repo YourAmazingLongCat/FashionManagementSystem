@@ -15,9 +15,9 @@
                 <h1 class="co-page-title">My Orders</h1>
                 <p class="co-page-subtitle">Track orders, review order details and complete unfinished orders.</p>
             </div>
-            <a class="co-secondary-btn" href="${pageContext.request.contextPath}/customer/wallet">
-                <span class="material-symbols-outlined">account_balance_wallet</span>
-                My Wallet
+            <a class="co-secondary-btn" href="${pageContext.request.contextPath}/cart">
+                <span class="material-symbols-outlined">shopping_cart</span>
+                View Cart
             </a>
         </div>
 

@@ -51,10 +51,7 @@ public class StaffPaymentServlet extends HttpServlet {
 
         int offset = (page - 1) * pageSize;
         List<Payment> payments = paymentService.getAllPaymentsPaginated(offset, pageSize);
-        List<Payment> pendingDeposits = paymentService.getPendingDeposits();
-
         request.setAttribute("payments", payments);
-        request.setAttribute("pendingDeposits", pendingDeposits);
         request.setAttribute("currentPage", page);
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("pageSize", pageSize);

@@ -49,7 +49,6 @@
         }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-paid { background: #dcfce7; color: #166534; }
-        .status-completed { background: #dcfce7; color: #166534; }
         .status-failed { background: #fee2e2; color: #991b1b; }
         .status-cancelled { background: #fee2e2; color: #991b1b; }
         .status-refunded { background: #e0e7ff; color: #3730a3; }
@@ -99,7 +98,7 @@
             <c:set var="pageFailedPayments" value="${0}" />
             <c:forEach var="payment" items="${payments}">
                 <c:choose>
-                    <c:when test="${payment.paymentStatus eq 'Paid' or payment.paymentStatus eq 'Completed'}">
+                    <c:when test="${payment.paymentStatus eq 'Paid'}">
                         <c:set var="pagePaidPayments" value="${pagePaidPayments + 1}" />
                     </c:when>
                     <c:when test="${payment.paymentStatus eq 'Pending'}">
@@ -127,7 +126,7 @@
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="stat-card" style="border-left-color: #27ae60;">
-                        <div class="stat-label">Paid / Completed</div>
+                        <div class="stat-label">Paid</div>
                         <div class="stat-number">${pagePaidPayments}</div>
                     </div>
                 </div>
@@ -138,47 +137,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Pending deposits -->
-            <c:if test="${not empty pendingDeposits}">
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Pending Deposits</span>
-                        <span class="badge bg-warning text-dark">${fn:length(pendingDeposits)} waiting</span>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Payment ID</th>
-                                        <th>Method</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Amount</th>
-                                        <th class="text-end">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:forEach var="payment" items="${pendingDeposits}">
-                                        <tr>
-                                            <td><code>${payment.paymentId}</code></td>
-                                            <td>${payment.paymentMethod}</td>
-                                            <td><span class="status-badge status-${fn:toLowerCase(payment.paymentStatus)}">${payment.paymentStatus}</span></td>
-                                            <td class="text-end fw-semibold"><fmt:formatNumber value="${payment.amount}" type="number" groupingUsed="true" /> đ</td>
-                                            <td class="text-end">
-                                                <form action="${pageContext.request.contextPath}/CompleteDepositServlet" method="post" class="d-inline">
-                                                    <input type="hidden" name="paymentId" value="${payment.paymentId}"/>
-                                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    </c:forEach>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </c:if>
 
             <!-- Payment records table -->
             <div class="card">

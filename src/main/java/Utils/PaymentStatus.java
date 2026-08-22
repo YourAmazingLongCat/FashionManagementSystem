@@ -11,66 +11,28 @@ public final class PaymentStatus {
     private PaymentStatus() {
     }
 
-    /**
-     * Returns true for any value that represents a successful payment.
-     *
-     * <p>Callers compare values pulled from various columns:
-     * <ul>
-     *   <li>{@code Orders.paymentStatus} stores {@code "Paid"}</li>
-     *   <li>{@code WalletTransactions.transactionStatus} stores
-     *       {@code "Completed"} (the CHECK constraint forbids {@code "Paid"})</li>
-     * </ul>
-     * Both represent the same real-world state, so accept either spelling.</p>
-     */
     public static boolean isPaid(String value) {
-        if (value == null) {
-            return false;
-        }
-        String v = value.trim();
-        return PAID.equalsIgnoreCase(v) || "Completed".equalsIgnoreCase(v);
+        return value != null && PAID.equalsIgnoreCase(value.trim());
     }
 
-    /**
-     * Returns true for any value that represents a refunded payment.
-     * {@code WalletTransactions.transactionStatus} stores {@code "Cancelled"}
-     * for refunds (the CHECK constraint forbids {@code "Refunded"}); accept
-     * both as the same logical state.
-     */
     public static boolean isRefunded(String value) {
-        if (value == null) {
-            return false;
-        }
-        String v = value.trim();
-        return REFUNDED.equalsIgnoreCase(v) || "Cancelled".equalsIgnoreCase(v);
+        return value != null && REFUNDED.equalsIgnoreCase(value.trim());
     }
 
-    /**
-     * Returns true for any value that represents a pending payment.
-     */
     public static boolean isPending(String value) {
-        if (value == null) {
-            return false;
-        }
-        return PENDING.equalsIgnoreCase(value.trim());
+        return value != null && PENDING.equalsIgnoreCase(value.trim());
     }
 
-    /**
-     * Returns true for any value that represents a cancelled payment.
-     */
     public static boolean isCancelled(String value) {
-        if (value == null) {
-            return false;
-        }
-        return CANCELLED.equalsIgnoreCase(value.trim());
+        return value != null && CANCELLED.equalsIgnoreCase(value.trim());
     }
 
-    /**
-     * Returns true for any value that represents a failed payment.
-     */
     public static boolean isFailed(String value) {
-        if (value == null) {
-            return false;
-        }
-        return FAILED.equalsIgnoreCase(value.trim());
+        return value != null && FAILED.equalsIgnoreCase(value.trim());
+    }
+
+    public static boolean isFinal(String value) {
+        return isPaid(value) || isRefunded(value)
+                || isCancelled(value) || isFailed(value);
     }
 }

@@ -1,6 +1,7 @@
 package DALs;
 
 import Utils.DBContext;
+import Utils.PaymentStatus;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -30,7 +31,8 @@ public class BillIntegrationDAO extends DBContext {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, paymentMethod.trim());
             ps.setString(2, paymentStatus.trim());
-            ps.setBigDecimal(3, totalAmount);
+            ps.setBigDecimal(3, PaymentStatus.isPaid(paymentStatus)
+                    ? totalAmount : BigDecimal.ZERO);
             ps.setString(4, orderId.trim());
             ps.executeUpdate();
             return true;

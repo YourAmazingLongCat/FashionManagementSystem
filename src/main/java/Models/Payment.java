@@ -3,10 +3,14 @@ package Models;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Payment record associated with an order.
+ *
+ * <p>The project supports Cash On Delivery and VNPay.</p>
+ */
 public class Payment {
 
     private String paymentId;
-    private String walletId;
     private String orderId;
     private String paymentType;
     private String paymentMethod;
@@ -19,12 +23,10 @@ public class Payment {
     public Payment() {
     }
 
-    public Payment(String paymentId, String walletId, String orderId,
-            String paymentType, String paymentMethod, String paymentStatus,
-            BigDecimal amount, String description, LocalDateTime createdAt,
-            LocalDateTime paidAt) {
+    public Payment(String paymentId, String orderId, String paymentType,
+            String paymentMethod, String paymentStatus, BigDecimal amount,
+            String description, LocalDateTime createdAt, LocalDateTime paidAt) {
         this.paymentId = paymentId;
-        this.walletId = walletId;
         this.orderId = orderId;
         this.paymentType = paymentType;
         this.paymentMethod = paymentMethod;
@@ -41,14 +43,6 @@ public class Payment {
 
     public void setPaymentId(String paymentId) {
         this.paymentId = paymentId;
-    }
-
-    public String getWalletId() {
-        return walletId;
-    }
-
-    public void setWalletId(String walletId) {
-        this.walletId = walletId;
     }
 
     public String getOrderId() {

@@ -11,7 +11,6 @@ import java.util.Map;
 import Models.Payment;
 import Services.PaymentService;
 import Utils.PaymentStatus;
-import Utils.PaymentType;
 import Utils.VNPayConfig;
 import Utils.VNPayProcessResult;
 import Utils.VNPayUtils;
@@ -45,7 +44,7 @@ public class VNPayReturnServlet extends HttpServlet {
                 || !VNPayUtils.validateSignature(parameters, secureHash, config.getHashSecret())) {
             session.setAttribute("errorMessage",
                     "The VNPay response could not be verified. No payment was updated.");
-            response.sendRedirect(request.getContextPath() + "/customer/wallet");
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
@@ -83,13 +82,8 @@ public class VNPayReturnServlet extends HttpServlet {
                 && gatewaySuccess
                 && payment != null
                 && PaymentStatus.isPaid(payment.getPaymentStatus())) {
-            if (PaymentType.DEPOSIT.equals(payment.getPaymentType())) {
-                session.setAttribute("successMessage",
-                        "VNPay payment completed. The money has been added to your wallet.");
-            } else {
-                session.setAttribute("successMessage",
-                        "VNPay payment completed. Your order is waiting for confirmation.");
-            }
+            session.setAttribute("successMessage",
+                    "VNPay payment completed. Your order is waiting for confirmation.");
         } else if (result == VNPayProcessResult.INVALID_AMOUNT) {
             session.setAttribute("errorMessage",
                     "The VNPay amount did not match the payment request. No money was recorded.");
@@ -144,7 +138,7 @@ public class VNPayReturnServlet extends HttpServlet {
                     + urlEncode(payment.getOrderId());
         }
 
-        return request.getContextPath() + "/customer/wallet";
+        return request.getContextPath() + "/customer/order-history";
     }
 
     private String urlEncode(String value) {

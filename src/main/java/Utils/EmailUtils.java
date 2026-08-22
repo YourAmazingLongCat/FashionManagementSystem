@@ -187,7 +187,7 @@ public class EmailUtils {
                     + "was not confirmed within 2 days and has been automatically removed.</p>"
                     + "<p><strong>Checkout time:</strong> " + checkoutTime + "<br>"
                     + "<strong>Order total:</strong> " + amount + "</p>"
-                    + "<p>If the order was paid by Wallet, the amount was returned automatically. "
+                    + "<p>If the order was paid through VNPay, its refund status is recorded automatically. "
                     + "For VNPay, the project has recorded the refund status.</p>"
                     + "<p>You can return to the store and place a new order at any time.</p>"
                     + "</div>";

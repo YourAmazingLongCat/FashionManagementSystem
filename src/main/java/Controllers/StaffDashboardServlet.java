@@ -49,7 +49,6 @@ public class StaffDashboardServlet extends HttpServlet {
 
         List<Order> orders = safeOrders();
         List<Payment> payments = safePayments();
-        List<Payment> pendingDeposits = safePendingDeposits();
         List<Product> products = safeProducts();
 
         request.setAttribute("totalCustomers", statisticDAO.getTotalCustomers());
@@ -62,11 +61,10 @@ public class StaffDashboardServlet extends HttpServlet {
         request.setAttribute("totalPayments", payments.size());
         request.setAttribute("pendingPayments", countPaymentsByStatus(payments, PaymentStatus::isPending));
         request.setAttribute("paidPayments", countPaymentsByStatus(payments, PaymentStatus::isPaid));
-        request.setAttribute("pendingDepositsCount", pendingDeposits.size());
+        request.setAttribute("failedPayments", countPaymentsByStatus(payments, PaymentStatus::isFailed));
         request.setAttribute("totalProducts", products.size());
         request.setAttribute("recentOrders", orders);
         request.setAttribute("payments", payments);
-        request.setAttribute("pendingDeposits", pendingDeposits);
 
         // Overview analytics (same data set used by Admin)
         request.setAttribute("revenue", statisticDAO.getRevenue());
@@ -88,11 +86,6 @@ public class StaffDashboardServlet extends HttpServlet {
     private List<Payment> safePayments() {
         List<Payment> payments = paymentService.getAllPayments();
         return payments == null ? new ArrayList<>() : payments;
-    }
-
-    private List<Payment> safePendingDeposits() {
-        List<Payment> pending = paymentService.getPendingDeposits();
-        return pending == null ? new ArrayList<>() : pending;
     }
 
     private List<Product> safeProducts() {

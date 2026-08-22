@@ -71,7 +71,7 @@ public class VNPayStartServlet extends HttpServlet {
         payment = paymentService.getPaymentForCustomer(paymentId, customerId);
         if (payment == null) {
             session.setAttribute("errorMessage", "This payment does not belong to your account.");
-            response.sendRedirect(request.getContextPath() + "/customer/wallet");
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
@@ -129,7 +129,7 @@ public class VNPayStartServlet extends HttpServlet {
                     + urlEncode(orderId);
         }
 
-        return request.getContextPath() + "/customer/wallet";
+        return request.getContextPath() + "/customer/order-history";
     }
 
     private String buildApplicationUrl(HttpServletRequest request, String path) {
