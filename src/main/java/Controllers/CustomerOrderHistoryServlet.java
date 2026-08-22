@@ -43,6 +43,7 @@ public class CustomerOrderHistoryServlet extends HttpServlet {
 
         request.setAttribute("listOrders", listOrders);
         request.setAttribute("keyword", keyword);
+        request.setAttribute("orderService", orderService);
         forwardLayout(request, response, ORDER_HISTORY_PAGE);
     }
 

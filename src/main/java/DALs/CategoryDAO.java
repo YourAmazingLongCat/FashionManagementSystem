@@ -62,12 +62,11 @@ public class CategoryDAO extends DBContext {
         return null;
     }
 
-    public boolean createCategory(Category category) {
+    public boolean createCategory(Category category) throws SQLException {
         String sql = "INSERT INTO Categories (categoryId, name, description) VALUES (?, ?, ?)";
 
         if (connection == null) {
-            System.out.println("createCategory error: database connection is not available.");
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         category.setCategoryId(generateNextCategoryId());
@@ -77,19 +76,14 @@ public class CategoryDAO extends DBContext {
             ps.setString(2, category.getName());
             ps.setString(3, category.getDescription());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("createCategory error: " + e.getMessage());
         }
-
-        return false;
     }
 
-    public boolean updateCategory(Category category) {
+    public boolean updateCategory(Category category) throws SQLException {
         String sql = "UPDATE Categories SET name = ?, description = ? WHERE categoryId = ?";
 
         if (connection == null) {
-            System.out.println("updateCategory error: database connection is not available.");
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -97,29 +91,20 @@ public class CategoryDAO extends DBContext {
             ps.setString(2, category.getDescription());
             ps.setString(3, category.getCategoryId());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("updateCategory error: " + e.getMessage());
         }
-
-        return false;
     }
 
-    public boolean deleteCategory(String categoryId) {
+    public boolean deleteCategory(String categoryId) throws SQLException {
         String sql = "DELETE FROM Categories WHERE categoryId = ?";
 
         if (connection == null) {
-            System.out.println("deleteCategory error: database connection is not available.");
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, categoryId);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("deleteCategory error: " + e.getMessage());
         }
-
-        return false;
     }
 
     private String generateNextCategoryId() {

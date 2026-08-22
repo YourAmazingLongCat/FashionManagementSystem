@@ -55,12 +55,11 @@ public class ColorDAO extends DBContext {
         return null;
     }
 
-    public boolean createColor(Color color) {
+    public boolean createColor(Color color) throws SQLException {
         String sql = "INSERT INTO Colors (colorId, colorName, hexCode) VALUES (?, ?, ?)";
 
         if (connection == null) {
-            System.out.println("createColor error: database connection is not available.");
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         color.setColorId(generateNextColorId());
@@ -70,19 +69,14 @@ public class ColorDAO extends DBContext {
             ps.setString(2, color.getColorName());
             ps.setString(3, color.getHexCode());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("createColor error: " + e.getMessage());
         }
-
-        return false;
     }
 
-    public boolean updateColor(Color color) {
+    public boolean updateColor(Color color) throws SQLException {
         String sql = "UPDATE Colors SET colorName = ?, hexCode = ? WHERE colorId = ?";
 
         if (connection == null) {
-            System.out.println("updateColor error: database connection is not available.");
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -90,29 +84,20 @@ public class ColorDAO extends DBContext {
             ps.setString(2, color.getHexCode());
             ps.setString(3, color.getColorId());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("updateColor error: " + e.getMessage());
         }
-
-        return false;
     }
 
-    public boolean deleteColor(String colorId) {
+    public boolean deleteColor(String colorId) throws SQLException {
         String sql = "DELETE FROM Colors WHERE colorId = ?";
 
         if (connection == null) {
-            System.out.println("deleteColor error: database connection is not available.");
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, colorId);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("deleteColor error: " + e.getMessage());
         }
-
-        return false;
     }
 
     private String generateNextColorId() {

@@ -2,12 +2,7 @@ package Models;
 
 import java.math.BigDecimal;
 
-/**
- * Model đại diện cho 1 dòng trong bảng "Chi tiết theo sản phẩm":
- * tổng số lượng đã bán, tổng tiền đã thu (Paid), tổng tiền còn thiếu
- * (các bill có paymentStatus khác 'Paid') của MỘT sản phẩm, trong
- * khoảng thời gian đang lọc.
- */
+
 public class ProductSalesRow {
 
     private String productId;

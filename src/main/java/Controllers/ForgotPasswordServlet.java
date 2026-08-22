@@ -27,47 +27,66 @@ public class ForgotPasswordServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         String email = request.getParameter("email");
         HttpSession session = request.getSession();
 
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
         if (email == null || email.trim().isEmpty()) {
-            request.setAttribute("errorMessage", "Vui lòng nhập địa chỉ email!");
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false, \"message\":\"Please enter your email address!\"}");
+                return;
+            }
+            request.setAttribute("errorMessage", "Please enter your email address!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
             return;
         }
 
         email = email.trim().toLowerCase();
 
-        // Kiểm tra email có tồn tại trong hệ thống không
         AccountDAO accountDAO = new AccountDAO();
         Account account = accountDAO.getAccountByEmail(email);
 
         if (account == null) {
-            // Không tiết lộ email có tồn tại hay không vì lý do bảo mật
-            // Vẫn hiển thị thông báo thành công để tránh email enumeration
-            request.setAttribute("successMessage", "Nếu email tồn tại trong hệ thống, mã OTP đã được gửi!");
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":true}");
+                return;
+            }
+            request.setAttribute("successMessage", "If the email exists, an OTP has been sent!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
             return;
         }
 
-        // Tạo OTP mới
         String otpCode = generateOTP();
         long expiryTime = System.currentTimeMillis() + (OTP_EXPIRY_MINUTES * 60 * 1000);
 
-        // Lưu OTP và thông tin vào session
         session.setAttribute("forgotPasswordOTP", otpCode);
         session.setAttribute("forgotPasswordEmail", email);
         session.setAttribute("forgotPasswordOTPExpiry", expiryTime);
 
-        // Gửi email OTP
         boolean emailSent = EmailUtils.sendOTPForPasswordReset(email, otpCode, OTP_EXPIRY_MINUTES);
 
         if (emailSent) {
-            // Chuyển hướng đến trang nhập OTP
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":true}");
+                return;
+            }
             response.sendRedirect(request.getContextPath() + "/auth/verify-otp?mode=forgot");
         } else {
-            request.setAttribute("errorMessage", "Không thể gửi email. Vui lòng thử lại sau!");
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false, \"message\":\"Cannot send email. Please try again later!\"}");
+                return;
+            }
+            request.setAttribute("errorMessage", "Cannot send email. Please try again later!");
             request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
         }
     }

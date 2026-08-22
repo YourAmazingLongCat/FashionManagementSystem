@@ -148,13 +148,15 @@ public class ProductExperienceServlet extends HttpServlet {
 
         String productId = trim(request.getParameter("productId"));
         WishlistDAO wishlistDAO = new WishlistDAO();
-        boolean inWishlist;
-        if (wishlistDAO.isInWishlist(user.getAccountId(), productId)) {
+        boolean inWishlist = wishlistDAO.isInWishlist(user.getAccountId(), productId);
+        if (inWishlist) {
             wishlistDAO.removeFromWishlist(user.getAccountId(), productId);
             inWishlist = false;
         } else {
-            wishlistDAO.addToWishlist(user.getAccountId(), productId);
-            inWishlist = true;
+            // addToWishlist now refuses hidden (Inactive) products and
+            // returns false. Reflect that accurately in the JSON response
+            // so the heart icon does not appear filled for hidden products.
+            inWishlist = wishlistDAO.addToWishlist(user.getAccountId(), productId);
         }
 
         Set<String> wishlist = wishlistDAO.getWishlistProductIdsByAccountId(user.getAccountId());

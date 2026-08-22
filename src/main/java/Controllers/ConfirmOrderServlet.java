@@ -42,7 +42,7 @@ public class ConfirmOrderServlet extends HttpServlet {
         session.setAttribute(confirmed ? "successMessage" : "errorMessage",
                 confirmed
                         ? "Order confirmed successfully."
-                        : "This order cannot be confirmed. The customer must press Place order first and Wallet/VNPay payment must be Paid.");
+                        : "This order cannot be confirmed. The customer must place the order first, and VNPay payments must be Paid.");
 
         response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
     }

@@ -23,16 +23,54 @@ public class OrderDAO extends DBContext {
         super();
     }
 
+    /**
+     * Count orders whose status is still Pending that reference any variant of
+     * the given product. Used to block product deletion only while the order
+     * is in Pending state.
+     */
+    public int countPendingOrdersByProductId(String productId) {
+        if (connection == null || productId == null || productId.isBlank()) return 0;
+        String sql = "SELECT COUNT(*) FROM OrderItems oi "
+                + "JOIN Orders o ON oi.orderId = o.orderId "
+                + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                + "WHERE pv.productId = ? AND o.orderStatus = 'Pending'";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException ex) {
+            System.out.println("countPendingOrdersByProductId error: " + ex.getMessage());
+        }
+        return 0;
+    }
+
     public int countOrders(String keyword) {
+        return countOrders(keyword, null, null, null);
+    }
+
+    public int countOrders(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM Orders o WHERE 1=1 ");
         List<Object> params = new ArrayList<>();
 
         if (keyword != null && !keyword.trim().isEmpty()) {
-            sql.append("AND (o.orderId LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) ");
+            sql.append("AND (o.orderId LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
             String kw = "%" + keyword.trim() + "%";
             params.add(kw);
             params.add(kw);
             params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(status.trim());
+        }
+        if (dateFrom != null) {
+            sql.append("AND o.placedAt >= ? ");
+            params.add(Timestamp.valueOf(dateFrom));
+        }
+        if (dateTo != null) {
+            sql.append("AND o.placedAt < ? ");
+            params.add(Timestamp.valueOf(dateTo));
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -50,20 +88,47 @@ public class OrderDAO extends DBContext {
         return 0;
     }
 
+    /**
+     * An order is considered placed after the customer has selected a payment
+     * method and a purchase payment record exists.
+     */
+    private static final String ORDER_PLACED_EXPR
+            = "CAST(CASE WHEN o.paymentMethod IS NOT NULL "
+            + "          AND EXISTS (SELECT 1 FROM Payments p "
+            + "                       WHERE p.orderId = o.orderId "
+            + "                         AND p.paymentType = 'Purchase') "
+            + "          THEN 1 ELSE 0 END AS BIT)";
+
     public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {
+        return getOrdersPaginated(keyword, null, null, null, offset, limit);
+    }
+
+    public List<Order> getOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-            "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE 1=1 "
+            "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
 
         if (keyword != null && !keyword.trim().isEmpty()) {
-            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) ");
+            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
             String kw = "%" + keyword.trim() + "%";
             params.add(kw);
             params.add(kw);
             params.add(kw);
             params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(status.trim());
+        }
+        if (dateFrom != null) {
+            sql.append("AND o.placedAt >= ? ");
+            params.add(Timestamp.valueOf(dateFrom));
+        }
+        if (dateTo != null) {
+            sql.append("AND o.placedAt < ? ");
+            params.add(Timestamp.valueOf(dateTo));
         }
 
         sql.append("ORDER BY o.placedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
@@ -74,7 +139,7 @@ public class OrderDAO extends DBContext {
                 ps.setObject(idx++, p);
             }
             ps.setInt(idx++, offset);
-            ps.setInt(idx++, limit);
+            ps.setInt(idx, limit);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -89,7 +154,7 @@ public class OrderDAO extends DBContext {
 
     public List<Order> getAllOrders() {
         List<Order> listOrders = new ArrayList<>();
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o ORDER BY o.placedAt DESC";
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query);
                 ResultSet rs = ps.executeQuery()) {
@@ -106,7 +171,7 @@ public class OrderDAO extends DBContext {
     }
 
     public Order getOrderById(String orderId) {
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE o.orderId = ?";
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE o.orderId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -125,7 +190,7 @@ public class OrderDAO extends DBContext {
     }
 
     public Order getOrderByIdAndCustomerId(String orderId, String customerId) {
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE o.orderId = ? AND o.customerId = ?";
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE o.orderId = ? AND o.customerId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -146,7 +211,7 @@ public class OrderDAO extends DBContext {
 
     public List<Order> getOrdersByCustomerId(String customerId) {
         List<Order> listOrders = new ArrayList<>();
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o WHERE o.customerId = ? ORDER BY o.placedAt DESC";
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE o.customerId = ? ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, customerId);
@@ -167,9 +232,9 @@ public class OrderDAO extends DBContext {
     public List<Order> searchOrdersByCustomerId(String customerId, String keyword) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o "
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o "
                 + "WHERE o.customerId = ? "
-                + "AND (o.orderId LIKE ? OR o.orderStatus LIKE ? OR o.phone LIKE ? OR o.shippingAddress LIKE ?) "
+                + "AND (o.orderId LIKE ? OR o.orderStatus LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) "
                 + "ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
@@ -195,27 +260,47 @@ public class OrderDAO extends DBContext {
     }
 
     public List<Order> searchOrdersPaginated(String keyword, int offset, int limit) {
+        return searchOrdersPaginated(keyword, null, null, null, offset, limit);
+    }
+
+    public List<Order> searchOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o "
-                + "WHERE o.orderId LIKE ? "
-                + "OR o.customerId LIKE ? "
-                + "OR o.orderStatus LIKE ? "
-                + "OR o.phone LIKE ? "
-                + "OR o.shippingAddress LIKE ? "
-                + "ORDER BY o.placedAt DESC "
-                + "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        StringBuilder sql = new StringBuilder(
+                "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            String searchValue = "%" + keyword + "%";
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.orderStatus LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append("AND o.orderStatus = ? ");
+            params.add(status.trim());
+        }
+        if (dateFrom != null) {
+            sql.append("AND o.placedAt >= ? ");
+            params.add(Timestamp.valueOf(dateFrom));
+        }
+        if (dateTo != null) {
+            sql.append("AND o.placedAt < ? ");
+            params.add(Timestamp.valueOf(dateTo));
+        }
 
-            ps.setString(1, searchValue);
-            ps.setString(2, searchValue);
-            ps.setString(3, searchValue);
-            ps.setString(4, searchValue);
-            ps.setString(5, searchValue);
-            ps.setInt(6, offset);
-            ps.setInt(7, limit);
+        sql.append("ORDER BY o.placedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, offset);
+            ps.setInt(idx, limit);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -233,11 +318,11 @@ public class OrderDAO extends DBContext {
     public List<Order> searchOrdersForStaff(String keyword) {
         List<Order> listOrders = new ArrayList<>();
 
-        String query = "SELECT o.*, CAST(CASE WHEN EXISTS (SELECT 1 FROM Payments p WHERE p.orderId = o.orderId AND p.paymentType = 'Purchase') THEN 1 ELSE 0 END AS BIT) AS orderPlaced FROM Orders o "
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o "
                 + "WHERE o.orderId LIKE ? "
                 + "OR o.customerId LIKE ? "
                 + "OR o.orderStatus LIKE ? "
-                + "OR o.phone LIKE ? "
+                + "OR o.shippingPhone LIKE ? "
                 + "OR o.shippingAddress LIKE ? "
                 + "ORDER BY o.placedAt DESC";
 
@@ -269,9 +354,7 @@ public class OrderDAO extends DBContext {
 
     /**
      * Creates a Pending order, reserves its stock and removes the selected
-     * cart rows in one database transaction. This is the entry point used by
-     * the Cart Checkout button, so the cart cannot remain unchanged after an
-     * order has already been created.
+     * cart rows in one database transaction.
      */
     public boolean createOrderFromCart(Order order, List<OrderItem> orderItems,
             String cartId, String[] cartItemIds) {
@@ -300,14 +383,18 @@ public class OrderDAO extends DBContext {
             return false;
         }
 
+        // New schema: phone -> shippingPhone. Order has no separate phone column.
         String orderQuery = "INSERT INTO Orders "
-                + "(orderId, customerId, orderStatus, shippingAddress, phone, placedAt, totalAmount) "
+                + "(orderId, customerId, orderStatus, shippingAddress, shippingPhone, placedAt, totalAmount) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        String reserveQuery = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
-                + "SET reservedQty = reservedQty + ? "
-                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
-
+        // Stock is intentionally NOT touched at checkout time. The Pending
+        // order just records what the customer wants to buy; reserving or
+        // deducting stock here would make the variant look out-of-stock to
+        // other shoppers even though the customer hasn't actually placed
+        // the order yet. Reservation only happens when the customer presses
+        // Place order (see CustomerOrderDetailServlet#placeOrder), and the
+        // real deduction happens when staff confirms the order.
         String itemQuery = "INSERT INTO OrderItems "
                 + "(orderItemId, orderId, variantId, quantity, unitPrice, discountAmount) "
                 + "VALUES (?, ?, ?, ?, ?, ?)";
@@ -337,25 +424,6 @@ public class OrderDAO extends DBContext {
                 ps.executeUpdate();
             }
 
-            /*
-             * Reserve every variant inside the same database transaction that
-             * creates the Order. The conditional UPDATE is atomic, so two
-             * customers cannot both reserve the last available unit.
-             */
-            Map<String, Integer> quantitiesByVariant = aggregateQuantities(orderItems);
-            try (PreparedStatement ps = connection.prepareStatement(reserveQuery)) {
-                for (Map.Entry<String, Integer> entry : quantitiesByVariant.entrySet()) {
-                    int quantity = entry.getValue();
-                    ps.setInt(1, quantity);
-                    ps.setString(2, entry.getKey());
-                    ps.setInt(3, quantity);
-
-                    if (ps.executeUpdate() != 1) {
-                        throw new SQLException("Insufficient available stock for variant " + entry.getKey());
-                    }
-                }
-            }
-
             try (PreparedStatement ps = connection.prepareStatement(itemQuery)) {
                 for (OrderItem item : orderItems) {
                     ps.setString(1, item.getOrderItemId());
@@ -372,26 +440,22 @@ public class OrderDAO extends DBContext {
             }
 
             if (cartId != null && cartItemIds != null && !cartItemIds.isEmpty()) {
-                StringBuilder placeholders = new StringBuilder();
-                for (int i = 0; i < cartItemIds.size(); i++) {
-                    if (i > 0) {
-                        placeholders.append(',');
-                    }
-                    placeholders.append('?');
-                }
-
-                String deleteCartSql = "DELETE FROM CartItems "
-                        + "WHERE cartId = ? AND cartItemId IN (" + placeholders + ")";
+                // In the new schema Cart rows are keyed by cartId (PK).
+                // The caller passes the cartIds of the rows to remove.
+                String deleteCartSql = "DELETE FROM Cart WHERE customerId = ? AND cartId IN ("
+                        + placeholders(cartItemIds.size()) + ")";
 
                 try (PreparedStatement ps = connection.prepareStatement(deleteCartSql)) {
-                    ps.setString(1, cartId);
+                    ps.setString(1, order.getCustomerId());
                     int parameterIndex = 2;
-                    for (String itemId : cartItemIds) {
-                        ps.setString(parameterIndex++, itemId);
+                    for (String cartRowId : cartItemIds) {
+                        ps.setString(parameterIndex++, cartRowId);
                     }
 
                     int deletedRows = ps.executeUpdate();
-                    if (deletedRows != cartItemIds.size()) {
+                    // Loose match — the cart may have changed since selection.
+                    // We only fail if the customer has no cart at all to clean up.
+                    if (deletedRows == 0 && !hasAnyCartRow(connection, order.getCustomerId())) {
                         throw new SQLException("The selected cart changed before checkout completed.");
                     }
                 }
@@ -410,14 +474,85 @@ public class OrderDAO extends DBContext {
         }
     }
 
+    /**
+     * Reserves stock for an existing Pending order. Called when the customer
+     * presses Place order on the order detail page. Stock is intentionally
+     * not touched at Cart Checkout (see {@link #createOrderFromCart}); this
+     * method closes the gap so the chosen variants are no longer visible to
+     * other shoppers.
+     */
+    public boolean reserveStockForOrder(String orderId) {
+        if (isBlank(orderId)) {
+            return false;
+        }
+
+        Map<String, Integer> quantities;
+        try {
+            quantities = getOrderQuantities(orderId);
+        } catch (SQLException ex) {
+            System.out.println("reserveStockForOrder: failed to load order quantities - " + ex.getMessage());
+            return false;
+        }
+        if (quantities.isEmpty()) {
+            return false;
+        }
+
+        String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
+                + "SET reservedQty = reservedQty + ? "
+                + "WHERE variantId = ? AND (stockQty - reservedQty) >= ?";
+
+        try {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                for (Map.Entry<String, Integer> entry : quantities.entrySet()) {
+                    int quantity = entry.getValue();
+                    ps.setInt(1, quantity);
+                    ps.setString(2, entry.getKey());
+                    ps.setInt(3, quantity);
+
+                    if (ps.executeUpdate() != 1) {
+                        rollback();
+                        System.out.println("reserveStockForOrder: insufficient available stock for variant "
+                                + entry.getKey() + " in order " + orderId);
+                        return false;
+                    }
+                }
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollback();
+            System.out.println("reserveStockForOrder error: " + e.getMessage());
+            return false;
+        } finally {
+            restoreAutoCommit();
+        }
+    }
+
+    private static String placeholders(int count) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            if (i > 0) sb.append(',');
+            sb.append('?');
+        }
+        return sb.toString();
+    }
+
+    private static boolean hasAnyCartRow(java.sql.Connection conn, String customerId) throws SQLException {
+        String sql = "SELECT 1 FROM Cart WHERE customerId = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
 
     /**
      * Changes an order status and performs the matching inventory transition
      * in one transaction.
-     *
-     * Pending -> Confirmed: reserved stock becomes sold stock.
-     * Confirmed -> Pending: sold stock returns to a reservation.
-     * Other one-step status changes do not alter inventory.
      */
     public boolean changeOrderStatusWithInventory(String orderId,
             String expectedCurrentStatus, String newStatus) {
@@ -448,30 +583,26 @@ public class OrderDAO extends DBContext {
                 return false;
             }
 
-            // Shipping is irreversible: Shipping/Delivered cannot move backward.
             if (isForbiddenTransitionFromShippingOrLater(currentStatus, newStatus)) {
                 rollback();
                 return false;
             }
 
             if ("Pending".equals(currentStatus) && "Confirmed".equals(newStatus)) {
-                // Check if order has reserved stock (created from cart)
                 boolean hasReservedStock = hasReservedStock(orderId);
                 if (hasReservedStock) {
-                    // Order from cart: commit reserved stock
                     if (!commitReservedStock(orderId)) {
                         rollback();
                         return false;
                     }
                 } else {
-                    // Order not from cart: deduct directly from stockQty
                     if (!deductStockForConfirm(orderId)) {
                         rollback();
                         return false;
                     }
                 }
-                // Create Bill when order is confirmed
-                createBillForOrder(orderId);
+                // Bills no longer exist - paymentMethod/paymentStatus live on
+                // the Orders row directly (PaymentService fills them in).
             } else if ("Confirmed".equals(currentStatus) && "Pending".equals(newStatus)) {
                 if (!moveCommittedStockBackToReservation(orderId)) {
                     rollback();
@@ -500,11 +631,6 @@ public class OrderDAO extends DBContext {
         }
     }
 
-    /**
-     * Cancels an order and restores/release inventory consistently.
-     * Pending orders release reservedQty. Confirmed/Processing orders have
-     * already consumed physical stock, so that stock is returned.
-     */
     public boolean cancelOrderAndAdjustInventory(String orderId) {
         if (isBlank(orderId)) {
             return false;
@@ -572,8 +698,6 @@ public class OrderDAO extends DBContext {
             return false;
         }
 
-        // Shipping may remain Shipping or move to Delivered. Delivered is final.
-        // Cancelled/unknown statuses have index -1 and are also rejected here.
         return newIndex < currentIndex;
     }
 
@@ -616,14 +740,9 @@ public class OrderDAO extends DBContext {
         return false;
     }
 
-    /**
-     * Allows the owning customer to update delivery details only while the
-     * order has not started shipping. The status condition is part of the
-     * UPDATE statement to avoid a race with staff changing the status.
-     */
     public boolean updateDeliveryInformationForCustomer(String orderId,
             String customerId, String shippingAddress, String phone) {
-        String query = "UPDATE Orders SET shippingAddress = ?, phone = ? "
+        String query = "UPDATE Orders SET shippingAddress = ?, shippingPhone = ? "
                 + "WHERE orderId = ? AND customerId = ? "
                 + "AND orderStatus IN ('Pending', 'Confirmed', 'Processing')";
 
@@ -645,7 +764,7 @@ public class OrderDAO extends DBContext {
         String query = "UPDATE Orders SET "
                 + "orderStatus = ?, "
                 + "shippingAddress = ?, "
-                + "phone = ?, "
+                + "shippingPhone = ?, "
                 + "totalAmount = ? "
                 + "WHERE orderId = ? "
                 + "AND NOT ((orderStatus = 'Shipping' AND ? NOT IN ('Shipping', 'Delivered')) "
@@ -707,12 +826,13 @@ public class OrderDAO extends DBContext {
             placedAt = placedAtTimestamp.toLocalDateTime();
         }
 
+        // New schema: shippingPhone replaces phone.
         Order order = new Order(
                 rs.getString("orderId"),
                 rs.getString("customerId"),
                 rs.getString("orderStatus"),
                 rs.getString("shippingAddress"),
-                rs.getString("phone"),
+                rs.getString("shippingPhone"),
                 placedAt,
                 rs.getBigDecimal("totalAmount")
         );
@@ -720,14 +840,6 @@ public class OrderDAO extends DBContext {
         return order;
     }
 
-
-    private Map<String, Integer> aggregateQuantities(List<OrderItem> orderItems) {
-        Map<String, Integer> quantities = new TreeMap<>();
-        for (OrderItem item : orderItems) {
-            quantities.merge(item.getVariantId(), item.getQuantity(), Integer::sum);
-        }
-        return quantities;
-    }
 
     private Map<String, Integer> getOrderQuantities(String orderId) throws SQLException {
         Map<String, Integer> quantities = new TreeMap<>();
@@ -753,10 +865,13 @@ public class OrderDAO extends DBContext {
     }
 
     private boolean releaseReservedStock(String orderId) throws SQLException {
+        // Lenient version: a Pending order created via Cart Checkout before
+        // Place order no longer holds any reservation. Releasing zero is a
+        // no-op rather than an error so cancellation still succeeds.
         String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
                 + "SET reservedQty = reservedQty - ? "
                 + "WHERE variantId = ? AND reservedQty >= ?";
-        return updateInventoryForOrder(orderId, sql, InventoryOperation.RELEASE_RESERVED);
+        return updateInventoryForOrderLenient(orderId, sql, InventoryOperation.RELEASE_RESERVED);
     }
 
     private boolean restoreCommittedStock(String orderId) throws SQLException {
@@ -774,6 +889,22 @@ public class OrderDAO extends DBContext {
 
     private boolean updateInventoryForOrder(String orderId, String sql,
             InventoryOperation operation) throws SQLException {
+        return updateInventoryForOrderInternal(orderId, sql, operation, false);
+    }
+
+    /**
+     * Same as {@link #updateInventoryForOrder} but treats an affected-row
+     * count of 0 as success. Used by release flows where stock may have
+     * never been reserved (e.g. a Pending order that never reached Place
+     * order under the new reservation flow).
+     */
+    private boolean updateInventoryForOrderLenient(String orderId, String sql,
+            InventoryOperation operation) throws SQLException {
+        return updateInventoryForOrderInternal(orderId, sql, operation, true);
+    }
+
+    private boolean updateInventoryForOrderInternal(String orderId, String sql,
+            InventoryOperation operation, boolean lenient) throws SQLException {
         Map<String, Integer> quantities = getOrderQuantities(orderId);
         if (quantities.isEmpty()) {
             return false;
@@ -810,7 +941,8 @@ public class OrderDAO extends DBContext {
                         return false;
                 }
 
-                if (ps.executeUpdate() != 1) {
+                int affected = ps.executeUpdate();
+                if (!lenient && affected != 1) {
                     return false;
                 }
             }
@@ -818,9 +950,6 @@ public class OrderDAO extends DBContext {
         return true;
     }
 
-    /**
-     * Checks if the order has reserved stock (was created from cart).
-     */
     private boolean hasReservedStock(String orderId) throws SQLException {
         String sql = "SELECT 1 FROM OrderItems oi "
                 + "INNER JOIN ProductVariants pv ON oi.variantId = pv.variantId "
@@ -828,13 +957,11 @@ public class OrderDAO extends DBContext {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, orderId);
             try (ResultSet rs = ps.executeQuery()) {
-                // Check if there's at least one item with sufficient reserved stock
                 if (rs.next()) {
                     return true;
                 }
             }
         }
-        // Also check if any item has ANY reservedQty > 0 for this order
         String checkSql = "SELECT 1 FROM OrderItems oi "
                 + "INNER JOIN ProductVariants pv ON oi.variantId = pv.variantId "
                 + "WHERE oi.orderId = ? AND pv.reservedQty > 0";
@@ -846,10 +973,6 @@ public class OrderDAO extends DBContext {
         }
     }
 
-    /**
-     * Deducts stock directly without using reservedQty.
-     * Used when order was not created from cart (no reserved stock).
-     */
     private boolean deductStockForConfirm(String orderId) throws SQLException {
         String sql = "UPDATE ProductVariants WITH (UPDLOCK, ROWLOCK) "
                 + "SET stockQty = stockQty - oi.quantity "
@@ -862,38 +985,6 @@ public class OrderDAO extends DBContext {
             int updated = ps.executeUpdate();
             System.out.println("deductStockForConfirm: updated " + updated + " rows for orderId=" + orderId);
             return updated > 0;
-        }
-    }
-
-    private void createBillForOrder(String orderId) {
-        // Get order total amount
-        String orderSql = "SELECT totalAmount FROM Orders WHERE orderId = ?";
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        try (PreparedStatement ps = connection.prepareStatement(orderSql)) {
-            ps.setString(1, orderId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    totalAmount = rs.getBigDecimal("totalAmount");
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("createBillForOrder: failed to get order total: " + e.getMessage());
-            return;
-        }
-
-        // Insert Bill
-        String billId = "BILL" + System.currentTimeMillis() + (int) (Math.random() * 900 + 100);
-        String insertSql = "INSERT INTO Bills (billId, orderId, paymentMethod, paymentStatus, totalAmount) VALUES (?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(insertSql)) {
-            ps.setString(1, billId);
-            ps.setString(2, orderId);
-            ps.setString(3, "COD");
-            ps.setString(4, "Pending");
-            ps.setBigDecimal(5, totalAmount != null ? totalAmount : BigDecimal.ZERO);
-            ps.executeUpdate();
-            System.out.println("createBillForOrder: Bill created with billId=" + billId + " for orderId=" + orderId);
-        } catch (SQLException e) {
-            System.err.println("createBillForOrder: failed to insert bill: " + e.getMessage());
         }
     }
 

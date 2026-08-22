@@ -249,7 +249,7 @@
                                         <c:if test="${order.orderStatus eq 'Pending' or order.orderStatus eq 'Confirmed' or order.orderStatus eq 'Processing'}">
                                             <form class="order-inline-form" method="post"
                                                   action="${pageContext.request.contextPath}/staff/cancel-order"
-                                                  onsubmit="return confirm('Cancel this order? Wallet payments will be refunded automatically if applicable.');">
+                                                  onsubmit="return confirm('Cancel this order? A completed VNPay payment will be marked for refund if applicable.');">
                                                 <input type="hidden" name="orderId" value="${order.orderId}" />
                                                 <button class="order-btn order-btn-danger" type="submit">
                                                     <span class="material-symbols-outlined">cancel</span>
@@ -267,7 +267,7 @@
                                         <div class="order-warning-box">
                                             Forward and backward movement must be one status level each time before Shipping.
                                             Once an order reaches Shipping, it cannot move backward or be cancelled.
-                                            Wallet/VNPay orders must be Paid before moving forward.
+                                            VNPay orders must be Paid before moving forward.
                                             COD orders can move forward while payment is Pending and become Paid automatically when Delivered.
                                         </div>
                                     </c:otherwise>

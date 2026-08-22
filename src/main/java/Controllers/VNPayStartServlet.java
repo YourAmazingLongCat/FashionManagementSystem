@@ -71,17 +71,17 @@ public class VNPayStartServlet extends HttpServlet {
         payment = paymentService.getPaymentForCustomer(paymentId, customerId);
         if (payment == null) {
             session.setAttribute("errorMessage", "This payment does not belong to your account.");
-            response.sendRedirect(request.getContextPath() + "/customer/wallet");
+            response.sendRedirect(request.getContextPath() + "/customer/order-history");
             return;
         }
 
-        if (PaymentStatus.PAID.equals(payment.getPaymentStatus())) {
+        if (PaymentStatus.isPaid(payment.getPaymentStatus())) {
             session.setAttribute("successMessage", "This VNPay payment has already been completed.");
             response.sendRedirect(resolveFallbackUrl(request, payment, orderId));
             return;
         }
 
-        if (!PaymentStatus.PENDING.equals(payment.getPaymentStatus())) {
+        if (!PaymentStatus.isPending(payment.getPaymentStatus())) {
             session.setAttribute("errorMessage",
                     "This VNPay request is no longer active. Please create a new payment request.");
             response.sendRedirect(resolveFallbackUrl(request, payment, orderId));
@@ -129,7 +129,7 @@ public class VNPayStartServlet extends HttpServlet {
                     + urlEncode(orderId);
         }
 
-        return request.getContextPath() + "/customer/wallet";
+        return request.getContextPath() + "/customer/order-history";
     }
 
     private String buildApplicationUrl(HttpServletRequest request, String path) {

@@ -77,7 +77,7 @@
                 <li class="nav-item">
                     <a class="nav-link ${param.currentPage == 'payments' ? 'active' : ''}"
                        href="${pageContext.request.contextPath}/staff/payments">
-                        <i class="fas fa-wallet"></i> Manage Payments
+                        <i class="fas fa-credit-card"></i> Manage Payments
                     </a>
                 </li>
                 <li class="nav-item">
@@ -192,12 +192,12 @@
                     <div class="col-md-3 col-6"><div class="stat-card"><div class="stat-label"><i class="fas fa-money-bill"></i> Total</div><div class="stat-number">${empty totalPayments ? 0 : totalPayments}</div></div></div>
                     <div class="col-md-3 col-6"><div class="stat-card" style="border-left-color: #f59e0b;"><div class="stat-label"><i class="fas fa-clock"></i> Pending</div><div class="stat-number">${empty pendingPayments ? 0 : pendingPayments}</div></div></div>
                     <div class="col-md-3 col-6"><div class="stat-card" style="border-left-color: #27ae60;"><div class="stat-label"><i class="fas fa-check-circle"></i> Paid</div><div class="stat-number">${empty paidPayments ? 0 : paidPayments}</div></div></div>
-                    <div class="col-md-3 col-6"><div class="stat-card" style="border-left-color: #e74c3c;"><div class="stat-label"><i class="fas fa-hand-holding-usd"></i> Pending deposits</div><div class="stat-number">${empty pendingDepositsCount ? 0 : pendingDepositsCount}</div></div></div>
+                    <div class="col-md-3 col-6"><div class="stat-card" style="border-left-color: #e74c3c;"><div class="stat-label"><i class="fas fa-circle-xmark"></i> Failed</div><div class="stat-number">${empty failedPayments ? 0 : failedPayments}</div></div></div>
                 </div>
 
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-wallet me-2"></i> Recent payments</span>
+                        <span><i class="fas fa-credit-card me-2"></i> Recent payments</span>
                         <a href="${pageContext.request.contextPath}/staff/payments" class="btn btn-sm btn-outline-secondary">Open full page</a>
                     </div>
                     <div class="card-body p-0">

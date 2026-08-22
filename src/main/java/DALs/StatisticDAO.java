@@ -16,8 +16,12 @@ public class StatisticDAO extends DBContext {
         super();
     }
 
+    /**
+     * In the new schema, customers live in their own table, so this simply
+     * counts rows from Customers.
+     */
     public int getTotalCustomers() {
-        String sql = "SELECT COUNT(*) FROM Accounts WHERE role='Customer'";
+        String sql = "SELECT COUNT(*) FROM Customers";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
@@ -42,10 +46,6 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    /**
-     * Revenue = sum of OrderItems (unitPrice * quantity)
-     * Only counts non-cancelled orders
-     */
     public double getRevenue() {
         String sql = """
             SELECT ISNULL(SUM(OI.quantity * OI.unitPrice), 0)
@@ -64,9 +64,6 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    /**
-     * Revenue by date range
-     */
     public double getRevenue(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT ISNULL(SUM(OI.quantity * OI.unitPrice), 0)
@@ -97,25 +94,20 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    /**
-     * Cost of Goods Sold = sum of (average import price * quantity sold)
-     * Uses WarehouseImports to get actual import costs
-     * If no import history exists, falls back to basePrice
-     */
     public double getCostOfGoodsSold() {
         return getCostOfGoodsSold(null, null);
     }
 
     public double getCostOfGoodsSold(String fromDate, String toDate) {
-        // Calculate cost using average import price from WarehouseImports
+        // New schema: WarehouseImports has importedAt, not importDate.
         StringBuilder sql = new StringBuilder("""
             SELECT ISNULL(SUM(cost.totalCost), 0) AS totalCost
             FROM (
-                SELECT 
+                SELECT
                     OI.variantId,
                     OI.quantity,
                     OI.orderId,
-                    CASE 
+                    CASE
                         WHEN avgImport.avgPrice IS NOT NULL THEN avgImport.avgPrice * OI.quantity
                         ELSE P.basePrice * OI.quantity
                     END AS totalCost
@@ -131,7 +123,7 @@ public class StatisticDAO extends DBContext {
                 WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
-        
+
         if (fromDate != null && !fromDate.isEmpty()) {
             sql.append(" AND O.placedAt >= ?");
             params.add(fromDate);
@@ -141,7 +133,7 @@ public class StatisticDAO extends DBContext {
             params.add(toDate + " 23:59:59");
         }
         sql.append(") cost");
-        
+
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 ps.setObject(i + 1, params.get(i));
@@ -156,9 +148,6 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    /**
-     * Profit = Revenue - Cost of Goods Sold
-     */
     public double getProfit() {
         return getProfit(null, null);
     }
@@ -173,14 +162,13 @@ public class StatisticDAO extends DBContext {
         List<CustomerStatistic> list = new ArrayList<>();
         String sql = """
                      SELECT
-                        A.accountId,
-                        A.fullName,
+                        c.customerId AS accountId,
+                        c.fullName,
                         COUNT(O.orderId) AS TotalOrders
-                     FROM Accounts A
-                     JOIN Orders O ON A.accountId = O.customerId
-                     WHERE A.role='Customer'
-                       AND O.orderStatus <> 'Cancelled'
-                     GROUP BY A.accountId, A.fullName
+                     FROM Customers c
+                     JOIN Orders O ON c.customerId = O.customerId
+                     WHERE O.orderStatus <> 'Cancelled'
+                     GROUP BY c.customerId, c.fullName
                      ORDER BY TotalOrders DESC
                      """;
         try (PreparedStatement ps = connection.prepareStatement(sql);
@@ -226,14 +214,13 @@ public class StatisticDAO extends DBContext {
         List<CustomerStatistic> list = new ArrayList<>();
         String sql = """
                      SELECT
-                        A.accountId,
-                        A.fullName,
+                        c.customerId AS accountId,
+                        c.fullName,
                         COUNT(O.orderId) AS TotalOrders
-                     FROM Accounts A
-                     JOIN Orders O ON A.accountId = O.customerId
-                     WHERE A.role='Customer'
-                       AND O.orderStatus <> 'Cancelled'
-                     GROUP BY A.accountId, A.fullName
+                     FROM Customers c
+                     JOIN Orders O ON c.customerId = O.customerId
+                     WHERE O.orderStatus <> 'Cancelled'
+                     GROUP BY c.customerId, c.fullName
                      HAVING COUNT(O.orderId) >= ?
                      ORDER BY TotalOrders DESC
                      """;
@@ -283,12 +270,9 @@ public class StatisticDAO extends DBContext {
         return 0;
     }
 
-    /**
-     * Top selling products with proper cost calculation from WarehouseImports
-     */
     public List<ProductSale> getTopProducts(int limit, String fromDate, String toDate) {
         List<ProductSale> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("""
+        StringBuilder sqlB = new StringBuilder("""
             SELECT TOP (?)
                 P.productId,
                 P.productId AS productCode,
@@ -297,7 +281,7 @@ public class StatisticDAO extends DBContext {
                 AVG(OI.unitPrice) AS avgUnitPrice,
                 SUM(OI.quantity) AS totalQty,
                 SUM(OI.quantity * OI.unitPrice) AS revenue,
-                SUM(CASE 
+                SUM(CASE
                     WHEN avgImport.avgPrice IS NOT NULL THEN (OI.unitPrice - avgImport.avgPrice) * OI.quantity
                     ELSE (OI.unitPrice - P.basePrice) * OI.quantity
                 END) AS profit
@@ -315,17 +299,17 @@ public class StatisticDAO extends DBContext {
         List<Object> params = new ArrayList<>();
         params.add(limit);
         if (fromDate != null && !fromDate.isEmpty()) {
-            sql.append(" AND O.placedAt >= ?");
+            sqlB.append(" AND O.placedAt >= ?");
             params.add(fromDate);
         }
         if (toDate != null && !toDate.isEmpty()) {
-            sql.append(" AND O.placedAt <= ?");
+            sqlB.append(" AND O.placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
-        sql.append(" GROUP BY P.productId, P.name, P.basePrice");
-        sql.append(" ORDER BY totalQty DESC, revenue DESC");
+        sqlB.append(" GROUP BY P.productId, P.name, P.basePrice");
+        sqlB.append(" ORDER BY totalQty DESC, revenue DESC");
 
-        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+        try (PreparedStatement ps = connection.prepareStatement(sqlB.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 ps.setObject(i + 1, params.get(i));
             }
@@ -348,12 +332,9 @@ public class StatisticDAO extends DBContext {
         return list;
     }
 
-    /**
-     * All product sales with proper cost calculation
-     */
     public List<ProductSale> getProductSales(String fromDate, String toDate) {
         List<ProductSale> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("""
+        StringBuilder sqlB = new StringBuilder("""
             SELECT
                 P.productId,
                 P.productId AS productCode,
@@ -362,7 +343,7 @@ public class StatisticDAO extends DBContext {
                 AVG(OI.unitPrice) AS avgUnitPrice,
                 SUM(OI.quantity) AS totalQty,
                 SUM(OI.quantity * OI.unitPrice) AS revenue,
-                SUM(CASE 
+                SUM(CASE
                     WHEN avgImport.avgPrice IS NOT NULL THEN (OI.unitPrice - avgImport.avgPrice) * OI.quantity
                     ELSE (OI.unitPrice - P.basePrice) * OI.quantity
                 END) AS profit
@@ -379,17 +360,17 @@ public class StatisticDAO extends DBContext {
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
-            sql.append(" AND O.placedAt >= ?");
+            sqlB.append(" AND O.placedAt >= ?");
             params.add(fromDate);
         }
         if (toDate != null && !toDate.isEmpty()) {
-            sql.append(" AND O.placedAt <= ?");
+            sqlB.append(" AND O.placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
-        sql.append(" GROUP BY P.productId, P.name, P.basePrice");
-        sql.append(" ORDER BY P.name");
+        sqlB.append(" GROUP BY P.productId, P.name, P.basePrice");
+        sqlB.append(" ORDER BY P.name");
 
-        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+        try (PreparedStatement ps = connection.prepareStatement(sqlB.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 ps.setObject(i + 1, params.get(i));
             }
@@ -414,31 +395,30 @@ public class StatisticDAO extends DBContext {
 
     public List<CustomerStatistic> getTopSpenders(int limit, String fromDate, String toDate) {
         List<CustomerStatistic> list = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("""
+        StringBuilder sqlB = new StringBuilder("""
             SELECT TOP (?)
-                A.accountId,
-                A.fullName,
+                c.customerId AS accountId,
+                c.fullName,
                 COUNT(O.orderId) AS totalOrders,
                 ISNULL(SUM(O.totalAmount), 0) AS totalSpent
-            FROM Accounts A
-            JOIN Orders O ON A.accountId = O.customerId
-            WHERE A.role = 'Customer'
-              AND O.orderStatus <> 'Cancelled'
+            FROM Customers c
+            JOIN Orders O ON c.customerId = O.customerId
+            WHERE O.orderStatus <> 'Cancelled'
         """);
         List<Object> params = new ArrayList<>();
         params.add(limit);
         if (fromDate != null && !fromDate.isEmpty()) {
-            sql.append(" AND O.placedAt >= ?");
+            sqlB.append(" AND O.placedAt >= ?");
             params.add(fromDate);
         }
         if (toDate != null && !toDate.isEmpty()) {
-            sql.append(" AND O.placedAt <= ?");
+            sqlB.append(" AND O.placedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
-        sql.append(" GROUP BY A.accountId, A.fullName");
-        sql.append(" ORDER BY totalSpent DESC, totalOrders DESC");
+        sqlB.append(" GROUP BY c.customerId, c.fullName");
+        sqlB.append(" ORDER BY totalSpent DESC, totalOrders DESC");
 
-        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+        try (PreparedStatement ps = connection.prepareStatement(sqlB.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 ps.setObject(i + 1, params.get(i));
             }
@@ -458,25 +438,25 @@ public class StatisticDAO extends DBContext {
     }
 
     /**
-     * Get total import cost from WarehouseImports
+     * New schema: WarehouseImports.importedAt replaces importDate.
      */
     public double getTotalImportCost(String fromDate, String toDate) {
-        StringBuilder sql = new StringBuilder("""
+        StringBuilder sqlB = new StringBuilder("""
             SELECT ISNULL(SUM(quantity * importPrice), 0)
             FROM WarehouseImports wi
             WHERE 1=1
         """);
         List<Object> params = new ArrayList<>();
         if (fromDate != null && !fromDate.isEmpty()) {
-            sql.append(" AND wi.importDate >= ?");
+            sqlB.append(" AND wi.importedAt >= ?");
             params.add(fromDate);
         }
         if (toDate != null && !toDate.isEmpty()) {
-            sql.append(" AND wi.importDate <= ?");
+            sqlB.append(" AND wi.importedAt <= ?");
             params.add(toDate + " 23:59:59");
         }
-        
-        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+
+        try (PreparedStatement ps = connection.prepareStatement(sqlB.toString())) {
             for (int i = 0; i < params.size(); i++) {
                 ps.setObject(i + 1, params.get(i));
             }

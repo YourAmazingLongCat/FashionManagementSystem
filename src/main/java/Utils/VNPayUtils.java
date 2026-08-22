@@ -148,9 +148,6 @@ public final class VNPayUtils {
     }
 
     private static String buildOrderInfo(Payment payment) {
-        if (PaymentType.DEPOSIT.equals(payment.getPaymentType())) {
-            return "Nap tien vao vi " + payment.getPaymentId();
-        }
 
         if (!isBlank(payment.getOrderId())) {
             return "Thanh toan don hang " + payment.getOrderId();

@@ -15,10 +15,36 @@ import Models.Account;
 import Utils.DBContext;
 
 /**
- * Data Access Object cho Account
- * @author ADMIN
+ * Data Access Object for Account.
+ *
+ * The database no longer has a single Accounts table; accounts are split into
+ * Customers (no role/salary) and Employees (role/salary). To keep every
+ * existing caller working unchanged, this DAO issues a single query that
+ * UNIONs both tables and synthesises the missing columns:
+ *   - role = 'Customer' for customer rows, the actual column for employees
+ *   - salary = 0 for customer rows, the actual column for employees
+ *   - the table of origin is exposed through a synthetic {@code _rowKind}
+ * column ('Customer' | 'Employee') so callers can route writes correctly.
  */
 public class AccountDAO {
+
+    private static final String CUST_BASE_SELECT
+            = "SELECT 'Customer' AS _rowKind, 'Customer' AS role, 0 AS salary, "
+            + "customerId AS accountId, "
+            + "username, email, passwordHash, fullName, "
+            + "phone, address, avatar, status, createdAt "
+            + "FROM Customers";
+
+    private static final String EMP_BASE_SELECT
+            = "SELECT 'Employee' AS _rowKind, role, salary, "
+            + "employeeId AS accountId, "
+            + "username, email, passwordHash, fullName, "
+            + "phone, address, avatar, status, createdAt "
+            + "FROM Employees";
+
+    // UNION ALL of the two tables. Each side already aliases its PK to accountId.
+    private static final String ALL_BASE_SELECT
+            = CUST_BASE_SELECT + " UNION ALL " + EMP_BASE_SELECT;
 
     private Account mapAccount(ResultSet rs) throws SQLException {
         Account acc = new Account();
@@ -32,19 +58,19 @@ public class AccountDAO {
         acc.setPhone(rs.getString("phone"));
         acc.setAddress(rs.getString("address"));
         acc.setAvatar(rs.getString("avatar"));
-        
+
         double salary = rs.getDouble("salary");
         acc.setSalary(rs.wasNull() ? null : java.math.BigDecimal.valueOf(salary));
-        
+
         Timestamp createdAtTs = rs.getTimestamp("createdAt");
         acc.setCreatedAt(createdAtTs != null ? createdAtTs.toLocalDateTime() : null);
-        
+
         return acc;
     }
 
     public Account checkLogin(String email, String password) {
         String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                     + "address, avatar, salary, createdAt FROM Accounts WHERE email = ?";
+                     + "address, avatar, salary, createdAt FROM (" + ALL_BASE_SELECT + ") AS a WHERE email = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -71,7 +97,7 @@ public class AccountDAO {
 
     public Account getAccountById(String accountId) {
         String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                     + "address, avatar, salary, createdAt FROM Accounts WHERE accountId = ?";
+                     + "address, avatar, salary, createdAt FROM (" + ALL_BASE_SELECT + ") AS a WHERE accountId = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -92,7 +118,7 @@ public class AccountDAO {
 
     public Account getAccountByEmail(String email) {
         String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                     + "address, avatar, salary, createdAt FROM Accounts WHERE email = ?";
+                     + "address, avatar, salary, createdAt FROM (" + ALL_BASE_SELECT + ") AS a WHERE email = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -112,7 +138,16 @@ public class AccountDAO {
     }
 
     public boolean updateProfile(Account account) {
-        String query = "UPDATE Accounts SET fullName = ?, phone = ?, address = ? WHERE accountId = ?";
+        // Customer profile uses Customer table; employee profile uses Employees.
+        String role = account.getRole();
+        boolean isEmployee = "Staff".equalsIgnoreCase(role) || "Admin".equalsIgnoreCase(role);
+
+        String query;
+        if (isEmployee) {
+            query = "UPDATE Employees SET fullName = ?, phone = ?, address = ? WHERE employeeId = ?";
+        } else {
+            query = "UPDATE Customers SET fullName = ?, phone = ?, address = ? WHERE customerId = ?";
+        }
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -130,25 +165,37 @@ public class AccountDAO {
     }
 
     public boolean updatePassword(String accountId, String newPassword) {
-        String query = "UPDATE Accounts SET passwordHash = ? WHERE accountId = ?";
+        String hashed = newPassword != null && !newPassword.startsWith("$2a$")
+                ? BCrypt.hashpw(newPassword, BCrypt.gensalt())
+                : newPassword;
+        // Try Employees first (staff may be updating their own password),
+        // then Customers. Hash only once.
+        String[] queries = new String[] {
+            "UPDATE Employees SET passwordHash = ? WHERE employeeId = ?",
+            "UPDATE Customers SET passwordHash = ? WHERE customerId = ?"
+        };
 
-        try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-
-            ps.setString(1, newPassword);
-            ps.setString(2, accountId);
-            return ps.executeUpdate() > 0;
+        try (Connection connection = new DBContext().getConnection()) {
+            for (String q : queries) {
+                try (PreparedStatement ps = connection.prepareStatement(q)) {
+                    ps.setString(1, hashed);
+                    ps.setString(2, accountId);
+                    if (ps.executeUpdate() > 0) {
+                        return true;
+                    }
+                }
+            }
         } catch (SQLException e) {
             System.out.println("Lỗi SQL tại AccountDAO.updatePassword: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     public List<Account> getAllAccounts() {
         List<Account> list = new ArrayList<>();
         String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                     + "address, avatar, salary, createdAt FROM Accounts ORDER BY accountId";
+                     + "address, avatar, salary, createdAt FROM (" + ALL_BASE_SELECT + ") AS a ORDER BY accountId";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query);
@@ -165,7 +212,8 @@ public class AccountDAO {
     }
 
     public boolean updateRole(String accountId, String role) {
-        String query = "UPDATE Accounts SET role = ? WHERE accountId = ?";
+        // Only employees carry a role.
+        String query = "UPDATE Employees SET role = ? WHERE employeeId = ?";
 
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
@@ -180,53 +228,114 @@ public class AccountDAO {
         }
     }
 
+    private static final java.util.Set<String> VALID_STATUSES = java.util.Set.of("Active", "Inactive", "Locked");
+
     public boolean updateStatus(String accountId, String status) {
-        String query = "UPDATE Accounts SET status = ? WHERE accountId = ?";
+        // Normalize: map "Banned" or other UI labels to a valid DB status
+        String dbStatus = mapToValidStatus(status);
+        if (dbStatus == null) {
+            System.out.println("AccountDAO.updateStatus: invalid status '" + status + "'");
+            return false;
+        }
 
-        try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
+        // Try both tables; the account belongs to only one.
+        String[] queries = new String[] {
+            "UPDATE Employees SET status = ? WHERE employeeId = ?",
+            "UPDATE Customers SET status = ? WHERE customerId = ?"
+        };
 
-            ps.setString(1, status);
-            ps.setString(2, accountId);
-            return ps.executeUpdate() > 0;
+        try (Connection connection = new DBContext().getConnection()) {
+            for (String q : queries) {
+                try (PreparedStatement ps = connection.prepareStatement(q)) {
+                    ps.setString(1, dbStatus);
+                    ps.setString(2, accountId);
+                    if (ps.executeUpdate() > 0) {
+                        return true;
+                    }
+                }
+            }
         } catch (SQLException e) {
             System.out.println("Lỗi SQL tại AccountDAO.updateStatus: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
+    private String mapToValidStatus(String status) {
+        if (status == null) return null;
+        String normalized = status.trim();
+        if (VALID_STATUSES.contains(normalized)) return normalized;
+        if (normalized.equalsIgnoreCase("Banned")
+                || normalized.equalsIgnoreCase("Locked")
+                || normalized.equalsIgnoreCase("Suspended")
+                || normalized.equalsIgnoreCase("Disabled")) {
+            return "Inactive";
+        }
+        return null;
+    }
+
+    public boolean isValidStatus(String status) {
+        return mapToValidStatus(status) != null;
+    }
+
+    /**
+     * Creates an account by inserting into either Customers or Employees.
+     * Customers have no role or salary column in the new schema, so role="Customer"
+     * rows go to Customers; role="Staff" or "Admin" go to Employees.
+     */
     public boolean createAccount(Account account, String rawPassword) {
-        String query = "INSERT INTO Accounts (accountId, username, email, passwordHash, fullName, role, status, "
-                     + "phone, address, avatar, salary, createdAt) "
-                     + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        if (account == null || isBlank(account.getAccountId())) {
+            return false;
+        }
+        String role = account.getRole() == null ? "Customer" : account.getRole();
+        boolean isEmployee = "Staff".equalsIgnoreCase(role) || "Admin".equalsIgnoreCase(role);
 
-        try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
+        String hashed = rawPassword != null && !rawPassword.startsWith("$2a$")
+                ? BCrypt.hashpw(rawPassword, BCrypt.gensalt())
+                : rawPassword;
 
-            String hashed = BCrypt.hashpw(rawPassword, BCrypt.gensalt());
-            ps.setString(1, account.getAccountId());
-            ps.setString(2, account.getUsername() != null ? account.getUsername() : account.getEmail());
-            ps.setString(3, account.getEmail());
-            ps.setString(4, hashed);
-            ps.setString(5, account.getFullName());
-            ps.setString(6, account.getRole() != null ? account.getRole() : "Customer");
-            ps.setString(7, account.getStatus() != null ? account.getStatus() : "Active");
-            ps.setString(8, account.getPhone() != null ? account.getPhone() : null);
-            ps.setString(9, account.getAddress() != null ? account.getAddress() : null);
-            ps.setString(10, account.getAvatar() != null ? account.getAvatar() : null);
-            
-            if (account.getSalary() != null) {
-                ps.setBigDecimal(11, account.getSalary());
+        try (Connection connection = new DBContext().getConnection()) {
+            if (isEmployee) {
+                String query = "INSERT INTO Employees (employeeId, username, email, passwordHash, fullName, role, "
+                             + "status, phone, address, avatar, salary, createdAt) "
+                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = connection.prepareStatement(query)) {
+                    ps.setString(1, account.getAccountId());
+                    ps.setString(2, account.getUsername() != null ? account.getUsername() : account.getEmail());
+                    ps.setString(3, account.getEmail());
+                    ps.setString(4, hashed);
+                    ps.setString(5, account.getFullName());
+                    ps.setString(6, role);
+                    ps.setString(7, account.getStatus() != null ? account.getStatus() : "Active");
+                    ps.setString(8, account.getPhone() != null ? account.getPhone() : null);
+                    ps.setString(9, account.getAddress() != null ? account.getAddress() : null);
+                    ps.setString(10, account.getAvatar() != null ? account.getAvatar() : null);
+                    ps.setBigDecimal(11, account.getSalary() != null ? account.getSalary() : java.math.BigDecimal.ZERO);
+                    ps.setTimestamp(12, account.getCreatedAt() != null
+                            ? Timestamp.valueOf(account.getCreatedAt())
+                            : Timestamp.valueOf(LocalDateTime.now()));
+                    return ps.executeUpdate() > 0;
+                }
             } else {
-                ps.setBigDecimal(11, java.math.BigDecimal.ZERO);
+                String query = "INSERT INTO Customers (customerId, username, email, passwordHash, fullName, status, "
+                             + "phone, address, avatar, createdAt) "
+                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement ps = connection.prepareStatement(query)) {
+                    ps.setString(1, account.getAccountId());
+                    ps.setString(2, account.getUsername() != null ? account.getUsername() : account.getEmail());
+                    ps.setString(3, account.getEmail());
+                    ps.setString(4, hashed);
+                    ps.setString(5, account.getFullName());
+                    ps.setString(6, account.getStatus() != null ? account.getStatus() : "Active");
+                    ps.setString(7, account.getPhone() != null ? account.getPhone() : null);
+                    ps.setString(8, account.getAddress() != null ? account.getAddress() : null);
+                    ps.setString(9, account.getAvatar() != null ? account.getAvatar() : null);
+                    ps.setTimestamp(10, account.getCreatedAt() != null
+                            ? Timestamp.valueOf(account.getCreatedAt())
+                            : Timestamp.valueOf(LocalDateTime.now()));
+                    return ps.executeUpdate() > 0;
+                }
             }
-            
-            ps.setTimestamp(12, account.getCreatedAt() != null 
-                    ? Timestamp.valueOf(account.getCreatedAt()) 
-                    : Timestamp.valueOf(LocalDateTime.now()));
-            
-            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Lỗi SQL tại AccountDAO.createAccount: " + e.getMessage());
             e.printStackTrace();
@@ -235,7 +344,7 @@ public class AccountDAO {
     }
 
     public boolean emailExists(String email) {
-        String query = "SELECT 1 FROM Accounts WHERE email = ?";
+        String query = "SELECT 1 FROM (" + ALL_BASE_SELECT + ") AS a WHERE email = ?";
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, email);
@@ -253,7 +362,7 @@ public class AccountDAO {
         if (phone == null || phone.isBlank()) {
             return false;
         }
-        String query = "SELECT 1 FROM Accounts WHERE phone = ?";
+        String query = "SELECT 1 FROM (" + ALL_BASE_SELECT + ") AS a WHERE phone = ?";
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, phone);
@@ -271,7 +380,7 @@ public class AccountDAO {
         if (phone == null || phone.isBlank()) {
             return false;
         }
-        String query = "SELECT 1 FROM Accounts WHERE phone = ? AND accountId != ?";
+        String query = "SELECT 1 FROM (" + ALL_BASE_SELECT + ") AS a WHERE phone = ? AND accountId != ?";
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, phone);
@@ -287,7 +396,9 @@ public class AccountDAO {
     }
 
     public String generateNextAccountId() {
-        String query = "SELECT TOP 1 accountId FROM Accounts ORDER BY accountId DESC";
+        // Combine both tables so generated IDs are globally unique.
+        // Parse the numeric suffix and sort numerically to avoid string-sort issues (e.g., "2" > "10" lexicographically).
+        String query = "SELECT TOP 1 accountId FROM (" + ALL_BASE_SELECT + ") AS a ORDER BY CAST(SUBSTRING(accountId, PATINDEX('%[0-9]%', accountId), LEN(accountId)) AS BIGINT) DESC";
         try (Connection connection = new DBContext().getConnection();
              PreparedStatement ps = connection.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
@@ -307,17 +418,52 @@ public class AccountDAO {
         return "ACC00001";
     }
 
-    public List<Account> searchAccounts(String keyword) {
+    public boolean deleteAccount(String accountId) {
+        String[] queries = new String[] {
+            "DELETE FROM Employees WHERE employeeId = ?",
+            "DELETE FROM Customers WHERE customerId = ?"
+        };
+        try (Connection connection = new DBContext().getConnection()) {
+            for (String q : queries) {
+                try (PreparedStatement ps = connection.prepareStatement(q)) {
+                    ps.setString(1, accountId);
+                    if (ps.executeUpdate() > 0) {
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Lỗi SQL tại AccountDAO.deleteAccount: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public List<Account> searchAccounts(String keyword, String status) {
         List<Account> list = new ArrayList<>();
-        String query = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                     + "address, avatar, salary, createdAt "
-                     + "FROM Accounts WHERE email LIKE ? OR phone LIKE ? OR fullName LIKE ? ORDER BY accountId";
+        StringBuilder query = new StringBuilder(
+                "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
+              + "address, avatar, salary, createdAt FROM (" + ALL_BASE_SELECT + ") AS a WHERE 1=1");
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            query.append(" AND (email LIKE ? OR phone LIKE ? OR fullName LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status.trim())) {
+            query.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        query.append(" ORDER BY accountId");
+
         try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            String kw = "%" + (keyword != null ? keyword : "") + "%";
-            ps.setString(1, kw);
-            ps.setString(2, kw);
-            ps.setString(3, kw);
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     list.add(mapAccount(rs));
@@ -330,30 +476,27 @@ public class AccountDAO {
         return list;
     }
 
-    public boolean deleteAccount(String accountId) {
-        String query = "DELETE FROM Accounts WHERE accountId = ?";
-        try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, accountId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("Lỗi SQL tại AccountDAO.deleteAccount: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
+    public int getTotalAccounts(String keyword, String status) {
+        StringBuilder query = new StringBuilder(
+                "SELECT COUNT(*) FROM (" + ALL_BASE_SELECT + ") AS a WHERE 1=1");
+        java.util.List<Object> params = new java.util.ArrayList<>();
 
-    public int getTotalAccounts(String keyword) {
-        String query = keyword != null && !keyword.trim().isEmpty()
-                ? "SELECT COUNT(*) FROM Accounts WHERE email LIKE ? OR phone LIKE ? OR fullName LIKE ?"
-                : "SELECT COUNT(*) FROM Accounts";
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            query.append(" AND (email LIKE ? OR phone LIKE ? OR fullName LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status.trim())) {
+            query.append(" AND status = ?");
+            params.add(status.trim());
+        }
+
         try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                String kw = "%" + keyword.trim() + "%";
-                ps.setString(1, kw);
-                ps.setString(2, kw);
-                ps.setString(3, kw);
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -367,29 +510,34 @@ public class AccountDAO {
         return 0;
     }
 
-    public List<Account> getAccountsPaged(int page, int pageSize, String keyword) {
+    public List<Account> getAccountsPaged(int page, int pageSize, String keyword, String status) {
         List<Account> list = new ArrayList<>();
         int offset = (page - 1) * pageSize;
-        String baseQuery = "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
-                         + "address, avatar, salary, createdAt FROM Accounts";
-        String query;
+
+        StringBuilder query = new StringBuilder(
+                "SELECT accountId, username, email, passwordHash, fullName, role, status, phone, "
+              + "address, avatar, salary, createdAt FROM (" + ALL_BASE_SELECT + ") AS a WHERE 1=1");
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
         if (keyword != null && !keyword.trim().isEmpty()) {
-            query = baseQuery + " WHERE email LIKE ? OR phone LIKE ? OR fullName LIKE ? ORDER BY accountId OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
-        } else {
-            query = baseQuery + " ORDER BY accountId OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+            query.append(" AND (email LIKE ? OR phone LIKE ? OR fullName LIKE ?)");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
         }
+        if (status != null && !status.trim().isEmpty() && !"all".equalsIgnoreCase(status.trim())) {
+            query.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        query.append(" ORDER BY accountId OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        params.add(offset);
+        params.add(pageSize);
+
         try (Connection connection = new DBContext().getConnection();
-             PreparedStatement ps = connection.prepareStatement(query)) {
-            if (keyword != null && !keyword.trim().isEmpty()) {
-                String kw = "%" + keyword.trim() + "%";
-                ps.setString(1, kw);
-                ps.setString(2, kw);
-                ps.setString(3, kw);
-                ps.setInt(4, offset);
-                ps.setInt(5, pageSize);
-            } else {
-                ps.setInt(1, offset);
-                ps.setInt(2, pageSize);
+             PreparedStatement ps = connection.prepareStatement(query.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -401,5 +549,9 @@ public class AccountDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

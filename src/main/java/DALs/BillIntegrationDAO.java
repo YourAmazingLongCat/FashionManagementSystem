@@ -1,53 +1,39 @@
 package DALs;
 
 import Utils.DBContext;
+import Utils.PaymentStatus;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * Small integration DAO used by Order/Payment modules.
+ * Bridge DAO used by Order/Payment modules.
  *
- * This class intentionally does not change the existing BillDAO/BillServlet
- * owned by the Bill module. It only creates or synchronises rows in Bills so
- * the existing Bill Management pages can read them normally.
+ * In the new schema, bill-style info lives directly on the Orders row
+ * (paymentMethod, paymentStatus, paidAmount, issuedDate). This DAO simply
+ * upserts those columns.
  */
 public class BillIntegrationDAO extends DBContext {
 
     public boolean createOrUpdateBill(String billId, String orderId, String paymentMethod,
             String paymentStatus, BigDecimal totalAmount) {
 
-        if (isEmpty(billId) || isEmpty(orderId) || isEmpty(paymentMethod)
+        if (isEmpty(orderId) || isEmpty(paymentMethod)
                 || isEmpty(paymentStatus) || totalAmount == null) {
             return false;
         }
 
-        String sql = "IF EXISTS (SELECT 1 FROM Bills WHERE orderId = ?) "
-                + "BEGIN "
-                + "UPDATE Bills "
-                + "SET paymentMethod = ?, paymentStatus = ?, totalAmount = ? "
-                + "WHERE orderId = ? "
-                + "END "
-                + "ELSE "
-                + "BEGIN "
-                + "INSERT INTO Bills (billId, orderId, paymentMethod, paymentStatus, issuedDate, totalAmount) "
-                + "VALUES (?, ?, ?, ?, GETDATE(), ?) "
-                + "END";
+        String sql = "UPDATE Orders "
+                   + "SET paymentMethod = ?, paymentStatus = ?, paidAmount = ?, "
+                   + "    issuedDate = COALESCE(issuedDate, GETDATE()) "
+                   + "WHERE orderId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, orderId.trim());
-
-            ps.setString(2, paymentMethod.trim());
-            ps.setString(3, paymentStatus.trim());
-            ps.setBigDecimal(4, totalAmount);
-            ps.setString(5, orderId.trim());
-
-            ps.setString(6, billId.trim());
-            ps.setString(7, orderId.trim());
-            ps.setString(8, paymentMethod.trim());
-            ps.setString(9, paymentStatus.trim());
-            ps.setBigDecimal(10, totalAmount);
-
+            ps.setString(1, paymentMethod.trim());
+            ps.setString(2, paymentStatus.trim());
+            ps.setBigDecimal(3, PaymentStatus.isPaid(paymentStatus)
+                    ? totalAmount : BigDecimal.ZERO);
+            ps.setString(4, orderId.trim());
             ps.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -62,16 +48,15 @@ public class BillIntegrationDAO extends DBContext {
             return false;
         }
 
-        String sql = "UPDATE Bills SET paymentStatus = ? WHERE orderId = ?";
+        String sql = "UPDATE Orders SET paymentStatus = ? WHERE orderId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, paymentStatus.trim());
             ps.setString(2, orderId.trim());
-
             ps.executeUpdate();
             return true;
         } catch (SQLException e) {
-            System.out.println("updateBillPaymentStatus error for orderId=" + orderId + ": " + e.getMessage());
+            System.out.println("updateBillPaymentStatus error: " + e.getMessage());
         }
 
         return false;

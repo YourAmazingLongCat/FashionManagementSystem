@@ -45,6 +45,7 @@
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
+        cursor: pointer;
     }
     .profile-sidebar .nav-link:hover, .profile-sidebar .nav-link.active {
         background-color: #f8fafc;
@@ -123,6 +124,19 @@
         background-color: #374151;
         transform: translateY(-1px);
     }
+
+    /* CSS ĐỂ ẨN HIỆN TAB MƯỢT MÀ */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    .tab-content.active-tab {
+        display: block;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <div class="profile-wrapper">
@@ -141,21 +155,13 @@
                     </div>
                     
                     <nav class="nav flex-column">
-                        <a class="nav-link active" href="${pageContext.request.contextPath}/profile">
+                        <a class="nav-link active" id="nav-account" onclick="switchTab('account')">
                             <span class="material-symbols-outlined">person</span> Account Details
                         </a>
-                        
-                        <!-- Chỉ hiện Đơn hàng và Yêu thích cho Customer -->
-                        <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
-                            <a class="nav-link" href="${pageContext.request.contextPath}/customer/order-history">
-                                <span class="material-symbols-outlined">receipt_long</span> My Orders
-                            </a>
-                            <a class="nav-link" href="${pageContext.request.contextPath}/wishlist">
-                                <span class="material-symbols-outlined">favorite</span> Wishlist
-                            </a>
-                        </c:if>
 
-                        <a class="nav-link" href="${pageContext.request.contextPath}/change-password">
+                        <!-- Đã gỡ bỏ My Orders và Wishlist ở đây -->
+
+                        <a class="nav-link" id="nav-password" onclick="switchTab('password')">
                             <span class="material-symbols-outlined">lock</span> Change Password
                         </a>
                         
@@ -168,44 +174,145 @@
                 </div>
             </div>
 
-            <!-- CỘT PHẢI: FORM CHỈNH SỬA THÔNG TIN -->
+            <!-- CỘT PHẢI: KHU VỰC HIỂN THỊ NỘI DUNG -->
             <div class="col-lg-9 col-md-8">
                 <div class="profile-content-card">
-                    <h3>Account Details</h3>
                     
-                    <form action="${pageContext.request.contextPath}/profile/update" method="POST">
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <label class="form-label">Full Name</label>
-                                <input type="text" name="fullName" class="form-control" value="${sessionScope.USER.fullName}" required>
-                            </div>
-                            
-                            <div class="col-md-6 mb-4">
-                                <label class="form-label">Email Address</label>
-                                <input type="email" class="form-control" value="${sessionScope.USER.email}" disabled>
-                            </div>
-                            
-                            <div class="col-md-12 mb-4">
-                                <label class="form-label">Phone Number</label>
-                                <input type="tel" name="phone" class="form-control" value="${sessionScope.USER.phone}" pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0 (e.g., 0912345678)">
-                            </div>
-                            
-                            <!-- Chỉ hiện Địa chỉ giao hàng nếu không phải là Staff/Admin -->
-                            <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
-                                <div class="col-md-12 mb-4">
-                                    <label class="form-label">Shipping Address</label>
-                                    <input type="text" name="address" class="form-control" value="${sessionScope.USER.address}" placeholder="Enter your full address">
-                                </div>
-                            </c:if>
-                        </div>
+                    <!-- TAB 1: THÔNG TIN TÀI KHOẢN -->
+                    <div id="tab-account-content" class="tab-content active-tab">
+                        <h3>Account Details</h3>
                         
-                        <div class="text-end mt-2">
-                            <button type="submit" class="btn-save">Save Changes</button>
-                        </div>
-                    </form>
+                        <form action="${pageContext.request.contextPath}/profile/update" method="POST">
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" name="fullName" class="form-control" value="${sessionScope.USER.fullName}" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" value="${sessionScope.USER.email}" disabled>
+                                </div>
+                                
+                                <div class="col-md-12 mb-4">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="tel" name="phone" class="form-control" value="${sessionScope.USER.phone}" pattern="0[0-9]{9}" placeholder="0912345678" title="Phone number must be exactly 10 digits starting with 0">
+                                </div>
+                                
+                                <c:if test="${sessionScope.USER.role ne 'Staff' && sessionScope.USER.role ne 'Admin'}">
+                                    <div class="col-md-12 mb-4">
+                                        <label class="form-label">Shipping Address</label>
+                                        <input type="text" name="address" class="form-control" value="${sessionScope.USER.address}" placeholder="Enter your full address">
+                                    </div>
+                                </c:if>
+                            </div>
+                            
+                            <div class="text-end mt-2">
+                                <button type="submit" class="btn-save">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 2: ĐỔI MẬT KHẨU (AJAX) -->
+                    <div id="tab-password-content" class="tab-content">
+                        <h3>Change Password</h3>
+                        
+                        <div id="pwdAlertBox" class="alert" style="display: none; border-radius: 12px; font-weight: 500; font-size: 0.95rem;"></div>
+
+                        <form id="ajaxChangePwdForm">
+                            <div class="row">
+                                <div class="col-md-12 mb-4">
+                                    <label class="form-label">Current Password</label>
+                                    <input type="password" name="oldPassword" class="form-control" placeholder="Enter current password" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" name="newPassword" class="form-control" placeholder="Enter new password" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-4">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <input type="password" name="confirmPassword" class="form-control" placeholder="Confirm new password" required>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end mt-2">
+                                <button type="submit" id="btnUpdatePwd" class="btn-save">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
         </div>
     </div>
 </div>
+
+<script>
+    // JS 1: ĐIỀU HƯỚNG TAB
+    function switchTab(tabName) {
+        // Tắt tất cả active
+        document.getElementById('nav-account').classList.remove('active');
+        document.getElementById('nav-password').classList.remove('active');
+        document.getElementById('tab-account-content').classList.remove('active-tab');
+        document.getElementById('tab-password-content').classList.remove('active-tab');
+
+        // Mở tab tương ứng
+        if(tabName === 'account') {
+            document.getElementById('nav-account').classList.add('active');
+            document.getElementById('tab-account-content').classList.add('active-tab');
+        } else if(tabName === 'password') {
+            document.getElementById('nav-password').classList.add('active');
+            document.getElementById('tab-password-content').classList.add('active-tab');
+        }
+    }
+
+    // JS 2: GỬI AJAX ĐỔI MẬT KHẨU NGẦM
+    document.addEventListener('DOMContentLoaded', function () {
+        const pwdForm = document.getElementById('ajaxChangePwdForm');
+        const alertBox = document.getElementById('pwdAlertBox');
+        const btnSubmit = document.getElementById('btnUpdatePwd');
+
+        if(pwdForm) {
+            pwdForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                alertBox.style.display = 'none';
+                alertBox.className = 'alert'; 
+                
+                const originalText = btnSubmit.textContent;
+                btnSubmit.textContent = 'UPDATING...';
+                btnSubmit.disabled = true;
+
+                fetch('${pageContext.request.contextPath}/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new URLSearchParams(new FormData(pwdForm))
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alertBox.style.display = 'block';
+                    if (data.success) {
+                        alertBox.classList.add('alert-success');
+                        alertBox.textContent = data.message;
+                        pwdForm.reset(); 
+                    } else {
+                        alertBox.classList.add('alert-danger');
+                        alertBox.textContent = data.message;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alertBox.style.display = 'block';
+                    alertBox.classList.add('alert-danger');
+                    alertBox.textContent = 'Lỗi hệ thống. Vui lòng thử lại sau!';
+                })
+                .finally(() => {
+                    btnSubmit.textContent = originalText;
+                    btnSubmit.disabled = false;
+                });
+            });
+        }
+    });
+</script>

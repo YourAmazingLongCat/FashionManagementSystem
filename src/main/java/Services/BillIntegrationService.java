@@ -9,10 +9,8 @@ import java.math.BigDecimal;
 import java.util.Random;
 
 /**
- * Thin bridge between Order/Payment and the existing Bill module.
- *
- * The Bill module is kept almost untouched. Order/Payment only call this
- * bridge when a purchase payment is created or its status changes.
+ * Keeps bill-style payment fields on the Orders row synchronized with the
+ * current order payment.
  */
 public class BillIntegrationService {
 

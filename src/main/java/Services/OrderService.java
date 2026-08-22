@@ -327,12 +327,20 @@ public class OrderService {
     }
 
     public List<Order> viewOrdersForStaff(int page, int pageSize) {
+        return viewOrdersForStaff(null, null, null, page, pageSize);
+    }
+
+    public List<Order> viewOrdersForStaff(String status, LocalDateTime dateFrom, LocalDateTime dateTo, int page, int pageSize) {
         int offset = (page - 1) * pageSize;
-        return orderDAO.getOrdersPaginated(null, offset, pageSize);
+        return orderDAO.getOrdersPaginated(null, status, dateFrom, dateTo, offset, pageSize);
     }
 
     public int countOrdersForStaff() {
-        return orderDAO.countOrders(null);
+        return countOrdersForStaff(null, null, null);
+    }
+
+    public int countOrdersForStaff(String status, LocalDateTime dateFrom, LocalDateTime dateTo) {
+        return orderDAO.countOrders(null, status, dateFrom, dateTo);
     }
 
     public List<Order> viewOrdersForStaff() {
@@ -364,18 +372,30 @@ public class OrderService {
     }
 
     public List<Order> searchOrdersForStaff(String keyword, int page, int pageSize) {
-        if (isEmpty(keyword)) {
-            return viewOrdersForStaff(page, pageSize);
+        return searchOrdersForStaff(keyword, null, null, null, page, pageSize);
+    }
+
+    public List<Order> searchOrdersForStaff(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int page, int pageSize) {
+        if (isEmpty(keyword) && isEmpty(status) && dateFrom == null && dateTo == null) {
+            return viewOrdersForStaff(status, dateFrom, dateTo, page, pageSize);
         }
         int offset = (page - 1) * pageSize;
-        return orderDAO.searchOrdersPaginated(keyword.trim(), offset, pageSize);
+        return orderDAO.searchOrdersPaginated(emptyToNull(keyword), status, dateFrom, dateTo, offset, pageSize);
     }
 
     public int countSearchOrdersForStaff(String keyword) {
-        if (isEmpty(keyword)) {
-            return countOrdersForStaff();
+        return countSearchOrdersForStaff(keyword, null, null, null);
+    }
+
+    public int countSearchOrdersForStaff(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo) {
+        if (isEmpty(keyword) && isEmpty(status) && dateFrom == null && dateTo == null) {
+            return countOrdersForStaff(status, dateFrom, dateTo);
         }
-        return orderDAO.countOrders(keyword.trim());
+        return orderDAO.countOrders(emptyToNull(keyword), status, dateFrom, dateTo);
+    }
+
+    private String emptyToNull(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value.trim();
     }
 
     public List<Order> searchOrdersForStaff(String keyword) {

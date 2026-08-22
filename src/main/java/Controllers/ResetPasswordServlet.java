@@ -19,16 +19,18 @@ public class ResetPasswordServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
         
-        // Kiểm tra đã xác thực OTP chưa
         if (session == null) {
             response.sendRedirect(request.getContextPath() + "/auth/forgot-password");
             return;
         }
         
         Boolean otpVerified = (Boolean) session.getAttribute("forgotPasswordOTPVerified");
+        Boolean allowReset = (Boolean) session.getAttribute("allowResetPassword"); 
+        boolean isVerified = (otpVerified != null && otpVerified) || (allowReset != null && allowReset);
+        
         String email = (String) session.getAttribute("forgotPasswordEmail");
         
-        if (otpVerified == null || !otpVerified || email == null) {
+        if (!isVerified || email == null) {
             response.sendRedirect(request.getContextPath() + "/auth/forgot-password");
             return;
         }
@@ -41,77 +43,82 @@ public class ResetPasswordServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+        
         HttpSession session = request.getSession(false);
         
-        // Kiểm tra đã xác thực OTP chưa
         if (session == null) {
-            request.setAttribute("errorMessage", "Phiên làm việc không hợp lệ. Vui lòng bắt đầu lại!");
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Invalid session. Please start again!", "/Pages/Authentication/ForgotPassword/ForgotPassword.jsp");
             return;
         }
         
         Boolean otpVerified = (Boolean) session.getAttribute("forgotPasswordOTPVerified");
+        Boolean allowReset = (Boolean) session.getAttribute("allowResetPassword");
+        boolean isVerified = (otpVerified != null && otpVerified) || (allowReset != null && allowReset);
         String email = (String) session.getAttribute("forgotPasswordEmail");
         
-        if (otpVerified == null || !otpVerified || email == null) {
-            request.setAttribute("errorMessage", "Phiên làm việc không hợp lệ. Vui lòng bắt đầu lại!");
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
+        if (!isVerified || email == null) {
+            sendResponse(request, response, isAjax, false, "Session expired or invalid. Please request a new OTP.", "/Pages/Authentication/ForgotPassword/ForgotPassword.jsp");
             return;
         }
 
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        // Validation
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            request.setAttribute("errorMessage", "Vui lòng nhập mật khẩu mới!");
-            request.setAttribute("email", email);
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Please enter a new password!", "/Pages/Authentication/ForgotPassword/ResetPassword.jsp");
             return;
         }
 
         if (newPassword.length() < 8) {
-            request.setAttribute("errorMessage", "Mật khẩu phải có ít nhất 8 ký tự!");
-            request.setAttribute("email", email);
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Password must be at least 8 characters!", "/Pages/Authentication/ForgotPassword/ResetPassword.jsp");
             return;
         }
 
         if (!newPassword.equals(confirmPassword)) {
-            request.setAttribute("errorMessage", "Mật khẩu xác nhận không khớp!");
-            request.setAttribute("email", email);
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Passwords do not match!", "/Pages/Authentication/ForgotPassword/ResetPassword.jsp");
             return;
         }
 
-        // Cập nhật password
         AccountDAO accountDAO = new AccountDAO();
         String hashedPassword = passwordUtil.hashPassword(newPassword);
-        
-        // Lấy accountId từ email
+
         Account account = accountDAO.getAccountByEmail(email);
         if (account == null) {
-            request.setAttribute("errorMessage", "Tài khoản không tồn tại!");
-            request.setAttribute("email", email);
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Account does not exist!", "/Pages/Authentication/ForgotPassword/ResetPassword.jsp");
             return;
         }
-        
+
         boolean updated = accountDAO.updatePassword(account.getAccountId(), hashedPassword);
 
         if (updated) {
-            // Dọn dẹp session
             session.removeAttribute("forgotPasswordOTP");
             session.removeAttribute("forgotPasswordEmail");
             session.removeAttribute("forgotPasswordOTPExpiry");
             session.removeAttribute("forgotPasswordOTPVerified");
-            
-            request.setAttribute("successMessage", "Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.");
-            request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
+            session.removeAttribute("allowResetPassword");
+
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":true, \"message\":\"Password reset successful!\"}");
+            } else {
+                request.setAttribute("successMessage", "Password reset successful! Please log in with your new password.");
+                request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
+            }
         } else {
-            request.setAttribute("errorMessage", "Không thể cập nhật mật khẩu. Vui lòng thử lại!");
-            request.setAttribute("email", email);
-            request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ResetPassword.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Cannot update password. Please try again!", "/Pages/Authentication/ForgotPassword/ResetPassword.jsp");
+        }
+    }
+
+    private void sendResponse(HttpServletRequest request, HttpServletResponse response, boolean isAjax, boolean success, String message, String fallbackJsp) throws ServletException, IOException {
+        if (isAjax) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("{\"success\":" + success + ", \"message\":\"" + message + "\"}");
+        } else {
+            request.setAttribute("errorMessage", message);
+            request.getRequestDispatcher(fallbackJsp).forward(request, response);
         }
     }
 }

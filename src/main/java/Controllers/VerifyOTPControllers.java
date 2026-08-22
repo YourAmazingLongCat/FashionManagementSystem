@@ -1,12 +1,10 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package Controllers;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import Utils.DBContext;
 import Utils.passwordUtil;
@@ -24,67 +22,61 @@ public class VerifyOTPControllers extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Mở trang nhập OTP
         request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        String inputOTP = request.getParameter("otp");
+        if (inputOTP == null) {
+            inputOTP = request.getParameter("otpCode");
+        }
         
-        // 1. Lấy mã OTP người dùng nhập vào
-        String inputOTP = request.getParameter("otpCode");
         HttpSession session = request.getSession();
-        
-        // 2. Kiểm tra mode: forgot hay register
+
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
         String mode = request.getParameter("mode");
         boolean isForgotPassword = "forgot".equals(mode);
-        
-        // 3. Lấy mã OTP hệ thống đã tạo ra lưu trong Session
+
         String generatedOTP;
         if (isForgotPassword) {
             generatedOTP = (String) session.getAttribute("forgotPasswordOTP");
             Long expiryTime = (Long) session.getAttribute("forgotPasswordOTPExpiry");
-            
+
             if (generatedOTP == null) {
-                request.setAttribute("errorMessage", "Phiên làm việc đã hết hạn. Vui lòng bắt đầu lại!");
-                request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Session expired. Please start again!", "/Pages/Authentication/ForgotPassword/ForgotPassword.jsp");
                 return;
             }
-            
-            // Kiểm tra OTP hết hạn chưa
+
             if (expiryTime != null && System.currentTimeMillis() > expiryTime) {
                 session.removeAttribute("forgotPasswordOTP");
                 session.removeAttribute("forgotPasswordEmail");
                 session.removeAttribute("forgotPasswordOTPExpiry");
-                request.setAttribute("errorMessage", "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới!");
-                request.getRequestDispatcher("/Pages/Authentication/ForgotPassword/ForgotPassword.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "OTP expired. Please request a new one!", "/Pages/Authentication/ForgotPassword/ForgotPassword.jsp");
                 return;
             }
         } else {
             generatedOTP = (String) session.getAttribute("generatedOTP");
             if (generatedOTP == null) {
-                request.setAttribute("errorMessage", "Phiên làm việc đã hết hạn. Vui lòng đăng ký lại!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Session expired. Please register again!", "/Pages/Authentication/Register/VerifyOTP.jsp");
                 return;
             }
         }
 
-        // 4. SO SÁNH 2 MÃ OTP
         if (inputOTP != null && inputOTP.equals(generatedOTP)) {
-            
+
             if (isForgotPassword) {
-                // ✅ FORGOT PASSWORD: Xác thực thành công -> Đánh dấu đã xác thực và chuyển đến reset password
                 session.setAttribute("forgotPasswordOTPVerified", true);
-                // Xóa OTP cũ để tránh reuse
+                session.setAttribute("allowResetPassword", true); 
+                
                 session.removeAttribute("forgotPasswordOTP");
                 session.removeAttribute("forgotPasswordOTPExpiry");
-                
-                response.sendRedirect(request.getContextPath() + "/auth/reset-password");
+
+                sendResponse(request, response, isAjax, true, null, request.getContextPath() + "/auth/reset-password");
             } else {
-                // ✅ REGISTER: MÃ KHỚP! BẮT ĐẦU LƯU VÀO DATABASE NÈ:
-                
-                // Lấy lại dữ liệu tạm từ Session
                 String fullName = (String) session.getAttribute("tempName");
                 String email = (String) session.getAttribute("tempEmail");
                 String phone = (String) session.getAttribute("tempPhone");
@@ -92,57 +84,122 @@ public class VerifyOTPControllers extends HttpServlet {
 
                 Connection conn = null;
                 PreparedStatement psInsert = null;
+                PreparedStatement psLock = null;
 
                 try {
                     conn = new DBContext().getConnection();
-                    
-                    // Tạo accountId dùng AccountDAO pattern
-                    String newAccountId = new AccountDAO().generateNextAccountId();
+                    conn.setAutoCommit(false);
 
-                    // Lưu vào bảng Accounts - dùng username = email như AccountDAO
-                    String insertSQL = "INSERT INTO Accounts (accountId, username, email, passwordHash, fullName, role, status, phone) VALUES (?, ?, ?, ?, ?, 'Customer', 'Active', ?)";
-                    
-                    psInsert = conn.prepareStatement(insertSQL);
-                    psInsert.setString(1, newAccountId);
-                    psInsert.setString(2, email); // username = email
-                    psInsert.setString(3, email);
-                    psInsert.setString(4, passwordUtil.hashPassword(password));
-                    psInsert.setString(5, fullName);
-                    psInsert.setString(6, phone);
+                    String newAccountId = null;
+                    int maxRetries = 5;
 
-                    int row = psInsert.executeUpdate();
-                    
-                    if (row > 0) {
-                        // LƯU THÀNH CÔNG -> Dọn dẹp sạch sẽ Session
-                        session.removeAttribute("tempName");
-                        session.removeAttribute("tempEmail");
-                        session.removeAttribute("tempPhone");
-                        session.removeAttribute("tempPassword");
-                        session.removeAttribute("generatedOTP");
+                    for (int attempt = 0; attempt < maxRetries; attempt++) {
+                        psLock = conn.prepareStatement(
+                            "SELECT TOP 1 customerId FROM Customers WITH (UPDLOCK) ORDER BY customerId DESC");
+                        ResultSet rsLock = psLock.executeQuery();
 
-                        // Đá về trang Login với thông báo xanh lá
-                        request.setAttribute("successMessage", "Xác thực thành công! Hệ thống đã ghi nhận tài khoản. Hãy đăng nhập.");
-                        request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
-                    } else {
-                        request.setAttribute("errorMessage", "Lỗi hệ thống khi lưu tài khoản.");
-                        request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                        String lastId = null;
+                        if (rsLock.next()) {
+                            lastId = rsLock.getString(1);
+                        }
+                        rsLock.close();
+                        psLock.close();
+                        psLock = null;
+
+                        String numericPart = lastId != null ? lastId.replaceAll("[^0-9]", "") : "";
+                        long nextNum = numericPart.isEmpty() ? 1 : Long.parseLong(numericPart) + 1;
+                        newAccountId = "ACC" + String.format("%05d", nextNum);
+
+                        String insertSQL = "INSERT INTO Customers (customerId, username, email, passwordHash, fullName, status, phone) VALUES (?, ?, ?, ?, ?, 'Active', ?)";
+                        psInsert = conn.prepareStatement(insertSQL);
+                        psInsert.setString(1, newAccountId);
+                        psInsert.setString(2, email);
+                        psInsert.setString(3, email);
+                        psInsert.setString(4, passwordUtil.hashPassword(password));
+                        psInsert.setString(5, fullName);
+                        psInsert.setString(6, phone);
+
+                        try {
+                            int row = psInsert.executeUpdate();
+                            psInsert.close();
+                            psInsert = null;
+                            conn.commit();
+                            break;
+                        } catch (SQLException insertEx) {
+                            psInsert.close();
+                            psInsert = null;
+                            if (insertEx.getMessage() != null && insertEx.getMessage().contains("duplicate key")) {
+                                continue; 
+                            }
+                            throw insertEx;
+                        }
                     }
+
+                    if (newAccountId == null) {
+                        conn.rollback();
+                        sendResponse(request, response, isAjax, false, "Unable to generate a unique account ID after multiple attempts. Please try again.", "/Pages/Authentication/Register/VerifyOTP.jsp");
+                        return;
+                    }
+
+                    session.removeAttribute("tempName");
+                    session.removeAttribute("tempEmail");
+                    session.removeAttribute("tempPhone");
+                    session.removeAttribute("tempPassword");
+                    session.removeAttribute("generatedOTP");
+
+                    sendResponse(request, response, isAjax, true, "Registration successful! You can now login.", "/Pages/Authentication/Login/Login.jsp");
+
                 } catch (Exception e) {
-                    request.setAttribute("errorMessage", "Lỗi CSDL: " + e.getMessage());
-                    request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                    if (conn != null) {
+                        try { conn.rollback(); } catch (Exception ignored) {}
+                    }
+                    sendResponse(request, response, isAjax, false, "Database error: " + e.getMessage(), "/Pages/Authentication/Register/VerifyOTP.jsp");
                 } finally {
-                    try { if (psInsert != null) psInsert.close(); if (conn != null) conn.close(); } catch (Exception ex) {}
+                    try {
+                        if (psInsert != null) psInsert.close();
+                        if (psLock != null) psLock.close();
+                        if (conn != null) {
+                            conn.setAutoCommit(true);
+                            conn.close();
+                        }
+                    } catch (Exception ex) {}
                 }
             }
-            
+
         } else {
-            // Nhập sai mã OTP -> Bắn lỗi, ở lại trang nhập OTP
             if (isForgotPassword) {
-                request.setAttribute("errorMessage", "Mã OTP không chính xác. Vui lòng kiểm tra lại hòm thư!");
-                response.sendRedirect(request.getContextPath() + "/auth/verify-otp?mode=forgot");
+                sendResponse(request, response, isAjax, false, "OTP is incorrect. Please check your inbox!", "/auth/verify-otp?mode=forgot");
             } else {
-                request.setAttribute("errorMessage", "Mã OTP không chính xác. Vui lòng kiểm tra lại hòm thư!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/VerifyOTP.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "OTP is incorrect. Please check your inbox!", "/Pages/Authentication/Register/VerifyOTP.jsp");
+            }
+        }
+    }
+
+    private void sendResponse(HttpServletRequest request, HttpServletResponse response, boolean isAjax, boolean success, String message, String redirectUrl) throws ServletException, IOException {
+        if (isAjax) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            if (success) {
+                response.getWriter().write("{\"success\":true, \"redirectUrl\":\"" + redirectUrl + "\"}");
+            } else {
+                String safeMessage = message != null ? message.replace("\"", "\\\"") : "";
+                response.getWriter().write("{\"success\":false, \"message\":\"" + safeMessage + "\"}");
+            }
+        } else {
+            if (success) {
+                if (redirectUrl != null && !redirectUrl.endsWith(".jsp")) {
+                    response.sendRedirect(redirectUrl);
+                } else if (redirectUrl != null) {
+                    request.setAttribute("successMessage", message);
+                    request.getRequestDispatcher(redirectUrl).forward(request, response);
+                }
+            } else {
+                request.setAttribute("errorMessage", message);
+                if (redirectUrl != null && redirectUrl.endsWith(".jsp")) {
+                    request.getRequestDispatcher(redirectUrl).forward(request, response);
+                } else if (redirectUrl != null) {
+                    response.sendRedirect(request.getContextPath() + redirectUrl);
+                }
             }
         }
     }

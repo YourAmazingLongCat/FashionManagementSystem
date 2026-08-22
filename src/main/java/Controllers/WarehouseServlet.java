@@ -19,10 +19,14 @@ import jakarta.servlet.http.HttpServletResponse;
     "/admin/warehouse/inventory",
     "/admin/warehouse/import",
     "/admin/warehouse/export",
+    "/admin/warehouse/import-bills",
+    "/admin/warehouse/import-bills/view",
     "/staff/warehouse",
     "/staff/warehouse/inventory",
     "/staff/warehouse/import",
-    "/staff/warehouse/export"
+    "/staff/warehouse/export",
+    "/staff/warehouse/import-bills",
+    "/staff/warehouse/import-bills/view"
 })
 public class WarehouseServlet extends HttpServlet {
 
@@ -60,9 +64,13 @@ public class WarehouseServlet extends HttpServlet {
             case "/staff/warehouse/import":
                 showImport(request, response);
                 break;
-            case "/admin/warehouse/export":
-            case "/staff/warehouse/export":
-                showExport(request, response);
+            case "/admin/warehouse/import-bills":
+            case "/staff/warehouse/import-bills":
+                showImportBills(request, response);
+                break;
+            case "/admin/warehouse/import-bills/view":
+            case "/staff/warehouse/import-bills/view":
+                showImportBillDetail(request, response);
                 break;
             default:
                 showInventory(request, response);
@@ -94,24 +102,53 @@ public class WarehouseServlet extends HttpServlet {
 
         switch (action) {
             case "import":
-                if (handleImport(request, user.getAccountId())) {
+                boolean importOk = handleImport(request, user.getAccountId());
+                Object batchAttr = request.getAttribute("batchResult");
+                if (batchAttr instanceof DALs.WarehouseDAO.BatchImportResult) {
+                    DALs.WarehouseDAO.BatchImportResult br = (DALs.WarehouseDAO.BatchImportResult) batchAttr;
+                    if (br.allOk()) {
+                        message = "Stock in successful! Added " + br.successCount + " item(s).";
+                        messageType = "success";
+                    } else if (br.partial()) {
+                        message = "Stock in partially completed: " + br.successCount + " added, " + br.failCount + " failed.";
+                        messageType = "error";
+                    } else {
+                        message = "Stock in failed. Please try again.";
+                        messageType = "error";
+                    }
+                } else if (importOk) {
                     message = "Stock in successful!";
                     messageType = "success";
                 } else {
                     message = "Stock in failed. Please try again.";
                     messageType = "error";
                 }
-                response.sendRedirect(basePath + "/import?message=" + 
+                response.sendRedirect(basePath + "/import?message=" +
                         java.net.URLEncoder.encode(message, "UTF-8") + "&messageType=" + messageType);
                 break;
             case "export":
-                if (handleExport(request)) {
+                boolean exportOk = handleExport(request, user.getAccountId());
+                Object exportBatchAttr = request.getAttribute("batchResult");
+                if (exportBatchAttr instanceof DALs.WarehouseDAO.BatchImportResult) {
+                    DALs.WarehouseDAO.BatchImportResult br = (DALs.WarehouseDAO.BatchImportResult) exportBatchAttr;
+                    if (br.allOk()) {
+                        message = "Stock out successful! Reduced " + br.successCount + " item(s).";
+                        messageType = "success";
+                    } else if (br.partial()) {
+                        message = "Stock out partially completed: " + br.successCount + " reduced, " + br.failCount + " failed.";
+                        messageType = "error";
+                    } else {
+                        message = "Stock out failed. " + (br.firstError == null ? "" : br.firstError);
+                        messageType = "error";
+                    }
+                } else if (exportOk) {
                     message = "Stock out successful!";
+                    messageType = "success";
                 } else {
                     message = "Stock out failed. Check available stock.";
                     messageType = "error";
                 }
-                response.sendRedirect(basePath + "/inventory?message=" + 
+                response.sendRedirect(basePath + "/export?message=" +
                         java.net.URLEncoder.encode(message, "UTF-8") + "&messageType=" + messageType);
                 break;
             default:
@@ -129,13 +166,24 @@ public class WarehouseServlet extends HttpServlet {
         String sizeFilter = trim(request.getParameter("sizeFilter"));
         String colorFilter = trim(request.getParameter("colorFilter"));
 
-        List<Object[]> inventory = warehouseDAO.getInventorySummary(keyword, sizeFilter, colorFilter, productFilter);
+        int invPage = 1;
+        if (request.getParameter("invPage") != null && !request.getParameter("invPage").isBlank()) {
+            invPage = Math.max(1, Integer.parseInt(request.getParameter("invPage")));
+        }
+        int invPageSize = 10;
+
+        Map<String, Object> invResult = warehouseDAO.getInventorySummaryPaginated(keyword, sizeFilter, colorFilter, productFilter, invPage, invPageSize);
+        @SuppressWarnings("unchecked")
+        List<Object[]> inventory = (List<Object[]>) invResult.get("data");
+        int invTotalRecords = (int) invResult.get("totalRecords");
+        int invTotalPages = (int) invResult.get("totalPages");
+
         List<Product> products = productDAO.getAllProducts();
         List<Object[]> lowStock = warehouseDAO.getLowStockItems(10);
         List<Object[]> allSizes = warehouseDAO.getAllSizes();
         List<Object[]> allColors = warehouseDAO.getAllColors();
 
-        int totalItems = inventory.size();
+        int totalItems = invTotalRecords;
         int totalStock = 0;
         int totalAvailable = 0;
         int lowStockCount = lowStock.size();
@@ -161,6 +209,9 @@ public class WarehouseServlet extends HttpServlet {
         request.setAttribute("currentProductFilter", productFilter);
         request.setAttribute("currentSizeFilter", sizeFilter);
         request.setAttribute("currentColorFilter", colorFilter);
+        request.setAttribute("invPage", invPage);
+        request.setAttribute("invTotalPages", invTotalPages);
+        request.setAttribute("invTotalRecords", invTotalRecords);
 
         if (request.getParameter("message") != null) {
             request.setAttribute("message", request.getParameter("message"));
@@ -240,64 +291,149 @@ public class WarehouseServlet extends HttpServlet {
         request.getRequestDispatcher("/views/pages/productManagement/warehouse/warehouseImport.jsp").forward(request, response);
     }
 
-    private void showExport(HttpServletRequest request, HttpServletResponse response)
+    private void showImportBills(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        List<Object[]> inventory = warehouseDAO.getInventorySummary();
-        List<Object[]> lowStock = warehouseDAO.getLowStockItems(10);
+        String importerFilter = trim(request.getParameter("importerFilter"));
+        String dateFrom = trim(request.getParameter("dateFrom"));
+        String dateTo = trim(request.getParameter("dateTo"));
+        String search = trim(request.getParameter("search"));
 
-        request.setAttribute("inventory", inventory);
-        request.setAttribute("lowStock", lowStock);
-        request.setAttribute("activeTab", "export");
+        int billPage = 1;
+        try {
+            if (request.getParameter("billPage") != null && !request.getParameter("billPage").isBlank()) {
+                billPage = Math.max(1, Integer.parseInt(request.getParameter("billPage")));
+            }
+        } catch (NumberFormatException ignored) {}
+        int billPageSize = 10;
 
-        request.getRequestDispatcher("/views/pages/productManagement/warehouse/warehouseExport.jsp").forward(request, response);
+        Map<String, Object> billResult = warehouseDAO.getImportBillsPaginated(
+                importerFilter, dateFrom, dateTo, search, billPage, billPageSize);
+        @SuppressWarnings("unchecked")
+        List<Object[]> importBills = (List<Object[]>) billResult.get("data");
+        int totalRecords = (int) billResult.get("totalRecords");
+        int totalPages = (int) billResult.get("totalPages");
+
+        List<Object[]> importers = warehouseDAO.getAllImporters();
+
+        request.setAttribute("importBills", importBills);
+        request.setAttribute("importers", importers);
+        request.setAttribute("activeTab", "import-bills");
+        request.setAttribute("billPage", billPage);
+        request.setAttribute("billTotalPages", totalPages);
+        request.setAttribute("billTotalRecords", totalRecords);
+        request.setAttribute("importerFilter", importerFilter);
+        request.setAttribute("dateFrom", dateFrom);
+        request.setAttribute("dateTo", dateTo);
+        request.setAttribute("billSearch", search);
+
+        if (request.getParameter("message") != null) {
+            request.setAttribute("message", request.getParameter("message"));
+            request.setAttribute("messageType", request.getParameter("messageType"));
+        }
+
+        request.getRequestDispatcher("/views/pages/productManagement/warehouse/importBillList.jsp").forward(request, response);
+    }
+
+    private void showImportBillDetail(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String billKey = trim(request.getParameter("billKey"));
+        List<Object[]> rows = warehouseDAO.getImportBillDetail(billKey);
+
+        request.setAttribute("billKey", billKey);
+        request.setAttribute("billRows", rows);
+        request.setAttribute("activeTab", "import-bills");
+
+        if (!rows.isEmpty()) {
+            Object[] first = rows.get(0);
+            request.setAttribute("billEmployeeName", first[8]);
+            request.setAttribute("billImportedAt", first[7]);
+        }
+
+        request.getRequestDispatcher("/views/pages/productManagement/warehouse/importBillDetail.jsp").forward(request, response);
     }
 
     private boolean handleImport(HttpServletRequest request, String importedBy) {
-        String variantId = trim(request.getParameter("variantId"));
-        String quantityStr = trim(request.getParameter("quantity"));
-        String importPriceStr = trim(request.getParameter("importPrice"));
+        // Batch form submits parallel arrays: variantId[], quantity[], importPrice[].
+        // Fallback to single-value fields so the old single-form still works.
+        String[] variantIds = request.getParameterValues("variantId");
+        String[] quantities = request.getParameterValues("quantity");
+        String[] prices = request.getParameterValues("importPrice");
 
-        if (variantId == null || variantId.isBlank()) return false;
-        if (quantityStr == null || quantityStr.isBlank()) return false;
-
-        int quantity;
-        try {
-            quantity = Integer.parseInt(quantityStr);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-
-        if (quantity <= 0) return false;
-
-        double importPrice = 0;
-        if (importPriceStr != null && !importPriceStr.isBlank()) {
-            try {
-                importPrice = Double.parseDouble(importPriceStr);
-            } catch (NumberFormatException e) {
-                return false;
+        // Single-mode fallback
+        if (variantIds == null) {
+            String singleVariant = trim(request.getParameter("variantId"));
+            if (singleVariant == null || singleVariant.isEmpty()) return false;
+            String qtyStr = trim(request.getParameter("quantity"));
+            String priceStr = trim(request.getParameter("importPrice"));
+            if (qtyStr == null || qtyStr.isBlank()) return false;
+            int qty;
+            double price = 0;
+            try { qty = Integer.parseInt(qtyStr); } catch (NumberFormatException e) { return false; }
+            if (qty <= 0) return false;
+            if (priceStr != null && !priceStr.isBlank()) {
+                try { price = Double.parseDouble(priceStr); } catch (NumberFormatException e) { return false; }
             }
+            return warehouseDAO.importStock(singleVariant, qty, price, importedBy);
         }
 
-        return warehouseDAO.importStock(variantId, quantity, importPrice, importedBy);
+        java.util.List<DALs.WarehouseDAO.ImportItem> items = new java.util.ArrayList<>();
+        for (int i = 0; i < variantIds.length; i++) {
+            String variantId = trim(variantIds[i]);
+            if (variantId == null || variantId.isEmpty()) continue;
+            // Skip rows the user left blank
+            String qtyStr = (quantities != null && i < quantities.length) ? trim(quantities[i]) : null;
+            if (qtyStr == null || qtyStr.isBlank()) continue;
+            int qty;
+            double price = 0;
+            try { qty = Integer.parseInt(qtyStr); } catch (NumberFormatException e) { continue; }
+            if (qty <= 0) continue;
+            String priceStr = (prices != null && i < prices.length) ? trim(prices[i]) : null;
+            if (priceStr != null && !priceStr.isBlank()) {
+                try { price = Double.parseDouble(priceStr); } catch (NumberFormatException e) { continue; }
+            }
+            items.add(new DALs.WarehouseDAO.ImportItem(variantId, qty, price));
+        }
+
+        if (items.isEmpty()) return false;
+        DALs.WarehouseDAO.BatchImportResult result = warehouseDAO.importStockBatch(items, importedBy);
+        // Stash result on request so doPost can build a richer message
+        request.setAttribute("batchResult", result);
+        return result.successCount > 0;
     }
 
-    private boolean handleExport(HttpServletRequest request) {
-        String variantId = trim(request.getParameter("variantId"));
-        String quantityStr = trim(request.getParameter("quantity"));
+    private boolean handleExport(HttpServletRequest request, String exportedBy) {
+        String[] variantIds = request.getParameterValues("variantId");
+        String[] quantities = request.getParameterValues("quantity");
+        String defaultReason = trim(request.getParameter("reason"));
 
-        if (variantId == null || variantId.isBlank()) return false;
-        if (quantityStr == null || quantityStr.isBlank()) return false;
-
-        int quantity;
-        try {
-            quantity = Integer.parseInt(quantityStr);
-        } catch (NumberFormatException e) {
-            return false;
+        // Single-mode fallback (old form used quantity + reason per row)
+        if (variantIds == null) {
+            String singleVariant = trim(request.getParameter("variantId"));
+            if (singleVariant == null || singleVariant.isEmpty()) return false;
+            String qtyStr = trim(request.getParameter("quantity"));
+            if (qtyStr == null || qtyStr.isBlank()) return false;
+            int qty;
+            try { qty = Integer.parseInt(qtyStr); } catch (NumberFormatException e) { return false; }
+            if (qty <= 0) return false;
+            return warehouseDAO.exportStock(singleVariant, qty, exportedBy, defaultReason);
         }
 
-        if (quantity <= 0) return false;
+        java.util.List<DALs.WarehouseDAO.ImportItem> items = new java.util.ArrayList<>();
+        for (int i = 0; i < variantIds.length; i++) {
+            String variantId = trim(variantIds[i]);
+            if (variantId == null || variantId.isEmpty()) continue;
+            String qtyStr = (quantities != null && i < quantities.length) ? trim(quantities[i]) : null;
+            if (qtyStr == null || qtyStr.isBlank()) continue;
+            int qty;
+            try { qty = Integer.parseInt(qtyStr); } catch (NumberFormatException e) { continue; }
+            if (qty <= 0) continue;
+            items.add(new DALs.WarehouseDAO.ImportItem(variantId, qty, 0));
+        }
 
-        return warehouseDAO.deductStock(variantId, quantity);
+        if (items.isEmpty()) return false;
+        DALs.WarehouseDAO.BatchImportResult result = warehouseDAO.exportStockBatch(items, exportedBy, defaultReason);
+        request.setAttribute("batchResult", result);
+        return result.successCount > 0;
     }
 
     private Account getLoggedInUser(HttpServletRequest request) {

@@ -261,7 +261,13 @@
                         </div>
                         <div class="info-card">
                             <span>Status</span>
-                            <strong>${product.status}</strong>
+                            <strong>
+                                <c:choose>
+                                    <c:when test="${product.status == 'Available'}">Visible</c:when>
+                                    <c:when test="${product.status == 'Inactive'}">Hidden</c:when>
+                                    <c:otherwise>${product.status}</c:otherwise>
+                                </c:choose>
+                            </strong>
                         </div>
                     </div>
 
@@ -280,7 +286,13 @@
                         </div>
                         <div class="delete-row">
                             <span>Status</span>
-                            <strong>${product.status}</strong>
+                            <strong>
+                                <c:choose>
+                                    <c:when test="${product.status == 'Available'}">Visible</c:when>
+                                    <c:when test="${product.status == 'Inactive'}">Hidden</c:when>
+                                    <c:otherwise>${product.status}</c:otherwise>
+                                </c:choose>
+                            </strong>
                         </div>
                     </div>
 

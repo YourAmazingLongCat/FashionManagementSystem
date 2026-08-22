@@ -16,7 +16,7 @@ import jakarta.mail.internet.MimeMessage;
 
 public class EmailUtils {
 
-    // QUAN TRỌNG: Hãy điền đúng Gmail và Mật khẩu ứng dụng 16 ký tự (VIẾT LIỀN, KHÔNG CÓ KHOẢNG TRẮNG)
+    // IMPORTANT: Use your Gmail + 16-char App Password (no spaces)
     private static final String FROM_EMAIL = "nhanpth.ce191725@gmail.com"; 
     private static final String APP_PASSWORD = "vgcngfzhdhdpfyqh"; 
 
@@ -187,7 +187,7 @@ public class EmailUtils {
                     + "was not confirmed within 2 days and has been automatically removed.</p>"
                     + "<p><strong>Checkout time:</strong> " + checkoutTime + "<br>"
                     + "<strong>Order total:</strong> " + amount + "</p>"
-                    + "<p>If the order was paid by Wallet, the amount was returned automatically. "
+                    + "<p>If the order was paid through VNPay, its refund status is recorded automatically. "
                     + "For VNPay, the project has recorded the refund status.</p>"
                     + "<p>You can return to the store and place a new order at any time.</p>"
                     + "</div>";

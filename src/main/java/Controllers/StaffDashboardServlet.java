@@ -1,6 +1,7 @@
 package Controllers;
 
 import DALs.ProductDAO;
+import DALs.StatisticDAO;
 import Models.Account;
 import Models.Order;
 import Models.Payment;
@@ -25,12 +26,14 @@ public class StaffDashboardServlet extends HttpServlet {
     private OrderService orderService;
     private PaymentService paymentService;
     private ProductDAO productDAO;
+    private StatisticDAO statisticDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
         paymentService = new PaymentService();
         productDAO = new ProductDAO();
+        statisticDAO = new StatisticDAO();
     }
 
     @Override
@@ -46,21 +49,31 @@ public class StaffDashboardServlet extends HttpServlet {
 
         List<Order> orders = safeOrders();
         List<Payment> payments = safePayments();
-        List<Payment> pendingDeposits = safePendingDeposits();
         List<Product> products = safeProducts();
 
+        request.setAttribute("totalCustomers", statisticDAO.getTotalCustomers());
         request.setAttribute("totalOrders", orders.size());
         request.setAttribute("pendingOrders", countOrdersByStatus(orders, OrderStatus.PENDING));
         request.setAttribute("processingOrders", countOrdersByStatus(orders, OrderStatus.PROCESSING));
         request.setAttribute("shippingOrders", countOrdersByStatus(orders, OrderStatus.SHIPPING));
+        request.setAttribute("deliveredOrders", countOrdersByStatus(orders, OrderStatus.DELIVERED));
+        request.setAttribute("cancelledOrders", countOrdersByStatus(orders, OrderStatus.CANCELLED));
         request.setAttribute("totalPayments", payments.size());
-        request.setAttribute("pendingPayments", countPaymentsByStatus(payments, PaymentStatus.PENDING));
-        request.setAttribute("paidPayments", countPaymentsByStatus(payments, PaymentStatus.PAID));
-        request.setAttribute("pendingDepositsCount", pendingDeposits.size());
+        request.setAttribute("pendingPayments", countPaymentsByStatus(payments, PaymentStatus::isPending));
+        request.setAttribute("paidPayments", countPaymentsByStatus(payments, PaymentStatus::isPaid));
+        request.setAttribute("failedPayments", countPaymentsByStatus(payments, PaymentStatus::isFailed));
         request.setAttribute("totalProducts", products.size());
         request.setAttribute("recentOrders", orders);
         request.setAttribute("payments", payments);
-        request.setAttribute("pendingDeposits", pendingDeposits);
+
+        // Overview analytics (same data set used by Admin)
+        request.setAttribute("revenue", statisticDAO.getRevenue());
+        request.setAttribute("costOfGoodsSold", statisticDAO.getCostOfGoodsSold());
+        request.setAttribute("profit", statisticDAO.getProfit());
+        request.setAttribute("totalProductSold", statisticDAO.getTotalProductSold(null, null));
+        request.setAttribute("topProducts", statisticDAO.getTopProducts(5, null, null));
+        request.setAttribute("topSpenders", statisticDAO.getTopSpenders(5, null, null));
+        request.setAttribute("orderStatistics", statisticDAO.getOrderStatistics());
 
         request.getRequestDispatcher("/Pages/Staff/Staff.jsp").forward(request, response);
     }
@@ -73,11 +86,6 @@ public class StaffDashboardServlet extends HttpServlet {
     private List<Payment> safePayments() {
         List<Payment> payments = paymentService.getAllPayments();
         return payments == null ? new ArrayList<>() : payments;
-    }
-
-    private List<Payment> safePendingDeposits() {
-        List<Payment> pending = paymentService.getPendingDeposits();
-        return pending == null ? new ArrayList<>() : pending;
     }
 
     private List<Product> safeProducts() {
@@ -95,10 +103,10 @@ public class StaffDashboardServlet extends HttpServlet {
         return count;
     }
 
-    private int countPaymentsByStatus(List<Payment> payments, String status) {
+    private int countPaymentsByStatus(List<Payment> payments, java.util.function.Predicate<String> matcher) {
         int count = 0;
         for (Payment payment : payments) {
-            if (payment != null && status.equalsIgnoreCase(payment.getPaymentStatus())) {
+            if (payment != null && matcher.test(payment.getPaymentStatus())) {
                 count++;
             }
         }

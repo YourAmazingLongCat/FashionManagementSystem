@@ -71,8 +71,12 @@ public class StatisticController extends HttpServlet {
         } else if ("updateStatus".equals(action)) {
             String newStatus = request.getParameter("status");
             if (accountId != null && !accountId.isEmpty() && newStatus != null && !newStatus.isEmpty()) {
-                accountDao.updateStatus(accountId, newStatus);
-                request.setAttribute("toastMsg", "Status updated successfully!");
+                boolean ok = accountDao.updateStatus(accountId, newStatus);
+                if (ok) {
+                    request.setAttribute("toastMsg", "Status updated successfully!");
+                } else {
+                    request.setAttribute("toastErr", "Invalid status value: " + newStatus);
+                }
             }
         } else         if ("createStaff".equals(action)) {
             String email = request.getParameter("email");
@@ -162,6 +166,7 @@ public class StatisticController extends HttpServlet {
         String toDate = request.getParameter("toDate");
         String currentSection = request.getParameter("section");
         String searchComment = request.getParameter("searchComment");
+        String statusFilter = request.getParameter("statusFilter");
 
         // Load comment data if comments section is active
         if ("comments".equals(currentSection)) {
@@ -225,10 +230,14 @@ public class StatisticController extends HttpServlet {
         request.setAttribute("topSpenders", topSpenders);
         request.setAttribute("customerStatistics", topCustomers);
         request.setAttribute("orderStatistics", dao.getOrderStatistics());
-        request.setAttribute("allAccounts", searchKeyword != null && !searchKeyword.trim().isEmpty()
-                ? accountDao.searchAccounts(searchKeyword.trim())
-                : accountDao.getAllAccounts());
-        
+
+        // Account list: filter by search keyword + status (keyword kept for backward compatibility)
+        String searchAcc = searchKeyword != null ? searchKeyword : request.getParameter("searchAccount");
+        String statusAcc = request.getParameter("statusFilter");
+        request.setAttribute("searchAccount", searchAcc);
+        request.setAttribute("statusFilter", statusAcc);
+        request.setAttribute("allAccounts", accountDao.searchAccounts(searchAcc, statusAcc));
+
         // Account pagination
         String pageParam = request.getParameter("page");
         int page = 1;
@@ -241,17 +250,16 @@ public class StatisticController extends HttpServlet {
             }
         }
         int pageSize = 10;
-        String searchAcc = request.getParameter("searchAccount");
-        int totalAccounts = accountDao.getTotalAccounts(searchAcc);
+        int totalAccounts = accountDao.getTotalAccounts(searchAcc, statusAcc);
         int totalPages = (int) Math.ceil((double) totalAccounts / pageSize);
         if (totalPages < 1) totalPages = 1;
         if (page > totalPages) page = totalPages;
-        
+
         request.setAttribute("accountPage", page);
         request.setAttribute("accountPageSize", pageSize);
         request.setAttribute("accountTotalPages", totalPages);
         request.setAttribute("accountTotalRecords", totalAccounts);
-        request.setAttribute("pagedAccounts", accountDao.getAccountsPaged(page, pageSize, searchAcc));
+        request.setAttribute("pagedAccounts", accountDao.getAccountsPaged(page, pageSize, searchAcc, statusAcc));
     }
 
     private String generateRandomPassword() {

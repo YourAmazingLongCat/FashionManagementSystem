@@ -7,11 +7,17 @@ import java.sql.SQLException;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * Backwards-compatible alias for the legacy "favorite products" feature.
+ *
+ * The new schema drops FavoriteProducts and consolidates the feature into the
+ * Wishlists table (customerId + productId). Every method here delegates to
+ * Wishlists so legacy callers keep working.
+ */
 public class FavoriteProductDAO extends DBContext {
 
     public FavoriteProductDAO() {
         super();
-        ensureTableExists();
     }
 
     public Set<String> getFavoriteProductIdsByAccountId(String accountId) {
@@ -20,7 +26,7 @@ public class FavoriteProductDAO extends DBContext {
             return favorites;
         }
 
-        String sql = "SELECT productId FROM FavoriteProducts WHERE accountId = ? ORDER BY createdAt DESC";
+        String sql = "SELECT productId FROM Wishlists WHERE customerId = ? ORDER BY createdAt DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -38,7 +44,7 @@ public class FavoriteProductDAO extends DBContext {
         if (connection == null || isBlank(accountId) || isBlank(productId)) {
             return false;
         }
-        String sql = "SELECT 1 FROM FavoriteProducts WHERE accountId = ? AND productId = ?";
+        String sql = "SELECT 1 FROM Wishlists WHERE customerId = ? AND productId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             ps.setString(2, productId);
@@ -59,8 +65,8 @@ public class FavoriteProductDAO extends DBContext {
         if (isFavorite(accountId, productId)) {
             return true;
         }
-        String newId = generateNextFavoriteId();
-        String sql = "INSERT INTO FavoriteProducts (favoriteId, accountId, productId, createdAt) VALUES (?, ?, ?, GETDATE())";
+        String newId = generateNextWishlistId();
+        String sql = "INSERT INTO Wishlists (wishlistId, customerId, productId, createdAt) VALUES (?, ?, ?, GETDATE())";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, newId);
             ps.setString(2, accountId);
@@ -79,7 +85,7 @@ public class FavoriteProductDAO extends DBContext {
         if (connection == null || isBlank(accountId) || isBlank(productId)) {
             return false;
         }
-        String sql = "DELETE FROM FavoriteProducts WHERE accountId = ? AND productId = ?";
+        String sql = "DELETE FROM Wishlists WHERE customerId = ? AND productId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             ps.setString(2, productId);
@@ -90,41 +96,19 @@ public class FavoriteProductDAO extends DBContext {
         }
     }
 
-    private void ensureTableExists() {
-        if (connection == null) {
-            return;
-        }
-        String sql = "IF OBJECT_ID('dbo.FavoriteProducts', 'U') IS NULL "
-                + "BEGIN "
-                + "CREATE TABLE dbo.FavoriteProducts ("
-                + "favoriteId VARCHAR(20) NOT NULL PRIMARY KEY,"
-                + "accountId VARCHAR(20) NOT NULL,"
-                + "productId VARCHAR(20) NOT NULL,"
-                + "createdAt DATETIME NULL DEFAULT GETDATE(),"
-                + "CONSTRAINT UQ_FavoriteProducts UNIQUE (accountId, productId),"
-                + "CONSTRAINT FK_FavoriteProducts_Accounts FOREIGN KEY (accountId) REFERENCES dbo.Accounts(accountId),"
-                + "CONSTRAINT FK_FavoriteProducts_Products FOREIGN KEY (productId) REFERENCES dbo.Products(productId)"
-                + ") END";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.execute();
-        } catch (SQLException ex) {
-            System.out.println("ensureTableExists FavoriteProducts error: " + ex.getMessage());
-        }
-    }
-
-    private String generateNextFavoriteId() {
-        String sql = "SELECT TOP 1 favoriteId FROM FavoriteProducts WHERE favoriteId LIKE 'FAV%' ORDER BY favoriteId DESC";
+    private String generateNextWishlistId() {
+        String sql = "SELECT TOP 1 wishlistId FROM Wishlists WHERE wishlistId LIKE 'WISH%' ORDER BY wishlistId DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
-                String currentId = rs.getString("favoriteId");
-                int number = Integer.parseInt(currentId.substring(3));
-                return String.format("FAV%03d", number + 1);
+                String currentId = rs.getString("wishlistId");
+                int number = Integer.parseInt(currentId.substring(4));
+                return String.format("WISH%03d", number + 1);
             }
         } catch (Exception ex) {
             System.out.println("generateNextFavoriteId error: " + ex.getMessage());
         }
-        return "FAV001";
+        return "WISH001";
     }
 
     private boolean isBlank(String value) {

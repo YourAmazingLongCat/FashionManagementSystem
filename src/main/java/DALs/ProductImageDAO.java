@@ -45,13 +45,49 @@ public class ProductImageDAO extends DBContext {
         return null;
     }
 
+    /**
+     * Delete image file in upload folder (external dir or webapps fallback).
+     * Used when staff uploads new image or deletes a product.
+     */
+    public void deleteImageFile(String imageUrl) {
+        try {
+            String fileName = getImageFileNameByUrl(imageUrl);
+            if (fileName == null) return;
+
+            Path externalDir = Controllers.ProductManagementServlet.getExternalUploadDirectory();
+            Path externalPath = externalDir.resolve(fileName).normalize();
+            if (Files.exists(externalPath) && Files.isRegularFile(externalPath)) {
+                Files.delete(externalPath);
+                return;
+            }
+
+            try {
+                Path webappsDir = Paths.get(System.getProperty("catalina.base"),
+                        "webapps", "FashionManagementSystem-1.0-SNAPSHOT",
+                        "Assets", "Images", "Product");
+                Path legacyPath = webappsDir.resolve(fileName).normalize();
+                if (Files.exists(legacyPath) && Files.isRegularFile(legacyPath)) {
+                    Files.delete(legacyPath);
+                }
+            } catch (Exception ignore) {
+            }
+        } catch (Exception e) {
+            System.out.println("[ProductImageDAO] deleteImageFile error: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Replace the primary image of a product. Only touches the primary image
+     * row (isPrimary = 1) so we never wipe out variant images that share
+     * the same productId but are stored with isPrimary = 0 and a variantId.
+     */
     public boolean upsertPrimaryImage(String productId, String imageUrl) {
         if (connection == null || productId == null || productId.isBlank() || imageUrl == null || imageUrl.isBlank()) {
             return false;
         }
 
         String getExistingSql = "SELECT imageId, imageUrl FROM ProductImages WHERE productId = ? AND isPrimary = 1";
-        String deleteSql = "DELETE FROM ProductImages WHERE productId = ?";
+        String deleteSql = "DELETE FROM ProductImages WHERE productId = ? AND isPrimary = 1";
         String insertSql = "INSERT INTO ProductImages (imageId, productId, imageUrl, isPrimary) VALUES (?, ?, ?, 1)";
 
         try {
@@ -72,6 +108,8 @@ public class ProductImageDAO extends DBContext {
                 deleteOldImageFile(oldImageUrl);
             }
 
+            // Only delete the primary image row. Variant images have
+            // isPrimary = 0 and a variantId, so this filter keeps them safe.
             try (PreparedStatement psDelete = connection.prepareStatement(deleteSql)) {
                 psDelete.setString(1, productId);
                 psDelete.executeUpdate();
@@ -143,6 +181,86 @@ public class ProductImageDAO extends DBContext {
             System.out.println("deleteImagesByProductId error: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Add an image that belongs to a specific variant. Does NOT touch existing
+     * images, so multiple variants can each have their own image row.
+     */
+    public boolean addVariantImage(String productId, String variantId, String imageUrl) {
+        if (connection == null || productId == null || productId.isBlank()
+                || variantId == null || variantId.isBlank()
+                || imageUrl == null || imageUrl.isBlank()) {
+            return false;
+        }
+
+        // Replace any previous image for this variant (1 image per variant).
+        String deleteSql = "DELETE FROM ProductImages WHERE variantId = ?";
+        String insertSql = "INSERT INTO ProductImages (imageId, productId, variantId, imageUrl, isPrimary) VALUES (?, ?, ?, ?, 0)";
+
+        try {
+            connection.setAutoCommit(false);
+
+            String oldImageUrl = null;
+            try (PreparedStatement psGet = connection.prepareStatement(
+                    "SELECT imageUrl FROM ProductImages WHERE variantId = ?")) {
+                psGet.setString(1, variantId);
+                try (ResultSet rs = psGet.executeQuery()) {
+                    if (rs.next()) {
+                        oldImageUrl = rs.getString("imageUrl");
+                    }
+                }
+            }
+
+            try (PreparedStatement psDelete = connection.prepareStatement(deleteSql)) {
+                psDelete.setString(1, variantId);
+                psDelete.executeUpdate();
+            }
+
+            try (PreparedStatement psInsert = connection.prepareStatement(insertSql)) {
+                psInsert.setString(1, generateImageId());
+                psInsert.setString(2, productId);
+                psInsert.setString(3, variantId);
+                psInsert.setString(4, imageUrl);
+                psInsert.executeUpdate();
+            }
+
+            // Best-effort cleanup of orphaned file
+            if (oldImageUrl != null && !oldImageUrl.equals(imageUrl)) {
+                deleteOldImageFile(oldImageUrl);
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            try { connection.rollback(); } catch (SQLException ignored) {}
+            System.out.println("addVariantImage error: " + e.getMessage());
+            return false;
+        } finally {
+            try { connection.setAutoCommit(true); } catch (SQLException ignored) {}
+        }
+    }
+
+    /**
+     * Get image URL for a specific variant. Returns null when the variant has no
+     * image row attached.
+     */
+    public String getImageUrlByVariantId(String variantId) {
+        if (connection == null || variantId == null || variantId.isBlank()) {
+            return null;
+        }
+        String sql = "SELECT TOP 1 imageUrl FROM ProductImages WHERE variantId = ? ORDER BY isPrimary DESC, imageId ASC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, variantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("imageUrl");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("getImageUrlByVariantId error: " + e.getMessage());
+        }
+        return null;
     }
 
     public String getPrimaryImageByProductId(String productId) {

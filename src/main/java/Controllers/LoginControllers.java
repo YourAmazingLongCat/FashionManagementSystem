@@ -12,64 +12,70 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * Controller xử lý logic Đăng Nhập cho Fashion Store
+ * Controller for Login logic (Fashion Store).
  */
 @WebServlet(name = "LoginControllers", urlPatterns = {"/auth/login"})
 public class LoginControllers extends HttpServlet {
 
-    /**
-     * Xử lý phương thức GET: Mở trang web đăng nhập
-     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // Điều hướng tới file Login.jsp
         request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
     }
 
-    /**
-     * Xử lý phương thức POST: Khi người dùng bấm nút "Đăng Nhập"
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 1. Lấy dữ liệu từ form (khớp với thuộc tính name="email" và name="password" trong JSP)
         String email = request.getParameter("email");
         String password = request.getParameter("password");
 
-        // 2. Gọi DAO để kiểm tra DB
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
         AccountDAO dao = new AccountDAO();
         Account acc = dao.checkLogin(email, password);
 
-        // 3. Xử lý kết quả
         if (acc != null) {
-
-            // 👉 SỬA Ở ĐÂY: Kiểm tra status kiểu String
-            // Nếu status khác null và KHÔNG bằng chữ "Active" (không phân biệt hoa thường)
             if (acc.getStatus() != null && !acc.getStatus().equalsIgnoreCase("Active")) {
-                request.setAttribute("errorMessage", "Tài khoản của bạn đã bị khóa hoặc chưa kích hoạt!");
+                if (isAjax) {
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"success\":false, \"message\":\"Your account is locked or not activated!\"}");
+                    return;
+                }
+                request.setAttribute("errorMessage", "Your account is locked or not activated!");
                 request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
                 return;
             }
 
-            // Đăng nhập thành công: Lưu thông tin Account vào Session
             HttpSession session = request.getSession();
             session.setAttribute("USER", acc);
 
-            // Chuyển hướng Staff đến Product Management, Admin đến Admin dashboard, Customer đến Home
+            String redirectUrl = request.getContextPath() + "/home";
             String role = acc.getRole();
             if (role != null && role.equalsIgnoreCase("Staff")) {
-                response.sendRedirect(request.getContextPath() + "/staff/products");
+                redirectUrl = request.getContextPath() + "/staff/products";
             } else if (role != null && role.equalsIgnoreCase("Admin")) {
-                response.sendRedirect(request.getContextPath() + "/Admin");
-            } else {
-                response.sendRedirect(request.getContextPath() + "/home");
+                redirectUrl = request.getContextPath() + "/Admin";
             }
 
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":true, \"redirectUrl\":\"" + redirectUrl + "\"}");
+                return;
+            }
+            
+            response.sendRedirect(redirectUrl);
+
         } else {
-            // Đăng nhập thất bại: Gửi thông báo lỗi về lại trang Login
-            request.setAttribute("errorMessage", "Email hoặc mật khẩu không chính xác!");
+            if (isAjax) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\":false, \"message\":\"Email or password is incorrect!\"}");
+                return;
+            }
+            request.setAttribute("errorMessage", "Email or password is incorrect!");
             request.getRequestDispatcher("/Pages/Authentication/Login/Login.jsp").forward(request, response);
         }
     }

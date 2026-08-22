@@ -93,11 +93,11 @@ public class SizeDAO extends DBContext {
         return null;
     }
 
-    public boolean createSize(Size size) {
+    public boolean createSize(Size size) throws SQLException {
         String sql = "INSERT INTO Sizes (sizeId, sizeName, categoryId) VALUES (?, ?, ?)";
 
         if (connection == null) {
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         size.setSizeId(generateNextSizeId());
@@ -107,18 +107,14 @@ public class SizeDAO extends DBContext {
             ps.setString(2, size.getSizeName());
             ps.setString(3, size.getCategoryId());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("createSize error: " + e.getMessage());
         }
-
-        return false;
     }
 
-    public boolean updateSize(Size size) {
+    public boolean updateSize(Size size) throws SQLException {
         String sql = "UPDATE Sizes SET sizeName = ?, categoryId = ? WHERE sizeId = ?";
 
         if (connection == null) {
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -126,28 +122,20 @@ public class SizeDAO extends DBContext {
             ps.setString(2, size.getCategoryId());
             ps.setString(3, size.getSizeId());
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("updateSize error: " + e.getMessage());
         }
-
-        return false;
     }
 
-    public boolean deleteSize(String sizeId) {
+    public boolean deleteSize(String sizeId) throws SQLException {
         String sql = "DELETE FROM Sizes WHERE sizeId = ?";
 
         if (connection == null) {
-            return false;
+            throw new SQLException("Database connection is not available.");
         }
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, sizeId);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("deleteSize error: " + e.getMessage());
         }
-
-        return false;
     }
 
     private String generateNextSizeId() {

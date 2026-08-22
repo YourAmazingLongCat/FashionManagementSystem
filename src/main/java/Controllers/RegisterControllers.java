@@ -30,80 +30,84 @@ public class RegisterControllers extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
-        // 1. Lấy dữ liệu từ Form
-        String fullName = request.getParameter("name");
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
+        String fullName = request.getParameter("fullName");
+        if (fullName == null || fullName.trim().isEmpty()) {
+            fullName = request.getParameter("name");
+        }
+        
         String email = request.getParameter("email");
-        String phone = request.getParameter("phoneNumber"); 
+        
+        String phone = request.getParameter("phone");
+        if (phone == null || phone.trim().isEmpty()) {
+            phone = request.getParameter("phoneNumber");
+        }
+        
         String password = request.getParameter("password");
         String confirmPassword = request.getParameter("confirmPassword");
 
-        // 2. Kiểm tra mật khẩu khớp
         if (password != null && !password.equals(confirmPassword)) {
-            request.setAttribute("errorMessage", "Mật khẩu xác nhận không khớp!");
-            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Passwords do not match!");
             return;
         }
 
-        // =========================================================================
-        // 👉 ĐÃ THÊM: Kiểm tra độ mạnh của mật khẩu (Chữ hoa đầu, có số, có ký tự ĐB)
-        // =========================================================================
         String passwordPattern = "^[A-Z](?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).+$";
-        
+
         if (password == null || !password.matches(passwordPattern)) {
-            request.setAttribute("errorMessage", "Mật khẩu phải bắt đầu bằng chữ cái viết hoa, có ít nhất 1 chữ số và 1 ký tự đặc biệt!");
-            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "Password must start with uppercase letter and contain at least 1 digit and 1 special character!");
             return;
         }
-        // =========================================================================
 
-        Connection connection = null; 
+        Connection connection = null;
         PreparedStatement psCheck = null;
         ResultSet rs = null;
 
         try {
-            connection = new DBContext().getConnection(); 
-            System.out.println("Connection = " + connection);
-            
-            // 3. Kiểm tra trùng lặp (Email hoặc Phone)
-            String checkSQL = "SELECT email FROM Accounts WHERE email = ? OR phone = ?";
+            connection = new DBContext().getConnection();
+
+            String checkSQL = "SELECT email FROM ("
+                    + "SELECT email, phone FROM Customers "
+                    + "UNION ALL "
+                    + "SELECT email, phone FROM Employees) AS a "
+                    + "WHERE email = ? OR phone = ?";
             psCheck = connection.prepareStatement(checkSQL);
             psCheck.setString(1, email);
             psCheck.setString(2, phone);
             rs = psCheck.executeQuery();
 
             if (rs.next()) {
-                request.setAttribute("errorMessage", "Email hoặc Số điện thoại đã được đăng ký!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Email or phone is already registered!");
                 return;
             }
 
-            // 4. Sinh ngẫu nhiên mã OTP 6 chữ số
             Random rand = new Random();
             String otpCode = String.format("%06d", rand.nextInt(999999));
 
-            // 5. Gửi email chứa OTP thông qua EmailUtils
             boolean mailSent = EmailUtils.sendOTP(email, otpCode);
-            
+
             if (mailSent) {
-                // Nếu gửi thành công, lưu dữ liệu tạm thời vào Session
                 HttpSession session = request.getSession();
                 session.setAttribute("tempName", fullName);
                 session.setAttribute("tempEmail", email);
                 session.setAttribute("tempPhone", phone);
                 session.setAttribute("tempPassword", password);
                 session.setAttribute("generatedOTP", otpCode);
-                
-                // Chuyển hướng sang Servlet xử lý trang nhập OTP
-                response.sendRedirect(request.getContextPath() + "/auth/verify-otp");
+
+                if (isAjax) {
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"success\":true}");
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/auth/verify-otp");
+                }
             } else {
-                request.setAttribute("errorMessage", "Không thể gửi mã xác minh tới Email này. Vui lòng kiểm tra lại cấu hình SMTP hoặc mạng!");
-                request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+                sendResponse(request, response, isAjax, false, "Cannot send OTP email. Please check SMTP config or network!");
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("errorMessage", "Lỗi Hệ Thống: " + e.getMessage());
-            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
+            sendResponse(request, response, isAjax, false, "System error: " + e.getMessage());
         } finally {
             try {
                 if (rs != null) rs.close();
@@ -112,6 +116,18 @@ public class RegisterControllers extends HttpServlet {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+        }
+    }
+
+    private void sendResponse(HttpServletRequest request, HttpServletResponse response, boolean isAjax, boolean success, String message) throws ServletException, IOException {
+        if (isAjax) {
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            String safeMessage = message.replace("\"", "\\\""); 
+            response.getWriter().write("{\"success\":" + success + ", \"message\":\"" + safeMessage + "\"}");
+        } else {
+            request.setAttribute("errorMessage", message);
+            request.getRequestDispatcher("/Pages/Authentication/Register/Register.jsp").forward(request, response);
         }
     }
 }

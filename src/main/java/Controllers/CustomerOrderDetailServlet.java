@@ -1,10 +1,10 @@
 package Controllers;
 
+import DALs.OrderDAO;
 import Models.Account;
 import Models.Order;
 import Models.OrderItem;
 import Models.Payment;
-import Models.Wallet;
 import Services.OrderService;
 import Services.PaymentService;
 import Utils.OrderStatus;
@@ -26,11 +26,13 @@ public class CustomerOrderDetailServlet extends HttpServlet {
 
     private OrderService orderService;
     private PaymentService paymentService;
+    private OrderDAO orderDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
         paymentService = new PaymentService();
+        orderDAO = new OrderDAO();
     }
 
     @Override
@@ -137,16 +139,20 @@ public class CustomerOrderDetailServlet extends HttpServlet {
             return;
         }
 
+        // Place order is the moment the customer's intent becomes a real
+        // claim on the inventory. Reserve the variant quantities here so
+        // other shoppers can no longer see them as available. The actual
+        // stockQty deduction only happens later, when staff confirms the
+        // order (see OrderDAO.changeOrderStatusWithInventory).
+        if (!orderDAO.reserveStockForOrder(orderId)) {
+            session.setAttribute("errorMessage",
+                    "One or more items no longer have enough stock. Please review your order and try again.");
+            response.sendRedirect(detailUrl);
+            return;
+        }
+
         boolean placed;
-        if (PaymentMethod.WALLET.equals(paymentMethod)) {
-            placed = paymentService.payOrderByWallet(customerId, orderId);
-            if (!placed) {
-                session.setAttribute("errorMessage",
-                        "Wallet payment was not completed. Deposit enough balance and place the order again.");
-                response.sendRedirect(detailUrl);
-                return;
-            }
-        } else if (PaymentMethod.VNPAY.equals(paymentMethod)) {
+        if (PaymentMethod.VNPAY.equals(paymentMethod)) {
             Payment vnPayPayment = paymentService.getOrCreateVNPayPaymentForOrder(
                     customerId, orderId);
             if (vnPayPayment == null) {
@@ -214,15 +220,14 @@ public class CustomerOrderDetailServlet extends HttpServlet {
         List<OrderItem> orderItems
                 = orderService.viewOrderItemsForCustomer(customerId, orderId);
         Payment payment = paymentService.getPaymentByOrderId(orderId);
-        Wallet wallet = paymentService.getOrCreateWallet(customerId);
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
         request.setAttribute("payment", payment);
-        request.setAttribute("wallet", wallet);
         request.setAttribute("orderPlaced", payment != null);
         request.setAttribute("canEditDelivery",
                 orderService.canEditDeliveryInformation(order));
+        request.setAttribute("canCancel", order.isCancellable());
     }
 
     private void forwardLayout(HttpServletRequest request,
@@ -246,9 +251,6 @@ public class CustomerOrderDetailServlet extends HttpServlet {
     }
 
     private String normalizePaymentMethod(String value) {
-        if (PaymentMethod.WALLET.equals(value)) {
-            return PaymentMethod.WALLET;
-        }
         if (PaymentMethod.VNPAY.equals(value)) {
             return PaymentMethod.VNPAY;
         }

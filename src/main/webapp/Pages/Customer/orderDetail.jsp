@@ -259,7 +259,6 @@
                                             <label for="paymentMethod">Payment method</label>
                                             <select id="paymentMethod" name="paymentMethod" class="co-input co-select">
                                                 <option value="COD" selected>Cash On Delivery</option>
-                                                <option value="Wallet">Wallet</option>
                                                 <option value="VNPay">VNPay</option>
                                             </select>
                                         </div>
@@ -269,15 +268,6 @@
                                                 <span>Order amount</span>
                                                 <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
                                             </div>
-                                            <div>
-                                                <span>Wallet balance</span>
-                                                <strong>
-                                                    <c:choose>
-                                                        <c:when test="${not empty wallet}"><fmt:formatNumber value="${wallet.balance}" type="number" groupingUsed="true" /> VND</c:when>
-                                                        <c:otherwise>0 VND</c:otherwise>
-                                                    </c:choose>
-                                                </strong>
-                                            </div>
                                         </div>
 
                                         <button class="co-primary-btn co-full-btn" type="submit">
@@ -285,11 +275,6 @@
                                             <span class="material-symbols-outlined">arrow_forward</span>
                                         </button>
                                     </form>
-
-                                    <a class="co-secondary-btn co-full-btn" href="${pageContext.request.contextPath}/customer/wallet">
-                                        <span class="material-symbols-outlined">account_balance_wallet</span>
-                                        Add money to wallet
-                                    </a>
                                 </div>
                             </c:when>
 

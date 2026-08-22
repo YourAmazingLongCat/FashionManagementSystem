@@ -12,6 +12,11 @@ public class ProductVariant {
     private String colorName;
     private String colorHexCode;
     private String sku;
+    private String imageUrl;
+    private String productName;
+    private String productDescription;
+    private BigDecimal productBasePrice;
+    private String categoryName;
     private int stockQty;
     private int reservedQty;
     private BigDecimal priceOverride;
@@ -82,6 +87,21 @@ public class ProductVariant {
     public void setSku(String sku) {
         this.sku = sku;
     }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+
+    public String getProductDescription() { return productDescription; }
+    public void setProductDescription(String productDescription) { this.productDescription = productDescription; }
+
+    public BigDecimal getProductBasePrice() { return productBasePrice; }
+    public void setProductBasePrice(BigDecimal productBasePrice) { this.productBasePrice = productBasePrice; }
+
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
 
     /** Total physical stock, including units currently reserved by Pending orders. */
     public int getStockQty() {
