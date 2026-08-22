@@ -1,7 +1,6 @@
 package Controllers;
 
 import DALs.CartDAO;
-import DALs.CartItemDAO;
 import DALs.ProductDAO;
 import DALs.WishlistDAO;
 import Models.Account;
@@ -43,11 +42,7 @@ public class WishlistServlet extends HttpServlet {
         List<Product> allWishlistProducts = new ArrayList<>();
         for (String productId : wishlistProductIds) {
             Product product = productDAO.getProductById(productId);
-            // Skip hidden (Inactive) products. The DAO already filters these
-            // out, but keeping a guard here means a future DAO refactor
-            // cannot accidentally leak hidden products into the customer's
-            // wishlist view.
-            if (product != null && !"Inactive".equalsIgnoreCase(product.getStatus())) {
+            if (product != null) {
                 allWishlistProducts.add(product);
             }
         }
@@ -93,8 +88,7 @@ public class WishlistServlet extends HttpServlet {
             CartDAO cartDAO = new CartDAO();
             Cart cart = cartDAO.getActiveCart(user.getAccountId());
             if (cart != null) {
-                CartItemDAO itemDAO = new CartItemDAO();
-                List<CartItemView> items = itemDAO.getCartItems(cart.getCartId());
+                List<CartItemView> items = cartDAO.getCartItems(cart.getCartId());
                 return items.stream().mapToInt(CartItemView::getQuantity).sum();
             }
             return 0;

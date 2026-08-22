@@ -10,7 +10,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Cart | Shopee Style</title>
+    
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -126,7 +126,6 @@
 </head>
 
 <body>
-<div class="container mt-3"><a href="${pageContext.request.contextPath}/home" class="btn btn-outline-secondary">&larr; Back to Home</a></div>
 
 <div class="container cart-container py-4">
 
