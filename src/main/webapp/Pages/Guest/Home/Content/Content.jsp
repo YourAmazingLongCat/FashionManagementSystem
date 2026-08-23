@@ -31,14 +31,31 @@
         </div>
     </section>
 
-    <div class="huge-marquee-container">
-        <div class="huge-marquee-track">
-            <span>FASHION STORE 2026 • NEW COLLECTION • </span>
-            <span>FASHION STORE 2026 • NEW COLLECTION • </span>
-            <span>FASHION STORE 2026 • NEW COLLECTION • </span>
-            <span>FASHION STORE 2026 • NEW COLLECTION • </span>
+    <section class="category-section">
+        <div class="category-section-header">
+            <h2 class="category-section-title">CATEGORY</h2>
         </div>
-    </div>
+        <div class="categories-grid">
+            <c:forEach var="category" items="${categories}">
+                <c:set var="categoryProducts" value="${productDAO.getProductsByCategoryName(category.name, 1)}" />
+                <a class="category-card" href="${pageContext.request.contextPath}/home/search?category=${category.categoryId}">
+                    <div class="category-image-container">
+                        <c:choose>
+                            <c:when test="${not empty categoryProducts && not empty categoryProducts[0].primaryImageUrl}">
+                                <img class="category-image" src="${pageContext.request.contextPath.concat(categoryProducts[0].primaryImageUrl)}" alt="${category.name}" />
+                            </c:when>
+                            <c:otherwise>
+                                <div class="category-image category-image-fallback">
+                                    <span class="material-symbols-outlined" aria-hidden="true">category</span>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                    <span class="category-label">${category.name}</span>
+                </a>
+            </c:forEach>
+        </div>
+    </section>
 
     <section class="product-section">
         <div class="section-header">

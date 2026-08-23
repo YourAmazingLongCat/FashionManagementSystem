@@ -15,7 +15,7 @@
         
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
         
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Layout/Layout.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Layout/Layout.css?v=20260823staff">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Header/Header.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/Content/Content.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/Pages/Guest/Home/SearchAndFilter/SearchAndFilter.css?v=20260729v10-4col">
@@ -61,18 +61,66 @@
         </header>
         </c:if>
 
-        <div class="main-container">
-            <main>
-                <c:catch var="contentError">
-                    <jsp:include page="${contentPage}" />
-                </c:catch>
-                <c:if test="${not empty contentError}">
-                    <h3 style="color:red; text-align:center; padding: 50px;">
-                        The requested page (${contentPage}) does not exist! <br> Error: ${contentError.message}
-                    </h3>
-                </c:if>
-            </main>
-        </div>
+        <c:choose>
+            <c:when test="${hideStaffHeader == 'true'}">
+                <div class="staff-layout">
+                    <aside class="staff-sidebar">
+                        <div class="staff-sidebar-brand">Staff</div>
+                        <nav class="staff-sidebar-nav" aria-label="Staff dashboard">
+                            <a class="staff-sidebar-link active" href="${pageContext.request.contextPath}/staff/orders">
+                                Manage Orders
+                            </a>
+                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/staff/payments">
+                                Manage Payments
+                            </a>
+                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/staff/products">
+                                Manage Products
+                            </a>
+                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">
+                                Manage Variants
+                            </a>
+                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
+                                Manage Warehouse
+                            </a>
+                        </nav>
+                        <nav class="staff-sidebar-footer" aria-label="Staff account">
+                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/profile">
+                                Profile
+                            </a>
+                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/auth/logout">
+                                Logout
+                            </a>
+                        </nav>
+                    </aside>
+                    <div class="staff-layout-content">
+                        <main>
+                            <c:catch var="contentError">
+                                <jsp:include page="${contentPage}" />
+                            </c:catch>
+                            <c:if test="${not empty contentError}">
+                                <h3 style="color:red; text-align:center; padding: 50px;">
+                                    The requested page (${contentPage}) does not exist! <br> Error: ${contentError.message}
+                                </h3>
+                            </c:if>
+                        </main>
+                    </div>
+                </div>
+            </c:when>
+            <c:otherwise>
+                <div class="main-container">
+                    <main>
+                        <c:catch var="contentError">
+                            <jsp:include page="${contentPage}" />
+                        </c:catch>
+                        <c:if test="${not empty contentError}">
+                            <h3 style="color:red; text-align:center; padding: 50px;">
+                                The requested page (${contentPage}) does not exist! <br> Error: ${contentError.message}
+                            </h3>
+                        </c:if>
+                    </main>
+                </div>
+            </c:otherwise>
+        </c:choose>
 
         <jsp:include page="/Pages/Guest/Home/Footer/Footer.jsp" />
 
