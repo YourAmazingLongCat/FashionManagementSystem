@@ -8,6 +8,8 @@ import Models.OrderItem;
 import Services.OrderService;
 import Services.PaymentService;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -41,37 +43,67 @@ public class StaffOrderDetailServlet extends HttpServlet {
             return;
         }
 
-        String orderId = request.getParameter("orderId");
+        String orderId = trim(request.getParameter("orderId"));
+        boolean modalRequest = "1".equals(request.getParameter("modal")) || isAjax(request);
 
-        if (orderId == null || orderId.trim().isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/staff/orders");
+        if (isEmpty(orderId)) {
+            if (modalRequest) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                request.setAttribute("errorMessage", "Missing order ID.");
+                forwardModal(request, response);
+            } else {
+                response.sendRedirect(request.getContextPath() + "/staff/orders");
+            }
             return;
         }
 
-        Order order = orderService.viewOrderDetailForStaff(orderId.trim());
+        // Staff Order Detail is popup-only. Direct links are normalized back to Manage Orders.
+        if (!modalRequest) {
+            response.sendRedirect(request.getContextPath()
+                    + "/staff/orders?openOrder="
+                    + URLEncoder.encode(orderId, StandardCharsets.UTF_8));
+            return;
+        }
 
+        Order order = orderService.viewOrderDetailForStaff(orderId);
         if (order == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             request.setAttribute("errorMessage", "Order not found.");
-            request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
-            request.setAttribute("hideStaffHeader", "true");
-            request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+            forwardModal(request, response);
             return;
         }
 
-        List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId.trim());
-        Bill bill = billDAO.getBillByOrderId(orderId.trim());
-        Models.Payment payment = paymentService.getPaymentByOrderId(orderId.trim());
+        List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId);
+        Bill bill = billDAO.getBillByOrderId(orderId);
+        Models.Payment payment = paymentService.getPaymentByOrderId(orderId);
 
         request.setAttribute("order", order);
         request.setAttribute("orderItems", orderItems);
         request.setAttribute("bill", bill);
         request.setAttribute("payment", payment);
-        request.setAttribute("contentPage", "/Pages/Staff/orderDetail.jsp");
-        request.setAttribute("hideStaffHeader", "true");
-        request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);
+        forwardModal(request, response);
+    }
+
+    private void forwardModal(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        request.getRequestDispatcher("/Pages/Staff/orderDetailModal.jsp").forward(request, response);
+    }
+
+    private boolean isAjax(HttpServletRequest request) {
+        return "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
     }
 
     private boolean isStaffOrAdmin(Account user) {
-        return "Staff".equalsIgnoreCase(user.getRole()) || "Admin".equalsIgnoreCase(user.getRole());
+        return "Staff".equalsIgnoreCase(user.getRole())
+                || "Admin".equalsIgnoreCase(user.getRole());
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private boolean isEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

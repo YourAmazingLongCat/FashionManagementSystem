@@ -2,6 +2,8 @@ package Controllers;
 
 import Services.OrderService;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -34,17 +36,54 @@ public class StaffCancelOrderServlet extends HttpServlet {
 
         if (isEmpty(orderId)) {
             session.setAttribute("errorMessage", "Missing order ID.");
-            response.sendRedirect(request.getContextPath() + "/staff/orders");
+            if (isAjax(request)) {
+                writeJson(response, HttpServletResponse.SC_BAD_REQUEST, false, "Missing order ID.");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/staff/orders");
+            }
             return;
         }
 
         boolean cancelled = orderService.cancelOrder(orderId);
-        session.setAttribute(cancelled ? "successMessage" : "errorMessage",
-                cancelled
-                        ? "Order cancelled successfully. Payment was refunded or cancelled when applicable."
-                        : "This order cannot be cancelled before the customer presses Place order or once it reaches Shipping.");
+        String message = cancelled
+                ? "Order cancelled successfully. Payment was refunded or cancelled when applicable."
+                : "This order cannot be cancelled before the customer presses Place order or once it reaches Shipping.";
+        session.setAttribute(cancelled ? "successMessage" : "errorMessage", message);
 
-        response.sendRedirect(request.getContextPath() + "/staff/order-detail?orderId=" + orderId);
+        if (isAjax(request)) {
+            writeJson(response, HttpServletResponse.SC_OK, cancelled, message);
+            return;
+        }
+
+        redirectToPopup(request, response, orderId);
+    }
+
+    private void redirectToPopup(HttpServletRequest request, HttpServletResponse response, String orderId)
+            throws IOException {
+        response.sendRedirect(request.getContextPath()
+                + "/staff/orders?openOrder="
+                + URLEncoder.encode(orderId, StandardCharsets.UTF_8));
+    }
+
+    private boolean isAjax(HttpServletRequest request) {
+        return "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
+    }
+
+    private void writeJson(HttpServletResponse response, int status, boolean success, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"success\":" + success + ",\"message\":\"" + jsonEscape(message) + "\"}");
+    }
+
+    private String jsonEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     private String trim(String value) {
