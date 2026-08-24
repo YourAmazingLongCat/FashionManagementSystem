@@ -72,7 +72,7 @@
             <div class="modal-body" style="padding: 25px;">
                 <div id="loginErrorMsg" class="alert alert-danger" style="display: none; border-radius: 0; font-size: 0.9rem; margin-bottom: 20px;"></div>
 
-                <form id="popupLoginForm" onsubmit="event.preventDefault();">
+                <form id="popupLoginForm" novalidate onsubmit="event.preventDefault();">
                     <div class="form-group mb-3">
                         <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">Email <span style="color:red;">*</span></label>
                         <input type="email" name="email" class="form-control" style="border-radius: 0; border: 1px solid #ccc; padding: 10px 12px; width: 100%;" required>
@@ -85,7 +85,6 @@
 
                     <div class="mt-3 text-center" style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; margin-top: 15px;">
                         <a href="javascript:void(0);" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" style="color: #555; text-decoration: none;">Forgot password?</a>
-                        <!-- Đã đổi link Register để mở Popup -->
                         <a href="javascript:void(0);" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal" style="color: #555; text-decoration: none;">Register new account</a>
                     </div>
                 </form>
@@ -105,27 +104,27 @@
             <div class="modal-body" style="padding: 25px;">
                 <div id="forgotPwdMsg" class="alert alert-danger" style="display: none; border-radius: 0; font-size: 0.9rem; margin-bottom: 20px;"></div>
                 
-                <form id="popupForgotPwdForm" onsubmit="event.preventDefault();">
+                <form id="popupForgotPwdForm" novalidate onsubmit="event.preventDefault();">
                     <input type="hidden" name="mode" value="forgot">
                     <div class="form-group mb-4" id="emailGroup">
                         <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">Email <span style="color:red;">*</span></label>
-                        <input type="email" id="forgotEmailInput" name="email" class="form-control" style="border-radius: 0; border: 1px solid #ccc; padding: 10px 12px; width: 100%; background-color: #f9f9f9;" placeholder="Enter your email address">
+                        <input type="email" id="forgotEmailInput" name="email" class="form-control" style="border-radius: 0; border: 1px solid #ccc; padding: 10px 12px; width: 100%; background-color: #f9f9f9;" placeholder="Enter your email address" required>
                     </div>
 
                     <div class="form-group mb-4" id="otpGroup" style="display: none;">
                         <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">6-Digit OTP Code <span style="color:red;">*</span></label>
-                        <input type="text" id="forgotOtpInput" name="otp" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%; letter-spacing: 5px; font-size: 1.2rem; font-weight: bold; text-align: center;" placeholder="------" maxlength="6">
+                        <input type="text" id="forgotOtpInput" name="otp" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%; letter-spacing: 5px; font-size: 1.2rem; font-weight: bold; text-align: center;" placeholder="------" maxlength="6" required>
                         <small style="color: #15803d; font-weight: 600; display: block; margin-top: 8px;">✔️ OTP has been sent to your email!</small>
                     </div>
 
                     <div id="newPasswordGroup" style="display: none;">
                         <div class="form-group mb-3">
                             <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">New Password <span style="color:red;">*</span></label>
-                            <input type="password" id="resetNewPwd" name="newPassword" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%;">
+                            <input type="password" id="resetNewPwd" name="newPassword" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%;" required>
                         </div>
                         <div class="form-group mb-4">
                             <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">Confirm New Password <span style="color:red;">*</span></label>
-                            <input type="password" id="resetConfirmPwd" name="confirmPassword" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%;">
+                            <input type="password" id="resetConfirmPwd" name="confirmPassword" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%;" required>
                         </div>
                     </div>
                     
@@ -150,7 +149,7 @@
             <div class="modal-body" style="padding: 25px;">
                 <div id="registerMsg" class="alert alert-danger" style="display: none; border-radius: 0; font-size: 0.9rem; margin-bottom: 20px;"></div>
                 
-                <form id="popupRegisterForm" onsubmit="event.preventDefault();">
+                <form id="popupRegisterForm" novalidate onsubmit="event.preventDefault();">
                     <input type="hidden" name="mode" value="register">
 
                     <!-- Bước 1: Thông tin đăng ký -->
@@ -180,7 +179,7 @@
                     <!-- Bước 2: Nhập OTP -->
                     <div class="form-group mb-4" id="regOtpGroup" style="display: none;">
                         <label style="font-weight: 500; font-size: 0.9rem; display: block; margin-bottom: 5px;">6-Digit OTP Code <span style="color:red;">*</span></label>
-                        <input type="text" id="regOtpInput" name="otp" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%; letter-spacing: 5px; font-size: 1.2rem; font-weight: bold; text-align: center;" placeholder="------" maxlength="6">
+                        <input type="text" id="regOtpInput" name="otp" class="form-control" style="border-radius: 0; border: 1px solid #000; padding: 10px 12px; width: 100%; letter-spacing: 5px; font-size: 1.2rem; font-weight: bold; text-align: center;" placeholder="------" maxlength="6" required>
                         <small style="color: #15803d; font-weight: 600; display: block; margin-top: 8px;">✔️ OTP has been sent to your email!</small>
                     </div>
                     
@@ -231,6 +230,19 @@
         if (loginForm) {
             loginForm.addEventListener('submit', function (e) {
                 e.preventDefault();
+                
+                const errorDiv = document.getElementById('loginErrorMsg');
+                const emailInput = loginForm.querySelector('input[name="email"]').value.trim();
+                const passwordInput = loginForm.querySelector('input[name="password"]').value.trim();
+
+                if (!emailInput || !passwordInput) {
+                    errorDiv.textContent = "Please fill in all required fields.";
+                    errorDiv.style.display = 'block';
+                    return; 
+                }
+                
+                errorDiv.style.display = 'none';
+
                 fetch('${pageContext.request.contextPath}/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
@@ -240,7 +252,6 @@
                 .then(data => {
                     if (data.success) { window.location.href = data.redirectUrl; } 
                     else {
-                        const errorDiv = document.getElementById('loginErrorMsg');
                         errorDiv.textContent = data.message;
                         errorDiv.style.display = 'block';
                     }
@@ -275,7 +286,7 @@
 
                 // XIN MÃ OTP
                 if (currentStep === 1) {
-                    const emailValue = document.getElementById('forgotEmailInput').value;
+                    const emailValue = document.getElementById('forgotEmailInput').value.trim();
                     if (!emailValue) {
                         forgotPwdMsg.textContent = "Please enter your email address.";
                         forgotPwdMsg.style.display = 'block';
@@ -316,7 +327,7 @@
                 } 
                 // KIỂM TRA MÃ OTP
                 else if (currentStep === 2) {
-                    const otpValue = forgotOtpInput.value;
+                    const otpValue = forgotOtpInput.value.trim();
                     if (!otpValue) {
                         forgotPwdMsg.textContent = "Please enter the OTP code.";
                         forgotPwdMsg.style.display = 'block';
@@ -384,7 +395,7 @@
                     fetch('${pageContext.request.contextPath}/auth/reset-password', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-                        body: newSearchParams({ newPassword: newPwd, confirmPassword: confirmPwd })
+                        body: new URLSearchParams({ newPassword: newPwd, confirmPassword: confirmPwd })
                     })
                     .then(response => response.json())
                     .then(data => {
@@ -441,8 +452,17 @@
 
                 // BƯỚC 1: NHẬP THÔNG TIN
                 if (regStep === 1) {
+                    const fullName = document.getElementById('regFullName').value.trim();
+                    const email = document.getElementById('regEmail').value.trim();
+                    const phone = document.getElementById('regPhone').value.trim();
                     const pass = document.getElementById('regPassword').value;
                     const confirmPass = document.getElementById('regConfirmPassword').value;
+
+                    if (!fullName || !email || !phone || !pass || !confirmPass) {
+                        registerMsg.textContent = "Please fill in all required fields.";
+                        registerMsg.style.display = 'block';
+                        return;
+                    }
 
                     if (pass !== confirmPass) {
                         registerMsg.textContent = "Passwords do not match!";
@@ -489,7 +509,7 @@
                 } 
                 // BƯỚC 2: XÁC THỰC OTP ĐĂNG KÝ
                 else if (regStep === 2) {
-                    const otpVal = document.getElementById('regOtpInput').value;
+                    const otpVal = document.getElementById('regOtpInput').value.trim();
                     if (!otpVal) {
                         registerMsg.textContent = "Please enter OTP code!";
                         registerMsg.style.display = 'block';
