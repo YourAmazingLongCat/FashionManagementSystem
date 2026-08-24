@@ -26,6 +26,106 @@ main {
     min-height: 50vh;
 }
 
+/* ================= STAFF DETAIL SHELL ================= */
+.staff-layout {
+    display: flex;
+    flex: 1;
+    min-height: 100vh;
+    background: #f6f7fb;
+}
+
+.staff-sidebar {
+    width: 16.666667%;
+    flex: 0 0 16.666667%;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    align-self: flex-start;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #2c3e50, #1a252f);
+    color: #ecf0f1;
+}
+
+.staff-sidebar-brand {
+    padding: 20px 15px;
+    border-bottom: 1px solid #34495e;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.staff-sidebar-nav,
+.staff-sidebar-footer {
+    display: flex;
+    flex-direction: column;
+}
+
+.staff-sidebar-nav {
+    flex: 1;
+    min-height: 0;
+}
+
+.staff-sidebar-footer {
+    padding-bottom: 18px;
+}
+
+.staff-sidebar-link {
+    display: block;
+    padding: 12px 20px;
+    border-left: 3px solid transparent;
+    color: #b0c4de;
+    font-weight: 500;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.staff-sidebar-link:hover,
+.staff-sidebar-link.active {
+    border-left-color: #1abc9c;
+    background: #34495e;
+    color: #ffffff;
+}
+
+.staff-layout-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.staff-layout-content main {
+    min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+    .staff-layout {
+        display: block;
+    }
+
+    .staff-sidebar {
+        width: 100%;
+        min-height: auto;
+        position: static;
+        height: auto;
+        overflow-y: visible;
+    }
+
+    .staff-sidebar-nav,
+    .staff-sidebar-footer {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .staff-sidebar-footer {
+        margin-top: 0;
+        padding-bottom: 0;
+    }
+
+    .staff-layout-content main {
+        min-height: auto;
+    }
+}
+
 /* ================= SCROLLING TICKER (DÒNG CHỮ CHẠY) ================= */
 .scrolling-ticker {
     width: 100%;
