@@ -220,55 +220,27 @@ public class OrderService {
         String trimmedOrderId = orderId.trim();
         String normalizedStatus = normalizeOrderStatus(newStatus);
 
-        if (!isOrderProgressStatus(normalizedStatus)) {
-            return false;
-        }
-
         Order order = orderDAO.getOrderById(trimmedOrderId);
         if (order == null) {
             return false;
         }
 
-        // The Payment row marks that the customer completed Place order.
-        if (paymentService.getPaymentByOrderId(trimmedOrderId) == null) {
-            return false;
-        }
-
         String currentStatus = normalizeOrderStatus(order.getOrderStatus());
 
-        if (OrderStatus.PENDING.equals(currentStatus)
-                && OrderStatus.CONFIRMED.equals(normalizedStatus)
-                && (isEmpty(order.getShippingAddress()) || isEmpty(order.getPhone()))) {
+        // Confirm Order owns Pending -> Confirmed. Change Ship Status is a
+        // forward-only fulfillment flow after confirmation:
+        // Confirmed -> Processing -> Shipping -> Delivered.
+        // Keeping this strict prevents the shipping endpoint from undoing a
+        // confirmation (and its inventory transaction) or skipping stages.
+        String expectedNextStatus = getNextShippingStatus(currentStatus);
+        if (expectedNextStatus == null
+                || !expectedNextStatus.equals(normalizedStatus)) {
             return false;
         }
 
-        int currentIndex = getOrderStatusIndex(currentStatus);
-        int newIndex = getOrderStatusIndex(normalizedStatus);
-
-        if (currentIndex < 0 || newIndex < 0 || currentIndex == newIndex) {
-            return false;
-        }
-
-        boolean isForward = newIndex > currentIndex;
-        boolean isBackward = newIndex < currentIndex;
-
-        // Shipping is an irreversible boundary.
-        if (isBackward
-                && currentIndex >= getOrderStatusIndex(OrderStatus.SHIPPING)) {
-            return false;
-        }
-
-        if (isForward) {
-            if (newIndex - currentIndex != 1) {
-                return false;
-            }
-
-            if (!paymentService.canForwardOrderStatusByPayment(trimmedOrderId)) {
-                return false;
-            }
-        }
-
-        if (isBackward && currentIndex - newIndex != 1) {
+        // The Payment row proves that Place order was completed. COD may stay
+        // Pending until delivery; VNPay must already be Paid.
+        if (!paymentService.canForwardOrderStatusByPayment(trimmedOrderId)) {
             return false;
         }
 
@@ -473,12 +445,17 @@ public class OrderService {
         return true;
     }
 
-    private boolean isOrderProgressStatus(String status) {
-        return OrderStatus.PENDING.equals(status)
-                || OrderStatus.CONFIRMED.equals(status)
-                || OrderStatus.PROCESSING.equals(status)
-                || OrderStatus.SHIPPING.equals(status)
-                || OrderStatus.DELIVERED.equals(status);
+    private String getNextShippingStatus(String currentStatus) {
+        if (OrderStatus.CONFIRMED.equals(currentStatus)) {
+            return OrderStatus.PROCESSING;
+        }
+        if (OrderStatus.PROCESSING.equals(currentStatus)) {
+            return OrderStatus.SHIPPING;
+        }
+        if (OrderStatus.SHIPPING.equals(currentStatus)) {
+            return OrderStatus.DELIVERED;
+        }
+        return null;
     }
 
     private int getOrderStatusIndex(String status) {

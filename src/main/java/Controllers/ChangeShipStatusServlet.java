@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Services.OrderService;
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -32,8 +33,26 @@ public class ChangeShipStatusServlet extends HttpServlet {
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
-        String orderId = trim(request.getParameter("orderId"));
-        String newStatus = trim(request.getParameter("newStatus"));
+
+        if (!isStaffOrAdmin(session)) {
+            if (isAjax(request)) {
+                writeJson(response, HttpServletResponse.SC_FORBIDDEN, false,
+                        "You do not have permission to change order shipping status.");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/auth/login");
+            }
+            return;
+        }
+
+        // Normal form posts use request parameters. X-* headers are kept as
+        // an AJAX fallback so a malformed/multipart client request does not
+        // lose the selected order/status information.
+        String orderId = firstNonEmpty(
+                request.getParameter("orderId"),
+                request.getHeader("X-Order-Id"));
+        String newStatus = firstNonEmpty(
+                request.getParameter("newStatus"),
+                request.getHeader("X-Order-Status"));
 
         if (isEmpty(orderId) || isEmpty(newStatus)) {
             session.setAttribute("errorMessage", "Missing order status information.");
@@ -48,7 +67,7 @@ public class ChangeShipStatusServlet extends HttpServlet {
         boolean updated = orderService.changeShipStatus(orderId, newStatus);
         String message = updated
                 ? "Order status updated successfully."
-                : "Order status was not changed. Shipping/Delivered orders cannot move backward; otherwise the order may be incomplete, the transition may be invalid, or a VNPay payment may not be Paid.";
+                : "Order status was not changed. Shipping status must move forward in order: Confirmed -> Processing -> Shipping -> Delivered, and VNPay must be Paid.";
         session.setAttribute(updated ? "successMessage" : "errorMessage", message);
 
         if (isAjax(request)) {
@@ -70,6 +89,19 @@ public class ChangeShipStatusServlet extends HttpServlet {
         return "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
     }
 
+    private boolean isStaffOrAdmin(HttpSession session) {
+        if (session == null) {
+            return false;
+        }
+        Object userObject = session.getAttribute("USER");
+        if (!(userObject instanceof Account)) {
+            return false;
+        }
+        Account user = (Account) userObject;
+        return "Staff".equalsIgnoreCase(user.getRole())
+                || "Admin".equalsIgnoreCase(user.getRole());
+    }
+
     private void writeJson(HttpServletResponse response, int status, boolean success, String message)
             throws IOException {
         response.setStatus(status);
@@ -85,6 +117,14 @@ public class ChangeShipStatusServlet extends HttpServlet {
                 .replace("\"", "\\\"")
                 .replace("\r", "\\r")
                 .replace("\n", "\\n");
+    }
+
+    private String firstNonEmpty(String first, String second) {
+        String value = trim(first);
+        if (!isEmpty(value)) {
+            return value;
+        }
+        return trim(second);
     }
 
     private String trim(String value) {

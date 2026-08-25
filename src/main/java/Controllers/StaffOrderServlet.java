@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Models.Order;
 import Services.OrderService;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "StaffOrderServlet", urlPatterns = {"/staff/orders"})
 public class StaffOrderServlet extends HttpServlet {
@@ -28,6 +30,13 @@ public class StaffOrderServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
+        Account user = session == null ? null : (Account) session.getAttribute("USER");
+        if (user == null || !isStaffOrAdmin(user)) {
+            response.sendRedirect(request.getContextPath() + "/auth/login");
+            return;
+        }
+
         String keyword = trim(request.getParameter("keyword"));
         String status = trim(request.getParameter("status"));
         LocalDateTime dateFrom = parseDateStart(request.getParameter("dateFrom"));
@@ -69,6 +78,11 @@ public class StaffOrderServlet extends HttpServlet {
 
     private boolean isEmpty(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private boolean isStaffOrAdmin(Account user) {
+        return "Staff".equalsIgnoreCase(user.getRole())
+                || "Admin".equalsIgnoreCase(user.getRole());
     }
 
     private LocalDateTime parseDateStart(String value) {

@@ -70,9 +70,6 @@
                             <a class="staff-sidebar-link active" href="${pageContext.request.contextPath}/staff/orders">
                                 Manage Orders
                             </a>
-                            <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/staff/payments">
-                                Manage Payments
-                            </a>
                             <a class="staff-sidebar-link" href="${pageContext.request.contextPath}/staff/products">
                                 Manage Products
                             </a>

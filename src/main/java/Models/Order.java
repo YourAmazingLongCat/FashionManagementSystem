@@ -13,6 +13,13 @@ public class Order {
     private LocalDateTime placedAt;
     private BigDecimal totalAmount;
     private boolean orderPlaced;
+    private String paymentMethod;
+    private String paymentStatus;
+    private BigDecimal paidAmount;
+    private LocalDateTime issuedDate;
+    private String cancellationReason;
+    private LocalDateTime cancelledAt;
+    private String cancelledBy;
 
     public Order() {
     }
@@ -91,6 +98,71 @@ public class Order {
 
     public void setOrderPlaced(boolean orderPlaced) {
         this.orderPlaced = orderPlaced;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public BigDecimal getPaidAmount() {
+        return paidAmount;
+    }
+
+    public void setPaidAmount(BigDecimal paidAmount) {
+        this.paidAmount = paidAmount;
+    }
+
+    public LocalDateTime getIssuedDate() {
+        return issuedDate;
+    }
+
+    public void setIssuedDate(LocalDateTime issuedDate) {
+        this.issuedDate = issuedDate;
+    }
+
+    /**
+     * Bill is merged into Order, so the invoice identifier is derived from
+     * the order identifier instead of requiring a separate Bills row.
+     */
+    public String getInvoiceId() {
+        return orderId == null || orderId.trim().isEmpty()
+                ? null : "INV-" + orderId;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
+    }
+
+    public LocalDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(LocalDateTime cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
+
+    public String getCancelledBy() {
+        return cancelledBy;
+    }
+
+    public void setCancelledBy(String cancelledBy) {
+        this.cancelledBy = cancelledBy;
     }
 
     /**

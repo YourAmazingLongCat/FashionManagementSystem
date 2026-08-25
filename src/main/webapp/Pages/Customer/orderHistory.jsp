@@ -5,15 +5,9 @@
 
 <section class="customer-order-page">
     <div class="co-container">
-        <div class="co-page-head">
+        <div class="co-page-head co-history-head">
             <div>
-                <a class="co-back-link" href="${pageContext.request.contextPath}/home">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                    Continue shopping
-                </a>
-                <p class="co-eyebrow">My account</p>
-                <h1 class="co-page-title">My Orders</h1>
-                <p class="co-page-subtitle">Track orders, review order details and complete unfinished orders.</p>
+                <h1 class="co-page-title">Orders</h1>
             </div>
             <a class="co-secondary-btn" href="${pageContext.request.contextPath}/cart">
                 <span class="material-symbols-outlined">shopping_cart</span>
@@ -27,7 +21,7 @@
                 <input type="text"
                        name="keyword"
                        value="<c:out value='${keyword}' />"
-                       placeholder="Search by order ID, status or phone number" />
+                       placeholder="Search by order ID, status, payment or phone number" />
             </div>
             <button class="co-primary-btn" type="submit">Search</button>
             <c:if test="${not empty keyword}">
@@ -61,6 +55,7 @@
                                     <th>Order</th>
                                     <th>Placed date</th>
                                     <th>Delivery</th>
+                                    <th>Payment</th>
                                     <th>Status</th>
                                     <th>Total</th>
                                     <th></th>
@@ -97,8 +92,20 @@
                                             </span>
                                         </td>
                                         <td>
+                                            <span class="co-cell-main">
+                                                <c:choose>
+                                                    <c:when test="${order.paymentMethod eq 'COD'}">Cash On Delivery</c:when>
+                                                    <c:when test="${not empty order.paymentMethod}"><c:out value="${order.paymentMethod}" /></c:when>
+                                                    <c:otherwise>Not selected</c:otherwise>
+                                                </c:choose>
+                                            </span>
+                                            <span class="co-payment-status co-payment-${fn:toLowerCase(order.paymentStatus)}">
+                                                <c:out value="${order.paymentStatus}" />
+                                            </span>
+                                        </td>
+                                        <td>
                                             <span class="co-status co-status-${fn:toLowerCase(order.orderStatus)}">
-                                                ${order.orderStatus}
+                                                <c:out value="${order.orderStatus}" />
                                             </span>
                                         </td>
                                         <td>

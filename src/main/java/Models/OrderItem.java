@@ -11,6 +11,13 @@ public class OrderItem {
     private BigDecimal unitPrice;
     private BigDecimal discountAmount;
 
+    // Read-only display metadata loaded by OrderItemDAO for Order Detail UI.
+    private String productName;
+    private String imageUrl;
+    private String sizeName;
+    private String colorName;
+    private String sku;
+
     public OrderItem() {
     }
 
@@ -70,6 +77,46 @@ public class OrderItem {
 
     public void setDiscountAmount(BigDecimal discountAmount) {
         this.discountAmount = discountAmount;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getSizeName() {
+        return sizeName;
+    }
+
+    public void setSizeName(String sizeName) {
+        this.sizeName = sizeName;
+    }
+
+    public String getColorName() {
+        return colorName;
+    }
+
+    public void setColorName(String colorName) {
+        this.colorName = colorName;
+    }
+
+    public String getSku() {
+        return sku;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
     }
 
     public BigDecimal getSubTotal() {
