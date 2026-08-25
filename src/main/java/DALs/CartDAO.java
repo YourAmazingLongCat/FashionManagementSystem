@@ -14,16 +14,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO for the Cart feature.
- *
- * <p>The new schema has a single flat {@code Cart} table — there is no
- * separate {@code CartItems} table. Every row is keyed by
- * {@code (cartId, customerId, variantId, quantity)}.</p>
- *
- * <p>This class consolidates all cart-related database operations including
- * cart management, cart items, and cart totals.</p>
- */
+
 public class CartDAO extends DBContext {
 
     private static final String CUSTOMER_ID_PREFIX = "CART_";
@@ -32,9 +23,6 @@ public class CartDAO extends DBContext {
         super();
     }
 
-    // =========================
-    // CART MANAGEMENT
-    // =========================
 
     public Cart getActiveCart(String accountId) {
         String sql = "SELECT customerId, COUNT(*) AS itemCount FROM Cart WHERE customerId = ? GROUP BY customerId";
@@ -74,11 +62,6 @@ public class CartDAO extends DBContext {
         }
     }
 
-    // =========================
-    // HELPER METHODS
-    // =========================
-
-    /** Extract the customerId from the legacy "CART_<customerId>" cartId string. */
     private static String customerIdFromCartId(String cartId) {
         if (cartId == null) return null;
         if (cartId.startsWith(CUSTOMER_ID_PREFIX)) {
@@ -87,11 +70,6 @@ public class CartDAO extends DBContext {
         return cartId;
     }
 
-    /**
-     * Get the Cart.cartId (PK) for the legacy cartId, i.e. the synthetic
-     * "CART_<customerId>" wrapper. Returns the cartId of the first row for
-     * the customer so that callers still get a non-null identifier.
-     */
     private String resolveCartId(String cartId) {
         String customerId = customerIdFromCartId(cartId);
         if (customerId == null || customerId.isBlank()) return cartId;
@@ -108,10 +86,6 @@ public class CartDAO extends DBContext {
         }
         return cartId;
     }
-
-    // =========================
-    // CART ITEM OPERATIONS
-    // =========================
 
     public boolean existsItem(String cartId, String variantId) {
         String customerId = customerIdFromCartId(cartId);
@@ -199,15 +173,11 @@ public class CartDAO extends DBContext {
         return null;
     }
 
-    // =========================
-    // GET CART ITEMS
-    // =========================
     public List<CartItemView> getCartItems(String cartId) {
         List<CartItemView> list = new ArrayList<>();
         String customerId = customerIdFromCartId(cartId);
         if (customerId == null) return list;
 
-        // Prioritize variant image if available, fallback to product primary image
         String sql =
                 "SELECT "
                 + "ci.cartId AS cartItemId, "
@@ -255,9 +225,7 @@ public class CartDAO extends DBContext {
         return list;
     }
 
-    // =========================
-    // UPDATE QUANTITY
-    // =========================
+  
     public void updateQuantity(String cartItemId, int quantity) {
         if (cartItemId == null || cartItemId.isBlank()) return;
 
@@ -271,9 +239,6 @@ public class CartDAO extends DBContext {
         }
     }
 
-    // =========================
-    // DELETE ITEM
-    // =========================
     public void deleteItem(String cartItemId) {
         if (cartItemId == null || cartItemId.isBlank()) return;
 
@@ -286,9 +251,6 @@ public class CartDAO extends DBContext {
         }
     }
 
-    // =========================
-    // CLEANUP INVALID ITEMS
-    // =========================
     public int cleanupInvalidItems(String cartId) {
         String customerId = customerIdFromCartId(cartId);
         if (customerId == null) return 0;
@@ -303,9 +265,6 @@ public class CartDAO extends DBContext {
         return 0;
     }
 
-    // =========================
-    // CART TOTAL
-    // =========================
     public double getCartTotal(String cartId) {
         String customerId = customerIdFromCartId(cartId);
         if (customerId == null) return 0;
@@ -341,7 +300,6 @@ public class CartDAO extends DBContext {
             placeholders.append("?");
         }
 
-        // SQL similar to getCartItems with variant image priority
         String sql = "SELECT "
                 + "ci.cartId AS cartItemId, "
                 + "ci.variantId, "
