@@ -14,6 +14,15 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * Controller for Warehouse & Stock Management Module:
+ * - View product stock & availability in warehouse
+ * - Search & filter products by size, color, name
+ * - Update stock quantity via Stock In (import) and Stock Out (export)
+ * - View import history & warehouse bills
+ * 
+ * @author ngocpace191049-cmyk
+ */
 @WebServlet(name = "WarehouseServlet", urlPatterns = {
     "/admin/warehouse",
     "/admin/warehouse/inventory",
