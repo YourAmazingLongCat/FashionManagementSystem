@@ -355,7 +355,7 @@
 
                 <section class="tab-panel ${activeTab eq 'categories' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Categories</h3><p>Manage category names and descriptions in a structured table.</p></div><button type="button" class="primary-btn" onclick="openCategoryModal()">Add category</button></div>
+                        <div class="section-header"><div><h3>Categories</h3><p>Manage category names in a structured table.</p></div><button type="button" class="primary-btn" onclick="openCategoryModal()">Add category</button></div>
                         <div class="section-body">
                             <c:choose>
                                 <c:when test="${empty categoryItems}">
@@ -368,7 +368,6 @@
                                                 <tr>
                                                     <th>ID</th>
                                                     <th>Name</th>
-                                                    <th>Description</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
@@ -377,7 +376,6 @@
                                                     <tr>
                                                         <td class="cell-id">${category.categoryId}</td>
                                                         <td class="cell-name">${category.name}</td>
-                                                        <td class="cell-description">${empty category.description ? '-' : category.description}</td>
                                                         <td class="cell-actions">
                                                             <div class="action-group">
                                                                 <button type="button" class="table-btn edit" onclick="openCategoryModal('${category.categoryId}')">Edit</button>
@@ -489,69 +487,29 @@
 
                 <section class="tab-panel ${activeTab eq 'sizes' ? 'active' : ''}">
                     <section class="surface-panel">
-                        <div class="section-header"><div><h3>Sizes</h3><p>Manage sizes grouped by category. Click on a category to expand and view its sizes.</p></div><button type="button" class="primary-btn" onclick="openSizeModal()">Add size</button></div>
+                        <div class="section-header"><div><h3>Sizes</h3><p>Manage the size options available across products.</p></div><button type="button" class="primary-btn" onclick="openSizeModal()">Add size</button></div>
                         <div class="section-body">
                             <c:choose>
-                                <c:when test="${empty sizesByCategory}">
+                                <c:when test="${empty sizeItems}">
                                     <div class="empty-state"><h4>No sizes found</h4><p>Add sizes that fit each category.</p></div>
                                 </c:when>
                                 <c:otherwise>
-                                    <div class="size-group-list">
-                                        <c:forEach var="catEntry" items="${sizesByCategory}">
-                                            <c:set var="categoryId" value="${catEntry.key}" />
-                                            <c:forEach var="cat" items="${allCategoryItems}">
-                                                <c:if test="${cat.categoryId == categoryId}">
-                                                    <c:set var="currentCategory" value="${cat}" />
-                                                </c:if>
-                                            </c:forEach>
-                                            <c:set var="sizesInCategory" value="${catEntry.value}" />
-
-                                            <div class="size-group">
-                                                <div class="size-group-header" data-group="${currentCategory.categoryId}">
-                                                    <div class="size-group-header-left">
-                                                        <span class="size-group-title">${currentCategory.name}</span>
-                                                        <span class="size-group-count">(${sizesInCategory.size()} sizes)</span>
-                                                    </div>
-                                                    <button type="button" class="add-size-btn" onclick="event.stopPropagation(); openSizeModal('${currentCategory.categoryId}')">
-                                                        + Add Size
-                                                    </button>
-                                                </div>
-                                                <div class="size-group-body" data-group="${currentCategory.categoryId}">
-                                                    <c:choose>
-                                                        <c:when test="${empty sizesInCategory}">
-                                                            <div style="padding: 20px; text-align: center; color: #94a3b8; font-style: italic;">No sizes in this category yet. Click "+ Add Size" to create one.</div>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <div class="data-table-wrapper">
-                                                                <table class="data-table">
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th>ID</th>
-                                                                            <th>Size Name</th>
-                                                                            <th>Actions</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        <c:forEach var="size" items="${sizesInCategory}">
-                                                                            <tr>
-                                                                                <td class="cell-id">${size.sizeId}</td>
-                                                                                <td class="cell-name">${size.sizeName}</td>
-                                                                                <td class="cell-actions">
-                                                                                    <div class="action-group">
-                                                                                        <button type="button" class="table-btn edit" onclick="openSizeModal(null,'${size.sizeId}')">Edit</button>
-                                                                                        <button type="button" class="table-btn delete" onclick="openDeleteModal('size','${size.sizeId}','${fn:escapeXml(size.sizeName)}')">Delete</button>
-                                                                                    </div>
-                                                                                </td>
-                                                                            </tr>
-                                                                        </c:forEach>
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </c:otherwise>
-                                                    </c:choose>
-                                                </div>
-                                            </div>
-                                        </c:forEach>
+                                    <div class="data-table-wrapper">
+                                        <table class="data-table">
+                                            <thead><tr><th>ID</th><th>Size Name</th><th>Actions</th></tr></thead>
+                                            <tbody>
+                                                <c:forEach var="size" items="${sizeItems}">
+                                                    <tr>
+                                                        <td class="cell-id">${size.sizeId}</td>
+                                                        <td class="cell-name">${size.sizeName}</td>
+                                                        <td class="cell-actions"><div class="action-group">
+                                                            <button type="button" class="table-btn edit" onclick="openSizeModal(null,'${size.sizeId}')">Edit</button>
+                                                            <button type="button" class="table-btn delete" onclick="openDeleteModal('size','${size.sizeId}','${fn:escapeXml(size.sizeName)}')">Delete</button>
+                                                        </div></td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </c:otherwise>
                             </c:choose>
@@ -581,10 +539,6 @@
                         <div class="form-group full-width">
                             <label for="categoryNameInput">Category name *</label>
                             <input id="categoryNameInput" name="name" type="text" maxlength="200" required placeholder="Ex: T-Shirts">
-                        </div>
-                        <div class="form-group full-width">
-                            <label for="categoryDescInput">Description</label>
-                            <textarea id="categoryDescInput" name="description" rows="4" placeholder="Add a short description for this category..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -640,12 +594,6 @@
                 <div class="product-modal-body">
                     <div id="sizeModalAlert" class="alert" style="display:none;"></div>
                     <div class="product-modal-grid">
-                        <div class="form-group">
-                            <label for="sizeCategorySelect">Category *</label>
-                            <select id="sizeCategorySelect" name="categoryId" required>
-                                <option value="">-- Select category --</option>
-                            </select>
-                        </div>
                         <div class="form-group">
                             <label for="sizeNameInput">Size name *</label>
                             <input id="sizeNameInput" name="sizeName" type="text" maxlength="50" required placeholder="Ex: S, M, L, 38, 40...">
@@ -981,7 +929,6 @@
             const categoryTitleEl = document.getElementById('categoryModalTitle');
             const categoryIdInput = document.getElementById('categoryIdInput');
             const categoryNameInput = document.getElementById('categoryNameInput');
-            const categoryDescInput = document.getElementById('categoryDescInput');
 
             function attachModalClose(modalEl) {
                 if (!modalEl) return;
@@ -1023,13 +970,11 @@
                     categoryTitleEl.textContent = 'Edit category';
                     categoryIdInput.value = categoryId;
                     categoryNameInput.value = '';
-                    categoryDescInput.value = '';
                     fetch(ctx + '/staff/products?action=getCategoryJson&id=' + encodeURIComponent(categoryId))
                         .then(r => r.json())
                         .then(data => {
                             if (data.error) { localShowAlert(categoryModal, data.error, 'error'); return; }
                             categoryNameInput.value = data.name || '';
-                            categoryDescInput.value = data.description || '';
                         }).catch(err => localShowAlert(categoryModal, 'Failed to load category: ' + err.message, 'error'));
                 } else {
                     categoryTitleEl.textContent = 'Add category';
@@ -1047,7 +992,6 @@
                 const params = new URLSearchParams();
                 params.set('action', isEdit ? 'editCategory' : 'createCategory');
                 params.set('name', categoryNameInput.value.trim());
-                params.set('description', categoryDescInput.value.trim());
                 if (isEdit) params.set('categoryId', categoryIdInput.value);
                 fetch(ctx + '/staff/products', { method: 'POST', body: params })
                     .then(r => r.json())
@@ -1119,33 +1063,12 @@
             const sizeForm = document.getElementById('sizeForm');
             const sizeTitleEl = document.getElementById('sizeModalTitle');
             const sizeIdInput = document.getElementById('sizeIdInput');
-            const sizeCategorySelect = document.getElementById('sizeCategorySelect');
             const sizeNameInput = document.getElementById('sizeNameInput');
             attachModalClose(sizeModal);
-
-            function populateSizeCategoryOptions() {
-                sizeCategorySelect.innerHTML = '<option value="">-- Select category --</option>';
-                for (const cat of allCategoriesForSize) {
-                    const opt = document.createElement('option');
-                    opt.value = cat.id;
-                    opt.textContent = cat.name;
-                    sizeCategorySelect.appendChild(opt);
-                }
-            }
-            const allCategoriesForSize = (() => {
-                // Read from JSON block rendered by servlet - contains ALL categories, regardless of active tab
-                try {
-                    const raw = document.getElementById('allCategoriesData').textContent.trim() || '[]';
-                    return JSON.parse('[' + raw + ']');
-                } catch (err) {
-                    return [];
-                }
-            })();
 
             window.openSizeModal = function (preselectCategoryId, sizeId) {
                 if (!sizeModal) return;
                 localClearAlert(sizeModal);
-                populateSizeCategoryOptions();
                 if (sizeId) {
                     sizeTitleEl.textContent = 'Edit size';
                     sizeIdInput.value = sizeId;
@@ -1155,13 +1078,11 @@
                         .then(data => {
                             if (data.error) { localShowAlert(sizeModal, data.error, 'error'); return; }
                             sizeNameInput.value = data.sizeName || '';
-                            sizeCategorySelect.value = data.categoryId || '';
                         }).catch(err => localShowAlert(sizeModal, 'Failed to load size: ' + err.message, 'error'));
                 } else {
                     sizeTitleEl.textContent = 'Add size';
                     sizeIdInput.value = '';
                     sizeForm.reset();
-                    if (preselectCategoryId) sizeCategorySelect.value = preselectCategoryId;
                 }
                 sizeModal.classList.add('open');
                 sizeModal.setAttribute('aria-hidden', 'false');
@@ -1174,7 +1095,6 @@
                 const params = new URLSearchParams();
                 params.set('action', isEdit ? 'editSize' : 'createSize');
                 params.set('sizeName', sizeNameInput.value.trim());
-                params.set('categoryId', sizeCategorySelect.value);
                 if (isEdit) params.set('sizeId', sizeIdInput.value);
                 fetch(ctx + '/staff/products', { method: 'POST', body: params })
                     .then(r => r.json())

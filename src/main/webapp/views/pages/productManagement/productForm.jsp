@@ -208,6 +208,10 @@
             </section>
         </div>
 
+        <div id="allSizeOptions" hidden>
+            <c:forEach var="size" items="${allSizes}"><span data-size-id="${size.sizeId}" data-size-name="${fn:escapeXml(size.sizeName)}"></span></c:forEach>
+        </div>
+
         <script>
             (function () {
                 const formatPrice = (value) => {
@@ -318,15 +322,13 @@
 
                 bindCurrencyInput(document.getElementById('basePrice'));
 
-                const categorySelect = document.getElementById('categoryId');
                 const productImageInput = document.getElementById('productImage');
                 const imagePreview = document.getElementById('imagePreview');
-                const getSizeOptionsByCategory = (categoryId) => {
-                    if (!categoryId) {
-                        return [];
-                    }
-                    return allSizeOptions.filter(item => item.categoryId === categoryId);
-                };
+                const allSizeOptions = Array.from(document.querySelectorAll('#allSizeOptions span')).map(node => ({
+                    id: node.dataset.sizeId,
+                    name: node.dataset.sizeName
+                }));
+                let sizeOptions = allSizeOptions;
 
                 const updateEmptyState = () => {
                     variantsEmpty.style.display = variantsList.children.length === 0 ? 'block' : 'none';
@@ -461,11 +463,6 @@
                     attachVariantRowEvents(row);
                     renumberVariantRows();
                     updateEmptyState();
-                };
-
-                const loadSizesByCategory = (categoryId) => {
-                    sizeOptions = getSizeOptionsByCategory(categoryId);
-                    refreshAllSizeSelects();
                 };
 
                 if (productImageInput && imagePreview) {

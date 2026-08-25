@@ -4,16 +4,13 @@ public class Size {
 
     private String sizeId;
     private String sizeName;
-    private String categoryId;
-    private String categoryName;
 
     public Size() {
     }
 
-    public Size(String sizeId, String sizeName, String categoryId) {
+    public Size(String sizeId, String sizeName) {
         this.sizeId = sizeId;
         this.sizeName = sizeName;
-        this.categoryId = categoryId;
     }
 
     public String getSizeId() {
@@ -32,19 +29,4 @@ public class Size {
         this.sizeName = sizeName;
     }
 
-    public String getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(String categoryId) {
-        this.categoryId = categoryId;
-    }
-
-    public String getCategoryName() {
-        return categoryName;
-    }
-
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
-    }
 }
