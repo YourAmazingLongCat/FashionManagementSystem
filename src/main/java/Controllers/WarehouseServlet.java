@@ -445,6 +445,11 @@ public class WarehouseServlet extends HttpServlet {
         return result.successCount > 0;
     }
 
+    private String parseDateParam(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) return null;
+        return dateStr.trim();
+    }
+
     private Account getLoggedInUser(HttpServletRequest request) {
         Object userObject = request.getSession(false) != null ? 
                 request.getSession(false).getAttribute("USER") : null;
