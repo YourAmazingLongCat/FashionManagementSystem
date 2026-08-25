@@ -1,27 +1,34 @@
 package Models;
 
-import java.util.Date;
+import java.sql.Timestamp;
 
+/**
+ * Model representing a Product Comment / Review.
+ * 
+ * @author ngocpace191049-cmyk
+ */
 public class Comment {
-    private String commentId;
-    private String orderItemId;
-    private String accountId;
-    private int rating;
-    private String content;
-    private Date createdAt;
-    private String status; // "Active", "Hidden"
 
-    // Extra fields for display (JOIN data)
+    private String commentId;
+    private String orderItemId;   // Maps to variantId or orderItemId
+    private String accountId;     // customerId
+    private int rating;           // 1 to 5 stars
+    private String content;       // Review text
+    private Timestamp createdAt;
+    private String status;        // Active or Hidden
+
+    // Extra display fields populated via JOIN queries
     private String accountFullName;
     private String accountUsername;
-    private String productName;
     private String productId;
-    private String variantInfo; // size + color info
+    private String productName;
+    private String sizeName;
+    private String colorName;
 
-    public Comment() {}
+    public Comment() {
+    }
 
-    public Comment(String commentId, String orderItemId, String accountId,
-                   int rating, String content, Date createdAt, String status) {
+    public Comment(String commentId, String orderItemId, String accountId, int rating, String content, Timestamp createdAt, String status) {
         this.commentId = commentId;
         this.orderItemId = orderItemId;
         this.accountId = accountId;
@@ -31,42 +38,119 @@ public class Comment {
         this.status = status;
     }
 
-    // Getters and Setters
-    public String getCommentId() { return commentId; }
-    public void setCommentId(String commentId) { this.commentId = commentId; }
+    public String getCommentId() {
+        return commentId;
+    }
 
-    public String getOrderItemId() { return orderItemId; }
-    public void setOrderItemId(String orderItemId) { this.orderItemId = orderItemId; }
+    public void setCommentId(String commentId) {
+        this.commentId = commentId;
+    }
 
-    public String getAccountId() { return accountId; }
-    public void setAccountId(String accountId) { this.accountId = accountId; }
+    public String getOrderItemId() {
+        return orderItemId;
+    }
 
-    public int getRating() { return rating; }
-    public void setRating(int rating) { this.rating = rating; }
+    public void setOrderItemId(String orderItemId) {
+        this.orderItemId = orderItemId;
+    }
 
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public String getAccountId() {
+        return accountId;
+    }
 
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+    public void setAccountId(String accountId) {
+        this.accountId = accountId;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public int getRating() {
+        return rating;
+    }
 
-    public String getAccountFullName() { return accountFullName; }
-    public void setAccountFullName(String accountFullName) { this.accountFullName = accountFullName; }
+    public void setRating(int rating) {
+        this.rating = rating;
+    }
 
-    public String getAccountUsername() { return accountUsername; }
-    public void setAccountUsername(String accountUsername) { this.accountUsername = accountUsername; }
+    public String getContent() {
+        return content;
+    }
 
-    public String getProductName() { return productName; }
-    public void setProductName(String productName) { this.productName = productName; }
+    public void setContent(String content) {
+        this.content = content;
+    }
 
-    public String getProductId() { return productId; }
-    public void setProductId(String productId) { this.productId = productId; }
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
 
-    public String getVariantInfo() { return variantInfo; }
-    public void setVariantInfo(String variantInfo) { this.variantInfo = variantInfo; }
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
 
-    public boolean isActive() { return "Active".equalsIgnoreCase(status); }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getAccountFullName() {
+        return accountFullName;
+    }
+
+    public void setAccountFullName(String accountFullName) {
+        this.accountFullName = accountFullName;
+    }
+
+    public String getAccountUsername() {
+        return accountUsername;
+    }
+
+    public void setAccountUsername(String accountUsername) {
+        this.accountUsername = accountUsername;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getSizeName() {
+        return sizeName;
+    }
+
+    public void setSizeName(String sizeName) {
+        this.sizeName = sizeName;
+    }
+
+    public String getColorName() {
+        return colorName;
+    }
+
+    public void setColorName(String colorName) {
+        this.colorName = colorName;
+    }
+
+    public String getVariantInfo() {
+        StringBuilder sb = new StringBuilder();
+        if (sizeName != null && !sizeName.isBlank()) {
+            sb.append("Size: ").append(sizeName);
+        }
+        if (colorName != null && !colorName.isBlank()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append("Color: ").append(colorName);
+        }
+        return sb.toString();
+    }
 }
