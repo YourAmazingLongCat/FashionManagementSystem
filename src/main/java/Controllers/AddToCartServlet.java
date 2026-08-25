@@ -46,6 +46,16 @@ public class AddToCartServlet extends HttpServlet {
             requestedVariantId = findVariantIdByAttributes(productId, colorId, sizeId);
         }
 
+        // Nếu vẫn không có, fallback lấy variant đầu tiên của sản phẩm
+        if ((requestedVariantId == null || requestedVariantId.isBlank())
+                && productId != null && !productId.isBlank()) {
+            ProductDAO pDAO = new ProductDAO();
+            Product p = pDAO.getProductById(productId);
+            if (p != null && p.getVariants() != null && !p.getVariants().isEmpty()) {
+                requestedVariantId = p.getVariants().get(0).getVariantId();
+            }
+        }
+
         // Vẫn không có variantId → redirect lỗi
         if (requestedVariantId == null || requestedVariantId.isBlank()) {
             String redirectUrl = request.getContextPath() 
