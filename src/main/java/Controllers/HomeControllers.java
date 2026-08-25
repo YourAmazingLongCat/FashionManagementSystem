@@ -122,6 +122,7 @@ public class HomeControllers extends HttpServlet {
         // Rating for current product
         double[] ratingSummary = commentDAO.getRatingSummary(productId);
         request.setAttribute("ratingSummary", ratingSummary);
+        request.setAttribute("productComments", commentDAO.getActiveCommentsByProduct(productId));
 
         // Rating for related products
         List<String> relatedIds = collectProductIds(relatedProducts);
