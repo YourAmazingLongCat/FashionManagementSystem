@@ -114,13 +114,10 @@
     <div class="row g-0">
         <!-- Sidebar -->
         <div class="col-md-3 col-lg-2 sidebar">
-            <div class="brand">Staff</div>
+            <div class="brand">Management</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Manage Payments</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>

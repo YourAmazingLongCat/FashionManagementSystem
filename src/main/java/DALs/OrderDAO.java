@@ -837,7 +837,39 @@ public class OrderDAO extends DBContext {
                 rs.getBigDecimal("totalAmount")
         );
         order.setOrderPlaced(rs.getBoolean("orderPlaced"));
+        order.setPaymentMethod(getOptionalString(rs, "paymentMethod"));
+        order.setPaymentStatus(getOptionalString(rs, "paymentStatus"));
+        order.setPaidAmount(getOptionalBigDecimal(rs, "paidAmount"));
+        order.setIssuedDate(getOptionalLocalDateTime(rs, "issuedDate"));
+        order.setCancellationReason(getOptionalString(rs, "cancellationReason"));
+        order.setCancelledAt(getOptionalLocalDateTime(rs, "cancelledAt"));
+        order.setCancelledBy(getOptionalString(rs, "cancelledBy"));
         return order;
+    }
+
+    private String getOptionalString(ResultSet rs, String columnName) {
+        try {
+            return rs.getString(columnName);
+        } catch (SQLException ex) {
+            return null;
+        }
+    }
+
+    private BigDecimal getOptionalBigDecimal(ResultSet rs, String columnName) {
+        try {
+            return rs.getBigDecimal(columnName);
+        } catch (SQLException ex) {
+            return null;
+        }
+    }
+
+    private LocalDateTime getOptionalLocalDateTime(ResultSet rs, String columnName) {
+        try {
+            Timestamp value = rs.getTimestamp(columnName);
+            return value == null ? null : value.toLocalDateTime();
+        } catch (SQLException ex) {
+            return null;
+        }
     }
 
 

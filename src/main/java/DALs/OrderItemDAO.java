@@ -18,10 +18,31 @@ public class OrderItemDAO extends DBContext {
 
     public List<OrderItem> getOrderItemsByOrderId(String orderId) {
         List<OrderItem> listItems = new ArrayList<>();
-        String query = "SELECT * FROM OrderItems WHERE orderId = ?";
+        if (orderId == null || orderId.trim().isEmpty()) {
+            return listItems;
+        }
+
+        String query = "SELECT oi.orderItemId, oi.orderId, oi.variantId, oi.quantity, "
+                + "oi.unitPrice, oi.discountAmount, pv.sku, p.name AS productName, "
+                + "s.sizeName, c.colorName, "
+                + "COALESCE("
+                + "  (SELECT TOP 1 piv.imageUrl FROM ProductImages piv "
+                + "   WHERE piv.variantId = oi.variantId "
+                + "   ORDER BY piv.isPrimary DESC, piv.imageId ASC), "
+                + "  (SELECT TOP 1 pip.imageUrl FROM ProductImages pip "
+                + "   WHERE pip.productId = p.productId "
+                + "   ORDER BY pip.isPrimary DESC, pip.imageId ASC)"
+                + ") AS imageUrl "
+                + "FROM OrderItems oi "
+                + "LEFT JOIN ProductVariants pv ON pv.variantId = oi.variantId "
+                + "LEFT JOIN Products p ON p.productId = pv.productId "
+                + "LEFT JOIN Sizes s ON s.sizeId = pv.sizeId "
+                + "LEFT JOIN Colors c ON c.colorId = pv.colorId "
+                + "WHERE oi.orderId = ? "
+                + "ORDER BY oi.orderItemId";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, orderId);
+            ps.setString(1, orderId.trim());
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -33,13 +54,17 @@ public class OrderItemDAO extends DBContext {
                             rs.getBigDecimal("unitPrice"),
                             rs.getBigDecimal("discountAmount")
                     );
-
+                    item.setSku(rs.getString("sku"));
+                    item.setProductName(rs.getString("productName"));
+                    item.setSizeName(rs.getString("sizeName"));
+                    item.setColorName(rs.getString("colorName"));
+                    item.setImageUrl(rs.getString("imageUrl"));
                     listItems.add(item);
                 }
             }
 
         } catch (SQLException e) {
-            System.out.println("getOrderItemsByOrderId error: " + e);
+            System.out.println("getOrderItemsByOrderId error: " + e.getMessage());
         }
 
         return listItems;

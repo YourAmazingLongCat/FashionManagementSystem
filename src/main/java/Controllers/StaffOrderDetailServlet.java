@@ -1,5 +1,6 @@
 package Controllers;
 
+import DALs.AccountDAO;
 import DALs.BillDAO;
 import Models.Account;
 import Models.Bill;
@@ -24,12 +25,14 @@ public class StaffOrderDetailServlet extends HttpServlet {
     private OrderService orderService;
     private PaymentService paymentService;
     private BillDAO billDAO;
+    private AccountDAO accountDAO;
 
     @Override
     public void init() throws ServletException {
         orderService = new OrderService();
         paymentService = new PaymentService();
         billDAO = new BillDAO();
+        accountDAO = new AccountDAO();
     }
 
     @Override
@@ -76,8 +79,10 @@ public class StaffOrderDetailServlet extends HttpServlet {
         List<OrderItem> orderItems = orderService.viewOrderItemsForStaff(orderId);
         Bill bill = billDAO.getBillByOrderId(orderId);
         Models.Payment payment = paymentService.getPaymentByOrderId(orderId);
+        Account customer = accountDAO.getAccountById(order.getCustomerId());
 
         request.setAttribute("order", order);
+        request.setAttribute("customer", customer);
         request.setAttribute("orderItems", orderItems);
         request.setAttribute("bill", bill);
         request.setAttribute("payment", payment);

@@ -56,6 +56,16 @@
                         </div>
                         <div class="order-modal-meta-grid">
                             <div class="order-modal-meta-item">
+                                <span class="order-modal-meta-label">Customer name</span>
+                                <div class="order-modal-meta-value">
+                                    <c:choose>
+                                        <c:when test="${not empty customer and not empty customer.fullName}">${fn:escapeXml(customer.fullName)}</c:when>
+                                        <c:when test="${not empty bill and not empty bill.customerName}">${fn:escapeXml(bill.customerName)}</c:when>
+                                        <c:otherwise>-</c:otherwise>
+                                    </c:choose>
+                                </div>
+                            </div>
+                            <div class="order-modal-meta-item">
                                 <span class="order-modal-meta-label">Customer ID</span>
                                 <div class="order-modal-meta-value">${fn:escapeXml(order.customerId)}</div>
                             </div>
@@ -113,20 +123,42 @@
                                     <table class="order-modal-items-table">
                                         <thead>
                                             <tr>
+                                                <th>Product</th>
                                                 <th>Variant</th>
                                                 <th>Quantity</th>
                                                 <th>Unit price</th>
-                                                <th>Discount</th>
                                                 <th class="text-end">Subtotal</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <c:forEach var="item" items="${orderItems}">
                                                 <tr>
-                                                    <td class="order-modal-variant">${fn:escapeXml(item.variantId)}</td>
+                                                    <td>
+                                                        <strong>
+                                                            <c:choose>
+                                                                <c:when test="${not empty item.productName}">${fn:escapeXml(item.productName)}</c:when>
+                                                                <c:otherwise>-</c:otherwise>
+                                                            </c:choose>
+                                                        </strong>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <c:choose>
+                                                                <c:when test="${not empty item.colorName or not empty item.sizeName}">
+                                                                    <c:if test="${not empty item.colorName}">${fn:escapeXml(item.colorName)}</c:if>
+                                                                    <c:if test="${not empty item.colorName and not empty item.sizeName}"> / </c:if>
+                                                                    <c:if test="${not empty item.sizeName}">${fn:escapeXml(item.sizeName)}</c:if>
+                                                                </c:when>
+                                                                <c:otherwise>${fn:escapeXml(item.variantId)}</c:otherwise>
+                                                            </c:choose>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            <c:if test="${not empty item.sku}">SKU: ${fn:escapeXml(item.sku)} &middot; </c:if>
+                                                            ID: ${fn:escapeXml(item.variantId)}
+                                                        </small>
+                                                    </td>
                                                     <td>${item.quantity}</td>
                                                     <td><fmt:formatNumber value="${item.unitPrice}" type="number" groupingUsed="true" /> VND</td>
-                                                    <td><fmt:formatNumber value="${item.discountAmount}" type="number" groupingUsed="true" /> VND</td>
                                                     <td class="text-end order-modal-price"><fmt:formatNumber value="${item.subTotal}" type="number" groupingUsed="true" /> VND</td>
                                                 </tr>
                                             </c:forEach>
@@ -218,15 +250,12 @@
                         </div>
 
                         <c:set var="nextStatus" value="" />
-                        <c:set var="previousStatus" value="" />
                         <c:choose>
                             <c:when test="${order.orderStatus eq 'Confirmed'}">
                                 <c:set var="nextStatus" value="Processing" />
-                                <c:set var="previousStatus" value="Pending" />
                             </c:when>
                             <c:when test="${order.orderStatus eq 'Processing'}">
                                 <c:set var="nextStatus" value="Shipping" />
-                                <c:set var="previousStatus" value="Confirmed" />
                             </c:when>
                             <c:when test="${order.orderStatus eq 'Shipping'}">
                                 <c:set var="nextStatus" value="Delivered" />
@@ -262,17 +291,6 @@
                                             <input type="hidden" name="newStatus" value="${fn:escapeXml(nextStatus)}" />
                                             <button type="submit" class="order-modal-action-btn">
                                                 <i class="fas fa-arrow-right" aria-hidden="true"></i>Move to ${fn:escapeXml(nextStatus)}
-                                            </button>
-                                        </form>
-                                    </c:if>
-
-                                    <c:if test="${not empty previousStatus and order.orderStatus ne 'Shipping' and order.orderStatus ne 'Delivered'}">
-                                        <form class="order-modal-action-form" method="post" action="${pageContext.request.contextPath}/staff/change-shipping-status"
-                                              data-confirm="Move order status back from ${fn:escapeXml(order.orderStatus)} to ${fn:escapeXml(previousStatus)}?">
-                                            <input type="hidden" name="orderId" value="${fn:escapeXml(order.orderId)}" />
-                                            <input type="hidden" name="newStatus" value="${fn:escapeXml(previousStatus)}" />
-                                            <button type="submit" class="order-modal-action-btn secondary">
-                                                <i class="fas fa-arrow-left" aria-hidden="true"></i>Back to ${fn:escapeXml(previousStatus)}
                                             </button>
                                         </form>
                                     </c:if>

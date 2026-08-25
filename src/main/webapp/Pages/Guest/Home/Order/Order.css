@@ -2092,3 +2092,250 @@
         text-align: left;
     }
 }
+
+/* Integrated Order details: product imagery, payment/invoice and cancellation audit. */
+.co-product-image {
+    display: block;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    object-fit: cover;
+}
+
+.co-cancellation-audit {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.co-cancellation-audit > div {
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fff7f7;
+}
+
+.co-cancellation-audit span,
+.co-cancellation-audit strong {
+    display: block;
+}
+
+.co-cancellation-audit span {
+    margin-bottom: 5px;
+    color: #991b1b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.co-cancellation-audit strong {
+    color: #7f1d1d;
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+}
+
+.co-cancel-form {
+    display: grid;
+    gap: 10px;
+}
+
+.co-cancel-form label {
+    color: #7f1d1d;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.co-cancel-form .co-textarea {
+    min-height: 92px;
+}
+
+@media (max-width: 760px) {
+    .co-cancellation-audit {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Customer Order Detail refinements: variant presentation and cancel action. */
+.co-cancel-after-save {
+    margin-top: 10px;
+    min-height: 43px;
+}
+
+.co-detail-head-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.co-cancel-head-btn {
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 8px 14px;
+    background: #ffffff;
+}
+
+.co-product-cell {
+    min-width: 250px;
+}
+
+.co-product-image {
+    flex-basis: 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+}
+
+.co-product-icon {
+    flex-basis: 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+}
+
+.co-variant-copy {
+    min-width: 0;
+}
+
+.co-product-cell .co-variant-name {
+    display: block;
+    color: #1f2937;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.co-product-cell .co-variant-sku {
+    display: block;
+    margin-top: 5px;
+    color: #8b94a1;
+    font-size: 0.74rem;
+    font-weight: 500;
+}
+
+.co-cancel-modal[hidden] {
+    display: none !important;
+}
+
+.co-cancel-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.co-cancel-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.48);
+    backdrop-filter: blur(3px);
+}
+
+.co-cancel-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(480px, 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 22px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.co-cancel-dialog-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 12px;
+}
+
+.co-cancel-dialog-head h2 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.3rem;
+    font-weight: 750;
+}
+
+.co-cancel-dialog-head .co-eyebrow {
+    margin-bottom: 4px;
+}
+
+.co-cancel-dialog-close {
+    display: inline-grid;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #6b7280;
+    cursor: pointer;
+}
+
+.co-cancel-dialog-close:hover {
+    border-color: #fecaca;
+    background: #fff7f7;
+    color: #b91c1c;
+}
+
+.co-cancel-dialog .co-cancel-warning {
+    margin-bottom: 16px;
+}
+
+.co-cancel-dialog .co-cancel-form {
+    gap: 12px;
+}
+
+.co-cancel-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.co-modal-open {
+    overflow: hidden;
+}
+
+.co-history-head {
+    align-items: center;
+}
+
+@media (max-width: 760px) {
+    .co-detail-head-actions {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .co-cancel-head-btn {
+        width: 100%;
+    }
+
+    .co-cancel-modal {
+        padding: 14px;
+    }
+
+    .co-cancel-dialog {
+        padding: 18px;
+    }
+
+    .co-cancel-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .co-cancel-dialog-actions .co-secondary-btn,
+    .co-cancel-dialog-actions .co-cancel-btn {
+        width: 100%;
+    }
+}

@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Management - Staff</title>
+    <title>Manage Orders</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/Assets/css/order-management.css?v=20260824-1">
@@ -645,13 +645,10 @@ body.order-modal-open {
     <div class="row g-0">
         <!-- Sidebar -->
         <div class="col-md-3 col-lg-2 sidebar">
-            <div class="brand">Staff</div>
+            <div class="brand">Management</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link active" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/payments">Manage Payments</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
@@ -863,7 +860,6 @@ body.order-modal-open {
             <div>
                 <p class="order-detail-modal-eyebrow">Order Management</p>
                 <h3 id="orderDetailModalTitle">Order Detail</h3>
-                <p id="orderDetailModalSubtitle">Review order, payment and fulfilment information.</p>
             </div>
             <button type="button" class="order-detail-modal-close" data-close-order-modal
                     aria-label="Close order detail">&times;</button>
@@ -888,7 +884,6 @@ body.order-modal-open {
     var modal = document.getElementById('orderDetailModal');
     var modalBody = document.getElementById('orderDetailModalBody');
     var modalTitle = document.getElementById('orderDetailModalTitle');
-    var modalSubtitle = document.getElementById('orderDetailModalSubtitle');
     var contextPath = '${pageContext.request.contextPath}';
     var activeOrderId = '';
     var returnFocus = null;
@@ -932,7 +927,6 @@ body.order-modal-open {
     function loadOrder(orderId) {
         activeOrderId = orderId;
         modalTitle.textContent = 'Order #' + orderId;
-        modalSubtitle.textContent = 'Review order, payment and fulfilment information.';
         modalBody.innerHTML = loadingMarkup();
 
         return fetch(contextPath + '/staff/order-detail?modal=1&orderId=' + encodeURIComponent(orderId), {
@@ -1014,11 +1008,30 @@ body.order-modal-open {
             submitButton.disabled = true;
         }
 
+        // Send staff order actions as application/x-www-form-urlencoded.
+        // The servlets read values through request.getParameter(...), so using
+        // multipart FormData here can make orderId/newStatus unavailable unless
+        // the servlet is configured with @MultipartConfig.
+        var formData = new FormData(form);
+        var submittedOrderId = formData.get('orderId');
+        if ((!submittedOrderId || String(submittedOrderId).trim() === '') && activeOrderId) {
+            formData.set('orderId', activeOrderId);
+            submittedOrderId = activeOrderId;
+        }
+        var submittedNewStatus = formData.get('newStatus');
+        var requestBody = new URLSearchParams();
+        formData.forEach(function (value, key) {
+            requestBody.append(key, value);
+        });
+
         fetch(form.action, {
             method: 'POST',
-            body: new FormData(form),
+            body: requestBody,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
+                'X-Order-Id': submittedOrderId || activeOrderId || '',
+                'X-Order-Status': submittedNewStatus || '',
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
                 'Accept': 'application/json'
             }
         }).then(function (response) {
@@ -1028,11 +1041,17 @@ body.order-modal-open {
                 if (!response.ok) {
                     throw new Error(payload.message || 'Unable to update this order.');
                 }
+
+                // Business-rule failures are returned as JSON with
+                // success=false. Do not mark the order as changed; reload the
+                // popup so the server-side flash message explains the reason.
+                if (!payload.success) {
+                    return loadOrder(activeOrderId);
+                }
+
                 orderChanged = true;
-                return payload;
+                return loadOrder(activeOrderId);
             });
-        }).then(function () {
-            return loadOrder(activeOrderId);
         }).catch(function (error) {
             errorMarkup(error.message);
         }).finally(function () {

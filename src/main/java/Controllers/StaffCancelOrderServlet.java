@@ -1,5 +1,6 @@
 package Controllers;
 
+import Models.Account;
 import Services.OrderService;
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -32,7 +33,20 @@ public class StaffCancelOrderServlet extends HttpServlet {
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
-        String orderId = trim(request.getParameter("orderId"));
+
+        if (!isStaffOrAdmin(session)) {
+            if (isAjax(request)) {
+                writeJson(response, HttpServletResponse.SC_FORBIDDEN, false,
+                        "You do not have permission to cancel orders.");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/auth/login");
+            }
+            return;
+        }
+
+        String orderId = firstNonEmpty(
+                request.getParameter("orderId"),
+                request.getHeader("X-Order-Id"));
 
         if (isEmpty(orderId)) {
             session.setAttribute("errorMessage", "Missing order ID.");
@@ -69,6 +83,19 @@ public class StaffCancelOrderServlet extends HttpServlet {
         return "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
     }
 
+    private boolean isStaffOrAdmin(HttpSession session) {
+        if (session == null) {
+            return false;
+        }
+        Object userObject = session.getAttribute("USER");
+        if (!(userObject instanceof Account)) {
+            return false;
+        }
+        Account user = (Account) userObject;
+        return "Staff".equalsIgnoreCase(user.getRole())
+                || "Admin".equalsIgnoreCase(user.getRole());
+    }
+
     private void writeJson(HttpServletResponse response, int status, boolean success, String message)
             throws IOException {
         response.setStatus(status);
@@ -84,6 +111,14 @@ public class StaffCancelOrderServlet extends HttpServlet {
                 .replace("\"", "\\\"")
                 .replace("\r", "\\r")
                 .replace("\n", "\\n");
+    }
+
+    private String firstNonEmpty(String first, String second) {
+        String value = trim(first);
+        if (!isEmpty(value)) {
+            return value;
+        }
+        return trim(second);
     }
 
     private String trim(String value) {
