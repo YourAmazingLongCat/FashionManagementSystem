@@ -42,23 +42,25 @@
             <h1 class="detail-title">${product.name}</h1>
             <span id="commentCountBadge" style="display:none;">0</span>
             <div class="detail-rating-row">
-                <c:choose>
-                    <c:when test="${not empty ratingSummary && ratingSummary[1] > 0}">
-                        <span class="detail-stars">
-                            <c:forEach begin="1" end="5" var="i">
-                                <c:choose>
-                                    <c:when test="${i <= ratingSummary[0] + 0.5}">★</c:when>
-                                    <c:otherwise>☆</c:otherwise>
-                                </c:choose>
-                            </c:forEach>
-                        </span>
-                        <span class="detail-rating-value"><fmt:formatNumber value="${ratingSummary[0]}" maxFractionDigits="1"/></span>
-                        <span class="detail-review-count">(${ratingSummary[1]} reviews)</span>
-                    </c:when>
-                    <c:otherwise>
-                        <span class="detail-no-rating">No reviews yet</span>
-                    </c:otherwise>
-                </c:choose>
+                <button type="button" id="openCommentsBtn" style="background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font:inherit;">
+                    <c:choose>
+                        <c:when test="${not empty ratingSummary && ratingSummary[1] > 0}">
+                            <span class="detail-stars">
+                                <c:forEach begin="1" end="5" var="i">
+                                    <c:choose>
+                                        <c:when test="${i <= ratingSummary[0] + 0.5}">★</c:when>
+                                        <c:otherwise>☆</c:otherwise>
+                                    </c:choose>
+                                </c:forEach>
+                            </span>
+                            <span class="detail-rating-value"><fmt:formatNumber value="${ratingSummary[0]}" maxFractionDigits="1"/></span>
+                            <span class="detail-review-count" style="text-decoration:underline;color:#666;">(${ratingSummary[1]} reviews)</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="detail-no-rating" style="text-decoration:underline;color:#666;">No reviews yet (Click to review)</span>
+                        </c:otherwise>
+                    </c:choose>
+                </button>
             </div>
 
             <div class="detail-price" id="detailPrice"><fmt:formatNumber value="${displayPrice}" type="number" groupingUsed="true"/> đ</div>
@@ -419,3 +421,5 @@
         refreshAvailability();
     })();
 </script>
+
+<jsp:include page="commentsModal.jsp" />
