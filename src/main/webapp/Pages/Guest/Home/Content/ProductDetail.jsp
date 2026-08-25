@@ -75,7 +75,7 @@
                 Please login to add items to cart.
             </div>
 
-            <form method="post" action="${pageContext.request.contextPath}/home/cart/add" class="detail-purchase-panel" id="addToCartForm" data-logged-in="${not empty sessionScope.USER}">
+            <form method="post" action="${pageContext.request.contextPath}/cart/add" class="detail-purchase-panel" id="addToCartForm" data-logged-in="${not empty sessionScope.USER}">
                 <input type="hidden" name="productId" value="${product.productId}" />
                 <input type="hidden" name="variantId" id="selectedVariantId" value="" />
 
@@ -144,6 +144,118 @@
                 ];
             </script>
             </c:if>
+        </div>
+    </section>
+
+    <!-- ===== INLINE CUSTOMER REVIEWS & COMMENTS SECTION ===== -->
+    <section class="product-section reviews-section" id="reviewsSection" style="margin-top: 40px; padding: 30px; background: #fafafa; border-radius: 12px; border: 1px solid #eaeaea;">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px;">
+            <h2 class="section-title" style="margin: 0; font-size: 1.4rem; font-weight: 700; text-transform: uppercase;">
+                ĐÁNH GIÁ VÀ BÌNH LUẬN SẢN PHẨM
+            </h2>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <c:choose>
+                    <c:when test="${not empty ratingSummary && ratingSummary[1] > 0}">
+                        <span style="font-size: 1.5rem; font-weight: bold; color: #f59e0b;"><fmt:formatNumber value="${ratingSummary[0]}" maxFractionDigits="1"/> / 5.0</span>
+                        <span style="color: #f59e0b; font-size: 1.2rem;">
+                            <c:forEach begin="1" end="5" var="i">${i <= ratingSummary[0] + 0.5 ? '★' : '☆'}</c:forEach>
+                        </span>
+                        <span style="color: #666; font-size: 0.95rem;">(${ratingSummary[1]} lượt đánh giá)</span>
+                    </c:when>
+                    <c:otherwise>
+                        <span style="color: #888; font-size: 0.95rem;">Chưa có đánh giá</span>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+        </div>
+
+        <!-- Add Review Box -->
+        <div class="review-add-card" style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 30px;">
+            <c:choose>
+                <c:when test="${empty sessionScope.USER}">
+                    <div style="text-align: center; padding: 15px; color: #555;">
+                        <p style="margin: 0 0 10px 0;">Vui lòng <strong>đăng nhập</strong> để đánh giá sản phẩm này.</p>
+                        <a href="${pageContext.request.contextPath}/auth/login" class="detail-chip-button" style="display: inline-block; padding: 8px 20px; background: #222; color: #fff; text-decoration: none; border-radius: 4px; font-weight: 600;">Đăng nhập</a>
+                    </div>
+                </c:when>
+                <c:when test="${not empty eligibleVariantId}">
+                    <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600;">Viết đánh giá của bạn</h3>
+                    <form method="post" action="${pageContext.request.contextPath}/comment" style="display: flex; flex-direction: column; gap: 12px;">
+                        <input type="hidden" name="action" value="add" />
+                        <input type="hidden" name="productId" value="${product.productId}" />
+
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="font-weight: 600; font-size: 0.95rem;">Chọn số sao:</label>
+                            <div class="star-rating-select" style="display: inline-flex; gap: 4px; font-size: 1.5rem; cursor: pointer; color: #f59e0b;">
+                                <select name="rating" required style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.95rem; font-weight: 600; color: #f59e0b;">
+                                    <option value="5" selected>★★★★★ - 5 Sao (Rất hài lòng)</option>
+                                    <option value="4">★★★★☆ - 4 Sao (Hài lòng)</option>
+                                    <option value="3">★★★☆☆ - 3 Sao (Bình thường)</option>
+                                    <option value="2">★★☆☆☆ - 2 Sao (Chưa hài lòng)</option>
+                                    <option value="1">★☆☆☆☆ - 1 Sao (Tệ)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">Nội dung bình luận:</label>
+                            <textarea name="content" rows="3" required placeholder="Hãy chia sẻ cảm nhận của bạn về chất liệu, kích cỡ, form dáng sản phẩm..." style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+                        </div>
+
+                        <div>
+                            <button type="submit" style="background: #222; color: #fff; border: none; padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;">Gửi đánh giá</button>
+                        </div>
+                    </form>
+                </c:when>
+                <c:otherwise>
+                    <div style="padding: 12px 16px; background: #f8fafc; border-left: 4px solid #3b82f6; color: #475569; font-size: 0.95rem;">
+                        ℹ️ Chỉ khách hàng đã mua sản phẩm này và nhận hàng thành công mới có thể gửi đánh giá.
+                    </div>
+                </c:otherwise>
+            </c:choose>
+        </div>
+
+        <!-- Comments List -->
+        <div class="comments-stream" style="display: flex; flex-direction: column; gap: 16px;">
+            <c:choose>
+                <c:when test="${not empty productComments}">
+                    <c:forEach var="c" items="${productComments}">
+                        <div class="comment-card" style="background: #fff; padding: 18px 20px; border-radius: 8px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div style="width: 38px; height: 38px; border-radius: 50%; background: #1e293b; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; text-transform: uppercase;">
+                                        ${empty c.accountFullName ? 'U' : c.accountFullName.substring(0, 1)}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 1rem; color: #111;">
+                                            ${empty c.accountFullName ? c.accountUsername : c.accountFullName}
+                                        </div>
+                                        <c:if test="${not empty c.variantInfo}">
+                                            <div style="font-size: 0.82rem; color: #64748b;">Đã mua: ${c.variantInfo}</div>
+                                        </c:if>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: #f59e0b; font-size: 1.1rem;">
+                                        <c:forEach begin="1" end="5" var="i">${i <= c.rating ? '★' : '☆'}</c:forEach>
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8;">
+                                        <fmt:formatDate value="${c.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <p style="margin: 6px 0 0 0; color: #334155; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${c.content}</p>
+                        </div>
+                    </c:forEach>
+                </c:when>
+                <c:otherwise>
+                    <div style="text-align: center; padding: 40px 20px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b;">
+                        <span style="font-size: 2rem; display: block; margin-bottom: 8px;">💬</span>
+                        <p style="margin: 0; font-size: 1rem; font-weight: 500;">Chưa có bình luận nào cho sản phẩm này.</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: #94a3b8;">Hãy là người đầu tiên trải nghiệm và chia sẻ cảm nhận!</p>
+                    </div>
+                </c:otherwise>
+            </c:choose>
         </div>
     </section>
 
