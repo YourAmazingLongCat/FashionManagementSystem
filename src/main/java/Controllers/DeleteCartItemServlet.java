@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package Controllers;
 
 import DALs.CartDAO;
@@ -11,30 +7,19 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/**
- *
- * @author Admin
- */
-
-
 @WebServlet("/cart/delete")
 public class DeleteCartItemServlet extends HttpServlet {
 
     @Override
-    protected void doGet(
-            HttpServletRequest request,
-            HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
 
-        String cartItemId =
-                request.getParameter("id");
+        String itemId = request.getParameter("id");
+        if (itemId != null && !itemId.isBlank()) {
+            CartDAO dao = new CartDAO();
+            dao.deleteItem(itemId);
+        }
 
-        CartDAO dao = new CartDAO();
-
-        dao.deleteItem(cartItemId);
-
-        response.sendRedirect(
-                request.getContextPath()
-                + "/cart");
+        response.sendRedirect(request.getContextPath() + "/cart");
     }
 }

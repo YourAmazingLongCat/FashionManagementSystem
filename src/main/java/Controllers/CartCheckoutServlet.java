@@ -46,58 +46,51 @@ public class CartCheckoutServlet extends HttpServlet {
             return;
         }
 
-        String[] selectedItems = request.getParameterValues("selectedItems");
-        if (selectedItems == null || selectedItems.length == 0) {
-            session.setAttribute("errorMessage",
-                    "Please select at least one product before checkout.");
+        String[] selectedIds = request.getParameterValues("selectedItems");
+        if (selectedIds == null || selectedIds.length == 0) {
+            session.setAttribute("errorMessage", "Please select at least one product before checkout.");
             response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
         CartDAO cartDAO = new CartDAO();
-        Cart cart = cartDAO.getActiveCart(account.getAccountId());
+        Cart activeCart = cartDAO.getActiveCart(account.getAccountId());
 
-        if (cart == null) {
+        if (activeCart == null) {
             session.setAttribute("errorMessage", "Your cart is empty.");
             response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        List<CartItemView> selectedCartItems
-                = cartDAO.getCartItemsByIds(cart.getCartId(), selectedItems);
-
-        if (selectedCartItems == null || selectedCartItems.isEmpty()) {
-            session.setAttribute("errorMessage",
-                    "Selected cart items are invalid or no longer available.");
+        List<CartItemView> selectedViews = cartDAO.getCartItemsByIds(activeCart.getCartId(), selectedIds);
+        if (selectedViews == null || selectedViews.isEmpty()) {
+            session.setAttribute("errorMessage", "Selected cart items are invalid or no longer available.");
             response.sendRedirect(request.getContextPath() + "/cart");
             return;
         }
 
-        List<CartItem> checkoutCart = new ArrayList<>();
-        for (CartItemView viewItem : selectedCartItems) {
+        // Chuyển đổi sang CartItem để gửi sang OrderService
+        List<CartItem> checkoutItems = new ArrayList<>();
+        for (CartItemView view : selectedViews) {
             CartItem item = new CartItem();
-            item.setVariantId(viewItem.getVariantId());
-            item.setProductName(viewItem.getProductName());
-            item.setProductImageUrl(viewItem.getImageUrl());
-            item.setSizeName(viewItem.getSizeName());
-            item.setColorName(viewItem.getColorName());
-            item.setQuantity(viewItem.getQuantity());
-            item.setUnitPrice(BigDecimal.valueOf(viewItem.getPrice()));
-            checkoutCart.add(item);
+            item.setVariantId(view.getVariantId());
+            item.setProductName(view.getProductName());
+            item.setProductImageUrl(view.getImageUrl());
+            item.setSizeName(view.getSizeName());
+            item.setColorName(view.getColorName());
+            item.setQuantity(view.getQuantity());
+            item.setUnitPrice(BigDecimal.valueOf(view.getPrice()));
+            checkoutItems.add(item);
         }
 
-        /*
-         * The business rule is applied here, at the actual Cart Checkout
-         * button. This transaction creates the Pending order, reserves stock,
-         * inserts OrderItems and removes the selected CartItems together.
-         */
+        // Tạo đơn hàng (Pending) và xóa các item đã chọn khỏi giỏ
         String orderId = orderService.createPendingOrderFromCart(
                 account.getAccountId(),
                 "",
                 account.getPhone(),
-                checkoutCart,
-                cart.getCartId(),
-                selectedItems
+                checkoutItems,
+                activeCart.getCartId(),
+                selectedIds
         );
 
         if (orderId == null) {
@@ -107,23 +100,21 @@ public class CartCheckoutServlet extends HttpServlet {
             return;
         }
 
-        // Refresh the header badge using only the products still in the cart.
-        List<CartItemView> remainingItems = cartDAO.getCartItems(cart.getCartId());
+        // Cập nhật lại số lượng giỏ hàng hiển thị
+        List<CartItemView> remainingItems = cartDAO.getCartItems(activeCart.getCartId());
         int remainingCount = remainingItems.stream()
                 .mapToInt(CartItemView::getQuantity)
                 .sum();
-
         session.setAttribute("cartCount", remainingCount);
+
+        // Xóa các session tạm
         session.setAttribute("pendingCheckoutOrderId", orderId);
         session.removeAttribute("cart");
         session.removeAttribute("checkoutCartItemIds");
-
-        // A successful Cart Checkout must not display a toast/notification.
-        // The customer is taken directly to the single Order page instead.
         session.removeAttribute("successMessage");
         session.removeAttribute("errorMessage");
 
-        response.sendRedirect(request.getContextPath()
-                + "/customer/order-detail?orderId=" + orderId);
+        // Chuyển sang trang chi tiết đơn hàng
+        response.sendRedirect(request.getContextPath() + "/customer/order-detail?orderId=" + orderId);
     }
 }

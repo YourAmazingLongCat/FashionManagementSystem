@@ -17,35 +17,34 @@ import java.util.List;
 public class ViewCartServlet extends HttpServlet {
 
     @Override
-    protected void doGet(HttpServletRequest request,
-            HttpServletResponse response)
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        Account acc = (Account) request.getSession().getAttribute("USER");
-
-        if (acc == null) {
+        Account loggedUser = (Account) request.getSession().getAttribute("USER");
+        if (loggedUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
         CartDAO cartDAO = new CartDAO();
-        Cart cart = cartDAO.getActiveCart(acc.getAccountId());
+        Cart activeCart = cartDAO.getActiveCart(loggedUser.getAccountId());
 
-        if (cart != null) {
-            cartDAO.cleanupInvalidItems(cart.getCartId());
+        List<CartItemView> items = new ArrayList<>();
+        double total = 0.0;
+        int cartCount = 0;
 
-            List<CartItemView> items = cartDAO.getCartItems(cart.getCartId());
-            request.setAttribute("cartItems", items);
-            request.setAttribute("total", cartDAO.getCartTotal(cart.getCartId()));
+        if (activeCart != null) {
+            // Xóa các item không hợp lệ (variant đã bị xóa hoặc hết hàng)
+            cartDAO.cleanupInvalidItems(activeCart.getCartId());
 
-            int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
-            request.getSession().setAttribute("cartCount", cartCount);
-
-        } else {
-            request.setAttribute("cartItems", new ArrayList<>());
-            request.setAttribute("total", 0);
-            request.getSession().setAttribute("cartCount", 0);
+            items = cartDAO.getCartItems(activeCart.getCartId());
+            total = cartDAO.getCartTotal(activeCart.getCartId());
+            cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
         }
+
+        request.setAttribute("cartItems", items);
+        request.setAttribute("total", total);
+        request.getSession().setAttribute("cartCount", cartCount);
 
         request.setAttribute("contentPage", "/Pages/Customer/Cart.jsp");
         request.getRequestDispatcher("/Pages/Guest/Home/Layout/Layout.jsp").forward(request, response);

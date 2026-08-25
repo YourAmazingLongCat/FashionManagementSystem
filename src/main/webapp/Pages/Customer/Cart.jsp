@@ -58,7 +58,7 @@
         }
 
         .price {
-            color: #ee4d2d;
+            color: #ee4d2d;  
             font-weight: bold;
         }
 
@@ -82,6 +82,7 @@
         .btn-shopee {
             background: #ee4d2d;
             color: white;
+            border: none;
         }
 
         .btn-shopee:hover {
@@ -225,7 +226,7 @@
                                 </div>
                             </div>
 
-                            <h4 class="text-danger">
+                            <h4 class="text-danger"> <!-- using Bootstrap danger red -->
                                 <span id="totalPrice">0 VND</span>
                             </h4>
 

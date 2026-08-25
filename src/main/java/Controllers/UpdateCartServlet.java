@@ -14,8 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class UpdateCartServlet extends HttpServlet {
 
     @Override
-    protected void doPost(HttpServletRequest request,
-            HttpServletResponse response)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         response.setContentType("application/json");
@@ -23,78 +22,61 @@ public class UpdateCartServlet extends HttpServlet {
 
         try {
             String cartItemId = request.getParameter("cartItemId");
-            String qtyStr = request.getParameter("quantity");
+            String quantityParam = request.getParameter("quantity");
 
             if (cartItemId == null || cartItemId.isBlank()) {
-                response.getWriter().write(
-                        "{\"success\":false,\"message\":\"Invalid cart item.\"}"
-                );
+                response.getWriter().write("{\"success\":false,\"message\":\"Invalid cart item.\"}");
                 return;
             }
 
-            int quantity = 1;
-
-            if (qtyStr != null && !qtyStr.isEmpty()) {
+            int newQuantity = 1;
+            if (quantityParam != null && !quantityParam.isEmpty()) {
                 try {
-                    quantity = Integer.parseInt(qtyStr);
+                    newQuantity = Integer.parseInt(quantityParam);
                 } catch (NumberFormatException ignored) {
-                    quantity = 1;
+                    // keep default
                 }
             }
-
-            if (quantity < 1) {
-                quantity = 1;
-            }
+            newQuantity = Math.max(1, newQuantity);
 
             CartDAO cartDAO = new CartDAO();
             ProductDAO productDAO = new ProductDAO();
 
             String variantId = cartDAO.getVariantIdByCartItemId(cartItemId);
-
             boolean adjusted = false;
-            int availableStock = 0;
+            int available = 0;
 
             if (variantId != null) {
-
                 ProductVariant variant = productDAO.getVariantById(variantId);
-
                 if (variant != null) {
-
-                    availableStock = variant.getAvailableQty();
-
-                    if (quantity > availableStock) {
-                        quantity = availableStock;
+                    available = variant.getAvailableQty();
+                    if (newQuantity > available) {
+                        newQuantity = Math.max(0, available);
                         adjusted = true;
                     }
                 }
             }
 
-            // Nếu tồn kho = 0
-            if (availableStock <= 0) {
-                response.getWriter().write(
-                        "{\"success\":false,\"message\":\"This product is currently out of stock.\"}"
-                );
+            if (available <= 0) {
+                response.getWriter().write("{\"success\":false,\"message\":\"This product is currently out of stock.\"}");
                 return;
             }
 
-            cartDAO.updateQuantity(cartItemId, quantity);
+            cartDAO.updateQuantity(cartItemId, newQuantity);
 
-            response.getWriter().write(
-                    "{"
-                    + "\"success\":true,"
-                    + "\"adjusted\":" + adjusted + ","
-                    + "\"quantity\":" + quantity + ","
-                    + "\"stock\":" + availableStock
-                    + "}"
-            );
+            // Build JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{")
+                .append("\"success\":true,")
+                .append("\"adjusted\":").append(adjusted).append(",")
+                .append("\"quantity\":").append(newQuantity).append(",")
+                .append("\"stock\":").append(available)
+                .append("}");
+            response.getWriter().write(json.toString());
 
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"Unable to update cart.\"}"
-            );
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"Unable to update cart.\"}");
         }
     }
 }

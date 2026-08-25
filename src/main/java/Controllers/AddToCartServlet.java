@@ -27,104 +27,127 @@ public class AddToCartServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        Account acc = (Account) request.getSession().getAttribute("USER");
-        if (acc == null) {
+        Account loggedUser = (Account) request.getSession().getAttribute("USER");
+        if (loggedUser == null) {
             response.sendRedirect(request.getContextPath() + "/auth/login");
             return;
         }
 
-        String variantId = trim(request.getParameter("variantId"));
+        // Lấy tham số
+        String requestedVariantId = trim(request.getParameter("variantId"));
         String productId = trim(request.getParameter("productId"));
         String colorId = trim(request.getParameter("colorId"));
         String sizeId = trim(request.getParameter("sizeId"));
-        String quantityStr = trim(request.getParameter("quantity"));
+        String quantityParam = trim(request.getParameter("quantity"));
 
-        
-        if ((variantId == null || variantId.isBlank()) && productId != null && !productId.isBlank()) {
-            ProductDAO productDAO = new ProductDAO();
-            Product product = productDAO.getProductById(productId);
-            if (product != null && product.getVariants() != null) {
-                for (ProductVariant v : product.getVariants()) {
-                    boolean colorMatch = (colorId == null || colorId.isBlank()) ||
-                                         (colorId.equals(v.getColorId()));
-                    boolean sizeMatch = (sizeId == null || sizeId.isBlank()) ||
-                                        (sizeId.equals(v.getSizeId()));
-                    if (colorMatch && sizeMatch) {
-                        variantId = v.getVariantId();
-                        break;
-                    }
-                }
-            }
+        // Nếu variantId không có, thử tìm theo productId + colorId + sizeId
+        if ((requestedVariantId == null || requestedVariantId.isBlank()) 
+                && productId != null && !productId.isBlank()) {
+            requestedVariantId = findVariantIdByAttributes(productId, colorId, sizeId);
         }
 
-        
-        if (variantId == null || variantId.isBlank()) {
-            String redirectUrl = request.getContextPath() + "/home/view-detail-product?productId=" + (productId != null ? productId : "") + "&message=variant-required";
+        // Vẫn không có variantId → redirect lỗi
+        if (requestedVariantId == null || requestedVariantId.isBlank()) {
+            String redirectUrl = request.getContextPath() 
+                    + "/home/view-detail-product?productId=" + (productId != null ? productId : "")
+                    + "&message=variant-required";
             response.sendRedirect(redirectUrl);
             return;
         }
 
-        int quantity = 1;
+        // Xác định số lượng
+        int qty = 1;
         try {
-            quantity = Math.max(1, Integer.parseInt(quantityStr));
-        } catch (NumberFormatException ignored) {}
+            qty = Math.max(1, Integer.parseInt(quantityParam));
+        } catch (NumberFormatException ignored) {
+            // keep default = 1
+        }
 
         ProductDAO productDAO = new ProductDAO();
-        ProductVariant variant = productDAO.getVariantById(variantId);
+        ProductVariant variant = productDAO.getVariantById(requestedVariantId);
+
+        // Fallback: nếu variant không tồn tại, lấy variant đầu tiên của product
         if (variant == null) {
-            
             Product product = productDAO.getProductById(productId);
             if (product != null && product.getVariants() != null && !product.getVariants().isEmpty()) {
                 variant = product.getVariants().get(0);
-                variantId = variant.getVariantId();
+                requestedVariantId = variant.getVariantId();
             } else {
-                response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
+                response.sendRedirect(request.getContextPath() 
+                        + "/home/view-detail-product?productId=" + productId 
+                        + "&message=variant-unavailable");
                 return;
             }
         }
 
         int availableStock = variant.getAvailableQty();
         if (availableStock <= 0) {
-            response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=variant-unavailable");
+            response.sendRedirect(request.getContextPath() 
+                    + "/home/view-detail-product?productId=" + productId 
+                    + "&message=variant-unavailable");
             return;
         }
 
         CartDAO cartDAO = new CartDAO();
-        Cart cart = cartDAO.getActiveCart(acc.getAccountId());
+        Cart cart = cartDAO.getActiveCart(loggedUser.getAccountId());
 
-        String cartId;
-        if (cart == null) {
-            cartId = cartDAO.createCart(acc.getAccountId());
-        } else {
-            cartId = cart.getCartId();
-        }
+        String cartId = (cart == null) 
+                ? cartDAO.createCart(loggedUser.getAccountId()) 
+                : cart.getCartId();
 
-        int currentCartQty = cartDAO.getQuantityInCart(cartId, variantId);
-        int totalRequestedQty = currentCartQty + quantity;
+        int currentQuantityInCart = cartDAO.getQuantityInCart(cartId, requestedVariantId);
+        int totalRequested = currentQuantityInCart + qty;
 
-        if (totalRequestedQty > availableStock) {
-            int maxCanAdd = availableStock - currentCartQty;
+        if (totalRequested > availableStock) {
+            int maxCanAdd = Math.max(0, availableStock - currentQuantityInCart);
             if (maxCanAdd <= 0) {
-                response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=cart-quantity-exceeded");
+                response.sendRedirect(request.getContextPath() 
+                        + "/home/view-detail-product?productId=" + productId 
+                        + "&message=cart-quantity-exceeded");
                 return;
             }
-            quantity = maxCanAdd;
+            qty = maxCanAdd;
         }
 
-        if (cartDAO.existsItem(cartId, variantId)) {
-            cartDAO.increaseQuantity(cartId, variantId, quantity);
+        // Thêm hoặc cập nhật
+        if (cartDAO.existsItem(cartId, requestedVariantId)) {
+            cartDAO.increaseQuantity(cartId, requestedVariantId, qty);
         } else {
-            cartDAO.addItem(cartId, variantId, quantity);
+            cartDAO.addItem(cartId, requestedVariantId, qty);
         }
 
-        List<CartItemView> items = cartDAO.getCartItems(cartId);
-        int cartCount = items.stream().mapToInt(CartItemView::getQuantity).sum();
-        request.getSession().setAttribute("cartCount", cartCount);
+        // Cập nhật số lượng giỏ hàng trên session
+        List<CartItemView> cartItems = cartDAO.getCartItems(cartId);
+        int totalItems = cartItems.stream().mapToInt(CartItemView::getQuantity).sum();
+        request.getSession().setAttribute("cartCount", totalItems);
 
-        response.sendRedirect(request.getContextPath() + "/home/view-detail-product?productId=" + productId + "&message=added-to-cart");
+        response.sendRedirect(request.getContextPath() 
+                + "/home/view-detail-product?productId=" + productId 
+                + "&message=added-to-cart");
     }
 
     private String trim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    /**
+     * Tìm variantId dựa trên productId, colorId, sizeId.
+     */
+    private String findVariantIdByAttributes(String productId, String colorId, String sizeId) {
+        ProductDAO productDAO = new ProductDAO();
+        Product product = productDAO.getProductById(productId);
+        if (product == null || product.getVariants() == null) {
+            return null;
+        }
+        for (ProductVariant v : product.getVariants()) {
+            boolean colorMatch = (colorId == null || colorId.isBlank()) 
+                                 || colorId.equals(v.getColorId());
+            boolean sizeMatch = (sizeId == null || sizeId.isBlank()) 
+                                || sizeId.equals(v.getSizeId());
+            if (colorMatch && sizeMatch) {
+                return v.getVariantId();
+            }
+        }
+        return null;
     }
 }
