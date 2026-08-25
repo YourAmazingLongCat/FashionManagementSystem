@@ -3,7 +3,6 @@ package DALs;
 import Utils.DBContext;
 import Utils.Utils;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -41,8 +40,7 @@ public class WishlistDAO extends DBContext {
                    + "WHERE w.customerId = ? AND ISNULL(p.status, '') <> 'Inactive' "
                    + "ORDER BY w.createdAt DESC";
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -67,8 +65,7 @@ public class WishlistDAO extends DBContext {
                    + "INNER JOIN Products p ON w.productId = p.productId "
                    + "WHERE w.customerId = ? AND w.productId = ? AND ISNULL(p.status, '') <> 'Inactive'";
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             ps.setString(2, productId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -97,8 +94,7 @@ public class WishlistDAO extends DBContext {
         String newId = Utils.generateId("WISH");
         String sql = "INSERT INTO Wishlists (wishlistId, customerId, productId, createdAt) VALUES (?, ?, ?, GETDATE())";
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, newId);
             ps.setString(2, accountId);
             ps.setString(3, productId);
@@ -118,8 +114,7 @@ public class WishlistDAO extends DBContext {
         }
 
         String sql = "DELETE FROM Wishlists WHERE customerId = ? AND productId = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, accountId);
             ps.setString(2, productId);
             return ps.executeUpdate() > 0;
@@ -144,8 +139,7 @@ public class WishlistDAO extends DBContext {
 
     private boolean isProductVisible(String productId) {
         String sql = "SELECT status FROM Products WHERE productId = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, productId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
