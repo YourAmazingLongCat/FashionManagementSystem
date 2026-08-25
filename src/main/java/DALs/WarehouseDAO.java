@@ -229,6 +229,21 @@ public class WarehouseDAO extends DBContext {
         return items;
     }
 
+    /**
+     * Get total physical stock quantity across all variants.
+     */
+    public int getTotalStockQuantity() {
+        if (connection == null) return 0;
+        String sql = "SELECT ISNULL(SUM(stockQty), 0) AS totalStock FROM ProductVariants";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getInt("totalStock");
+        } catch (SQLException ex) {
+            System.err.println("getTotalStockQuantity error: " + ex.getMessage());
+        }
+        return 0;
+    }
+
     public int getCurrentStock(String variantId) {
         if (connection == null || isBlank(variantId))
             return 0;
