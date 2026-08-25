@@ -151,7 +151,7 @@
     <section class="product-section reviews-section" id="reviewsSection" style="margin-top: 40px; padding: 30px; background: #fafafa; border-radius: 12px; border: 1px solid #eaeaea;">
         <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px;">
             <h2 class="section-title" style="margin: 0; font-size: 1.4rem; font-weight: 700; text-transform: uppercase;">
-                ĐÁNH GIÁ VÀ BÌNH LUẬN SẢN PHẨM
+                Customer Reviews & Ratings
             </h2>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <c:choose>
@@ -160,10 +160,10 @@
                         <span style="color: #f59e0b; font-size: 1.2rem;">
                             <c:forEach begin="1" end="5" var="i">${i <= ratingSummary[0] + 0.5 ? '★' : '☆'}</c:forEach>
                         </span>
-                        <span style="color: #666; font-size: 0.95rem;">(${ratingSummary[1]} lượt đánh giá)</span>
+                        <span style="color: #666; font-size: 0.95rem;">(${ratingSummary[1]} reviews)</span>
                     </c:when>
                     <c:otherwise>
-                        <span style="color: #888; font-size: 0.95rem;">Chưa có đánh giá</span>
+                        <span style="color: #888; font-size: 0.95rem;">No reviews yet</span>
                     </c:otherwise>
                 </c:choose>
             </div>
@@ -174,42 +174,42 @@
             <c:choose>
                 <c:when test="${empty sessionScope.USER}">
                     <div style="text-align: center; padding: 15px; color: #555;">
-                        <p style="margin: 0 0 10px 0;">Vui lòng <strong>đăng nhập</strong> để đánh giá sản phẩm này.</p>
-                        <a href="${pageContext.request.contextPath}/auth/login" class="detail-chip-button" style="display: inline-block; padding: 8px 20px; background: #222; color: #fff; text-decoration: none; border-radius: 4px; font-weight: 600;">Đăng nhập</a>
+                        <p style="margin: 0 0 10px 0;">Please <strong>log in</strong> to write a review for this product.</p>
+                        <a href="${pageContext.request.contextPath}/auth/login" class="detail-chip-button" style="display: inline-block; padding: 8px 20px; background: #222; color: #fff; text-decoration: none; border-radius: 4px; font-weight: 600;">Log in</a>
                     </div>
                 </c:when>
                 <c:when test="${not empty eligibleVariantId}">
-                    <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600;">Viết đánh giá của bạn</h3>
+                    <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600;">Write a Review</h3>
                     <form method="post" action="${pageContext.request.contextPath}/comment" style="display: flex; flex-direction: column; gap: 12px;">
                         <input type="hidden" name="action" value="add" />
                         <input type="hidden" name="productId" value="${product.productId}" />
 
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <label style="font-weight: 600; font-size: 0.95rem;">Chọn số sao:</label>
+                            <label style="font-weight: 600; font-size: 0.95rem;">Rating:</label>
                             <div class="star-rating-select" style="display: inline-flex; gap: 4px; font-size: 1.5rem; cursor: pointer; color: #f59e0b;">
                                 <select name="rating" required style="padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.95rem; font-weight: 600; color: #f59e0b;">
-                                    <option value="5" selected>★★★★★ - 5 Sao (Rất hài lòng)</option>
-                                    <option value="4">★★★★☆ - 4 Sao (Hài lòng)</option>
-                                    <option value="3">★★★☆☆ - 3 Sao (Bình thường)</option>
-                                    <option value="2">★★☆☆☆ - 2 Sao (Chưa hài lòng)</option>
-                                    <option value="1">★☆☆☆☆ - 1 Sao (Tệ)</option>
+                                    <option value="5" selected>★★★★★ - 5 Stars (Excellent)</option>
+                                    <option value="4">★★★★☆ - 4 Stars (Good)</option>
+                                    <option value="3">★★★☆☆ - 3 Stars (Average)</option>
+                                    <option value="2">★★☆☆☆ - 2 Stars (Poor)</option>
+                                    <option value="1">★☆☆☆☆ - 1 Star (Terrible)</option>
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                            <label style="display: block; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">Nội dung bình luận:</label>
-                            <textarea name="content" rows="3" required placeholder="Hãy chia sẻ cảm nhận của bạn về chất liệu, kích cỡ, form dáng sản phẩm..." style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+                            <label style="display: block; font-weight: 600; font-size: 0.95rem; margin-bottom: 6px;">Review Content:</label>
+                            <textarea name="content" rows="3" required placeholder="Share your thoughts about product quality, size, and fit..." style="width: 100%; box-sizing: border-box; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
                         </div>
 
                         <div>
-                            <button type="submit" style="background: #222; color: #fff; border: none; padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;">Gửi đánh giá</button>
+                            <button type="submit" style="background: #222; color: #fff; border: none; padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background 0.2s;">Submit Review</button>
                         </div>
                     </form>
                 </c:when>
                 <c:otherwise>
                     <div style="padding: 12px 16px; background: #f8fafc; border-left: 4px solid #3b82f6; color: #475569; font-size: 0.95rem;">
-                        ℹ️ Chỉ khách hàng đã mua sản phẩm này và nhận hàng thành công mới có thể gửi đánh giá.
+                        ℹ️ Only customers who have purchased and received this product can write a review.
                     </div>
                 </c:otherwise>
             </c:choose>
@@ -231,7 +231,7 @@
                                             ${empty c.accountFullName ? c.accountUsername : c.accountFullName}
                                         </div>
                                         <c:if test="${not empty c.variantInfo}">
-                                            <div style="font-size: 0.82rem; color: #64748b;">Đã mua: ${c.variantInfo}</div>
+                                            <div style="font-size: 0.82rem; color: #64748b;">Purchased: ${c.variantInfo}</div>
                                         </c:if>
                                     </div>
                                 </div>
@@ -251,8 +251,8 @@
                 <c:otherwise>
                     <div style="text-align: center; padding: 40px 20px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b;">
                         <span style="font-size: 2rem; display: block; margin-bottom: 8px;">💬</span>
-                        <p style="margin: 0; font-size: 1rem; font-weight: 500;">Chưa có bình luận nào cho sản phẩm này.</p>
-                        <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: #94a3b8;">Hãy là người đầu tiên trải nghiệm và chia sẻ cảm nhận!</p>
+                        <p style="margin: 0; font-size: 1rem; font-weight: 500;">No reviews yet for this product.</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: #94a3b8;">Be the first to share your experience!</p>
                     </div>
                 </c:otherwise>
             </c:choose>
