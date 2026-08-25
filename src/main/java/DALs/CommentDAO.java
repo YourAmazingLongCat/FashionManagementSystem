@@ -1,13 +1,18 @@
 package DALs;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import Models.Comment;
 import Utils.DBContext;
 import Utils.Utils;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 public class CommentDAO {
 

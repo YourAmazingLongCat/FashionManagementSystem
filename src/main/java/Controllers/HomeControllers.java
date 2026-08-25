@@ -1,10 +1,16 @@
 package Controllers;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import DALs.CartDAO;
 import DALs.CategoryDAO;
 import DALs.CommentDAO;
-import DALs.WishlistDAO;
 import DALs.ProductDAO;
+import DALs.WishlistDAO;
 import Models.Account;
 import Models.Cart;
 import Models.CartItemView;
@@ -16,11 +22,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Controller for the home page and product detail (guest view).
