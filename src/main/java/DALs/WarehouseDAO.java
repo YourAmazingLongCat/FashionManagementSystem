@@ -28,13 +28,16 @@ public class WarehouseDAO extends DBContext {
         return getInventorySummary(keyword, sizeFilter, colorFilter, null);
     }
 
-    public List<Object[]> getInventorySummary(String keyword, String sizeFilter, String colorFilter, String productFilter) {
+    public List<Object[]> getInventorySummary(String keyword, String sizeFilter, String colorFilter,
+            String productFilter) {
         @SuppressWarnings("unchecked")
-        List<Object[]> result = (List<Object[]>) getInventorySummaryPaginated(keyword, sizeFilter, colorFilter, productFilter, 1, 10).get("data");
+        List<Object[]> result = (List<Object[]>) getInventorySummaryPaginated(keyword, sizeFilter, colorFilter,
+                productFilter, 1, 10).get("data");
         return result;
     }
 
-    public Map<String, Object> getInventorySummaryPaginated(String keyword, String sizeFilter, String colorFilter, String productFilter, int page, int pageSize) {
+    public Map<String, Object> getInventorySummaryPaginated(String keyword, String sizeFilter, String colorFilter,
+            String productFilter, int page, int pageSize) {
         Map<String, Object> result = new HashMap<>();
         List<Object[]> summary = new ArrayList<>();
         if (connection == null) {
@@ -50,13 +53,13 @@ public class WarehouseDAO extends DBContext {
                 + "JOIN Colors c ON pv.colorId = c.colorId WHERE 1=1 ");
         StringBuilder sql = new StringBuilder(
                 "SELECT pv.variantId, pv.productId, p.name AS productName, "
-                + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, "
-                + "pv.stockQty, pv.reservedQty, pv.priceOverride, pv.createdAt "
-                + "FROM ProductVariants pv "
-                + "JOIN Products p ON pv.productId = p.productId "
-                + "JOIN Sizes s ON pv.sizeId = s.sizeId "
-                + "JOIN Colors c ON pv.colorId = c.colorId "
-                + "WHERE 1=1 ");
+                        + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, "
+                        + "pv.stockQty, pv.reservedQty, pv.priceOverride, pv.createdAt "
+                        + "FROM ProductVariants pv "
+                        + "JOIN Products p ON pv.productId = p.productId "
+                        + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                        + "JOIN Colors c ON pv.colorId = c.colorId "
+                        + "WHERE 1=1 ");
 
         List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -95,9 +98,11 @@ public class WarehouseDAO extends DBContext {
 
         int totalRecords = 0;
         try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
-            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            for (int i = 0; i < countParams.size(); i++)
+                ps.setObject(i + 1, countParams.get(i));
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) totalRecords = rs.getInt(1);
+                if (rs.next())
+                    totalRecords = rs.getInt(1);
             }
         } catch (SQLException ex) {
             System.out.println("getInventorySummaryPaginated count error: " + ex.getMessage());
@@ -108,7 +113,8 @@ public class WarehouseDAO extends DBContext {
         sql.append("ORDER BY p.name, s.sizeName, c.colorName OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
             ps.setInt(params.size() + 1, offset);
             ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
@@ -141,13 +147,14 @@ public class WarehouseDAO extends DBContext {
 
     public List<Object[]> getAllSizes() {
         List<Object[]> sizes = new ArrayList<>();
-        if (connection == null) return sizes;
+        if (connection == null)
+            return sizes;
 
         String sql = "SELECT DISTINCT s.sizeId, s.sizeName FROM Sizes s "
-                   + "JOIN ProductVariants pv ON s.sizeId = pv.sizeId "
-                   + "ORDER BY s.sizeName";
+                + "JOIN ProductVariants pv ON s.sizeId = pv.sizeId "
+                + "ORDER BY s.sizeName";
         try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Object[] row = new Object[2];
                 row[0] = rs.getString("sizeId");
@@ -162,13 +169,14 @@ public class WarehouseDAO extends DBContext {
 
     public List<Object[]> getAllColors() {
         List<Object[]> colors = new ArrayList<>();
-        if (connection == null) return colors;
+        if (connection == null)
+            return colors;
 
         String sql = "SELECT DISTINCT c.colorId, c.colorName, c.hexCode FROM Colors c "
-                   + "JOIN ProductVariants pv ON c.colorId = pv.colorId "
-                   + "ORDER BY c.colorName";
+                + "JOIN ProductVariants pv ON c.colorId = pv.colorId "
+                + "ORDER BY c.colorName";
         try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Object[] row = new Object[3];
                 row[0] = rs.getString("colorId");
@@ -184,7 +192,8 @@ public class WarehouseDAO extends DBContext {
 
     public List<Object[]> getLowStockItems(int threshold) {
         List<Object[]> items = new ArrayList<>();
-        if (connection == null) return items;
+        if (connection == null)
+            return items;
 
         String sql = "SELECT pv.variantId, pv.productId, p.name AS productName, "
                 + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, "
@@ -221,13 +230,15 @@ public class WarehouseDAO extends DBContext {
     }
 
     public int getCurrentStock(String variantId) {
-        if (connection == null || isBlank(variantId)) return 0;
+        if (connection == null || isBlank(variantId))
+            return 0;
 
         String sql = "SELECT stockQty FROM ProductVariants WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, variantId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt("stockQty");
+                if (rs.next())
+                    return rs.getInt("stockQty");
             }
         } catch (SQLException ex) {
             System.out.println("getCurrentStock error: " + ex.getMessage());
@@ -236,13 +247,15 @@ public class WarehouseDAO extends DBContext {
     }
 
     public int getAvailableStock(String variantId) {
-        if (connection == null || isBlank(variantId)) return 0;
+        if (connection == null || isBlank(variantId))
+            return 0;
 
         String sql = "SELECT (stockQty - reservedQty) AS availableStock FROM ProductVariants WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, variantId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt("availableStock");
+                if (rs.next())
+                    return rs.getInt("availableStock");
             }
         } catch (SQLException ex) {
             System.out.println("getAvailableStock error: " + ex.getMessage());
@@ -257,7 +270,8 @@ public class WarehouseDAO extends DBContext {
      * drop them from the INSERT since they don't exist.
      */
     public boolean importStock(String variantId, int quantity, double importPrice, String importedBy) {
-        if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(importedBy)) return false;
+        if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(importedBy))
+            return false;
 
         String importId = generateId("IMP");
         String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, employeeId, importedAt) VALUES (?, ?, ?, ?, ?, GETDATE())";
@@ -323,9 +337,17 @@ public class WarehouseDAO extends DBContext {
             this.firstError = firstError;
         }
 
-        public boolean allOk() { return failCount == 0 && successCount > 0; }
-        public boolean partial() { return successCount > 0 && failCount > 0; }
-        public boolean noneOk() { return successCount == 0; }
+        public boolean allOk() {
+            return failCount == 0 && successCount > 0;
+        }
+
+        public boolean partial() {
+            return successCount > 0 && failCount > 0;
+        }
+
+        public boolean noneOk() {
+            return successCount == 0;
+        }
     }
 
     public BatchImportResult importStockBatch(List<ImportItem> items, String importedBy) {
@@ -343,10 +365,11 @@ public class WarehouseDAO extends DBContext {
             connection.setAutoCommit(false);
 
             try (PreparedStatement psInsert = connection.prepareStatement(insertSql);
-                 PreparedStatement psUpdate = connection.prepareStatement(updateSql)) {
+                    PreparedStatement psUpdate = connection.prepareStatement(updateSql)) {
 
                 for (ImportItem item : items) {
-                    if (item == null || isBlank(item.variantId) || item.quantity <= 0) continue;
+                    if (item == null || isBlank(item.variantId) || item.quantity <= 0)
+                        continue;
 
                     String importId = generateId("IMP");
                     psInsert.setString(1, importId);
@@ -362,22 +385,30 @@ public class WarehouseDAO extends DBContext {
                 }
 
                 int[] inserted = psInsert.executeBatch();
-                int[] updated  = psUpdate.executeBatch();
+                int[] updated = psUpdate.executeBatch();
 
                 int success = 0;
-                for (int n : inserted) success += Math.max(n, 0);
+                for (int n : inserted)
+                    success += Math.max(n, 0);
                 int fail = items.size() - success;
-                if (fail < 0) fail = 0;
+                if (fail < 0)
+                    fail = 0;
 
                 connection.commit();
                 return new BatchImportResult(success, fail, null);
             }
         } catch (SQLException ex) {
             System.out.println("importStockBatch error: " + ex.getMessage());
-            try { connection.rollback(); } catch (SQLException rb) { /* ignore */ }
+            try {
+                connection.rollback();
+            } catch (SQLException rb) {
+                /* ignore */ }
             return new BatchImportResult(0, items.size(), ex.getMessage());
         } finally {
-            try { connection.setAutoCommit(true); } catch (SQLException ex) { /* ignore */ }
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                /* ignore */ }
         }
     }
 
@@ -387,10 +418,12 @@ public class WarehouseDAO extends DBContext {
      * from the INSERT while still recording the export row.
      */
     public boolean exportStock(String variantId, int quantity, String exportedBy, String reason) {
-        if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(exportedBy)) return false;
+        if (connection == null || isBlank(variantId) || quantity <= 0 || isBlank(exportedBy))
+            return false;
 
         int availableStock = getAvailableStock(variantId);
-        if (availableStock < quantity) return false;
+        if (availableStock < quantity)
+            return false;
 
         String exportId = generateId("EXP");
         String insertSql = "INSERT INTO WarehouseImports (importId, variantId, quantity, importPrice, employeeId, importedAt) VALUES (?, ?, ?, 0, ?, GETDATE())";
@@ -422,10 +455,16 @@ public class WarehouseDAO extends DBContext {
             return true;
         } catch (SQLException ex) {
             System.out.println("exportStock error: " + ex.getMessage());
-            try { connection.rollback(); } catch (SQLException rb) { /* ignore */ }
+            try {
+                connection.rollback();
+            } catch (SQLException rb) {
+                /* ignore */ }
             return false;
         } finally {
-            try { connection.setAutoCommit(true); } catch (SQLException ex) { /* ignore */ }
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                /* ignore */ }
         }
     }
 
@@ -444,7 +483,7 @@ public class WarehouseDAO extends DBContext {
             connection.setAutoCommit(false);
 
             try (PreparedStatement psInsert = connection.prepareStatement(insertSql);
-                 PreparedStatement psUpdate = connection.prepareStatement(updateSql)) {
+                    PreparedStatement psUpdate = connection.prepareStatement(updateSql)) {
 
                 int success = 0;
                 int fail = 0;
@@ -459,7 +498,8 @@ public class WarehouseDAO extends DBContext {
                     int availableStock = getAvailableStock(item.variantId);
                     if (availableStock < item.quantity) {
                         fail++;
-                        if (firstError == null) firstError = "Insufficient stock for variant " + item.variantId;
+                        if (firstError == null)
+                            firstError = "Insufficient stock for variant " + item.variantId;
                         continue;
                     }
 
@@ -486,7 +526,8 @@ public class WarehouseDAO extends DBContext {
                 psInsert.executeBatch();
                 int[] updated = psUpdate.executeBatch();
                 int affectedRows = 0;
-                for (int n : updated) affectedRows += Math.max(n, 0);
+                for (int n : updated)
+                    affectedRows += Math.max(n, 0);
                 if (affectedRows < success) {
                     connection.rollback();
                     return new BatchImportResult(0, items.size(), "Stock changed during export. Please retry.");
@@ -497,15 +538,22 @@ public class WarehouseDAO extends DBContext {
             }
         } catch (SQLException ex) {
             System.out.println("exportStockBatch error: " + ex.getMessage());
-            try { connection.rollback(); } catch (SQLException rb) { /* ignore */ }
+            try {
+                connection.rollback();
+            } catch (SQLException rb) {
+                /* ignore */ }
             return new BatchImportResult(0, items.size(), ex.getMessage());
         } finally {
-            try { connection.setAutoCommit(true); } catch (SQLException ex) { /* ignore */ }
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                /* ignore */ }
         }
     }
 
     public boolean addStock(String variantId, int quantity) {
-        if (connection == null || isBlank(variantId) || quantity <= 0) return false;
+        if (connection == null || isBlank(variantId) || quantity <= 0)
+            return false;
 
         int currentStock = getCurrentStock(variantId);
         int newStock = currentStock + quantity;
@@ -522,10 +570,12 @@ public class WarehouseDAO extends DBContext {
     }
 
     public boolean deductStock(String variantId, int quantity) {
-        if (connection == null || isBlank(variantId) || quantity <= 0) return false;
+        if (connection == null || isBlank(variantId) || quantity <= 0)
+            return false;
 
         int availableStock = getAvailableStock(variantId);
-        if (availableStock < quantity) return false;
+        if (availableStock < quantity)
+            return false;
 
         String sql = "UPDATE ProductVariants SET stockQty = stockQty - ? WHERE variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -539,7 +589,8 @@ public class WarehouseDAO extends DBContext {
     }
 
     public boolean deductStockForOrder(String orderId) {
-        if (connection == null || isBlank(orderId)) return false;
+        if (connection == null || isBlank(orderId))
+            return false;
 
         String selectSql = "SELECT variantId, quantity FROM OrderItems WHERE orderId = ?";
         try (PreparedStatement psSelect = connection.prepareStatement(selectSql)) {
@@ -560,7 +611,8 @@ public class WarehouseDAO extends DBContext {
 
     public List<Object[]> getImportHistory(String variantId) {
         List<Object[]> history = new ArrayList<>();
-        if (connection == null) return history;
+        if (connection == null)
+            return history;
 
         // New schema: importedAt + Employees (not Accounts).
         String sql = "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
@@ -603,7 +655,8 @@ public class WarehouseDAO extends DBContext {
      * schema, so this method now ignores it (it always returns Import-style
      * rows) and the note column is absent too.
      */
-    public Map<String, Object> getRecentImportsPaginated(String productFilter, String importerFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
+    public Map<String, Object> getRecentImportsPaginated(String productFilter, String importerFilter, String dateFrom,
+            String dateTo, String search, int page, int pageSize) {
         Map<String, Object> result = new HashMap<>();
         List<Object[]> imports = new ArrayList<>();
         if (connection == null) {
@@ -614,22 +667,22 @@ public class WarehouseDAO extends DBContext {
         }
 
         StringBuilder countSql = new StringBuilder(
-            "SELECT COUNT(*) FROM WarehouseImports wi "
-            + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
-            + "JOIN Products p ON pv.productId = p.productId "
-            + "JOIN Employees e ON wi.employeeId = e.employeeId "
-            + "WHERE 1=1 ");
+                "SELECT COUNT(*) FROM WarehouseImports wi "
+                        + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+                        + "JOIN Products p ON pv.productId = p.productId "
+                        + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                        + "WHERE 1=1 ");
         StringBuilder sql = new StringBuilder(
-            "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
-            + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS importerName, "
-            + "p.name AS productName, s.sizeName, c.colorName, p.productId "
-            + "FROM WarehouseImports wi "
-            + "JOIN Employees e ON wi.employeeId = e.employeeId "
-            + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
-            + "JOIN Products p ON pv.productId = p.productId "
-            + "JOIN Sizes s ON pv.sizeId = s.sizeId "
-            + "JOIN Colors c ON pv.colorId = c.colorId "
-            + "WHERE 1=1 ");
+                "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
+                        + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS importerName, "
+                        + "p.name AS productName, s.sizeName, c.colorName, p.productId "
+                        + "FROM WarehouseImports wi "
+                        + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                        + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+                        + "JOIN Products p ON pv.productId = p.productId "
+                        + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                        + "JOIN Colors c ON pv.colorId = c.colorId "
+                        + "WHERE 1=1 ");
 
         List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -675,9 +728,11 @@ public class WarehouseDAO extends DBContext {
 
         int totalRecords = 0;
         try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
-            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            for (int i = 0; i < countParams.size(); i++)
+                ps.setObject(i + 1, countParams.get(i));
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) totalRecords = rs.getInt(1);
+                if (rs.next())
+                    totalRecords = rs.getInt(1);
             }
         } catch (SQLException ex) {
             System.out.println("getRecentImportsPaginated count error: " + ex.getMessage());
@@ -688,7 +743,8 @@ public class WarehouseDAO extends DBContext {
         sql.append(" ORDER BY wi.importedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
             ps.setInt(params.size() + 1, offset);
             ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
@@ -720,12 +776,13 @@ public class WarehouseDAO extends DBContext {
 
     public List<Object[]> getAllImporters() {
         List<Object[]> importers = new ArrayList<>();
-        if (connection == null) return importers;
+        if (connection == null)
+            return importers;
         String sql = "SELECT DISTINCT e.employeeId AS accountId, e.fullName FROM WarehouseImports wi "
-                   + "JOIN Employees e ON wi.employeeId = e.employeeId "
-                   + "ORDER BY e.fullName";
+                + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                + "ORDER BY e.fullName";
         try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Object[] row = new Object[2];
                 row[0] = rs.getString("accountId");
@@ -740,7 +797,8 @@ public class WarehouseDAO extends DBContext {
 
     /**
      * Legacy Exporters API. With transactionType dropped, exports can no longer
-     * be filtered, so this returns the same importer list as {@link #getAllImporters}.
+     * be filtered, so this returns the same importer list as
+     * {@link #getAllImporters}.
      */
     public List<Object[]> getAllExporters() {
         return getAllImporters();
@@ -757,7 +815,8 @@ public class WarehouseDAO extends DBContext {
      * differs from the row's importPrice (exported = importPrice=0).
      * Kept for legacy JSP wiring.
      */
-    public Map<String, Object> getRecentExportsPaginated(String productFilter, String exporterFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
+    public Map<String, Object> getRecentExportsPaginated(String productFilter, String exporterFilter, String dateFrom,
+            String dateTo, String search, int page, int pageSize) {
         Map<String, Object> result = new HashMap<>();
         List<Object[]> exports = new ArrayList<>();
         if (connection == null) {
@@ -768,22 +827,22 @@ public class WarehouseDAO extends DBContext {
         }
 
         StringBuilder countSql = new StringBuilder(
-            "SELECT COUNT(*) FROM WarehouseImports wi "
-            + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
-            + "JOIN Products p ON pv.productId = p.productId "
-            + "JOIN Employees e ON wi.employeeId = e.employeeId "
-            + "WHERE wi.importPrice = 0 ");
+                "SELECT COUNT(*) FROM WarehouseImports wi "
+                        + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+                        + "JOIN Products p ON pv.productId = p.productId "
+                        + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                        + "WHERE wi.importPrice = 0 ");
         StringBuilder sql = new StringBuilder(
-            "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
-            + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS exporterName, "
-            + "p.name AS productName, s.sizeName, c.colorName, p.productId, CAST('' AS NVARCHAR(255)) AS note "
-            + "FROM WarehouseImports wi "
-            + "JOIN Employees e ON wi.employeeId = e.employeeId "
-            + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
-            + "JOIN Products p ON pv.productId = p.productId "
-            + "JOIN Sizes s ON pv.sizeId = s.sizeId "
-            + "JOIN Colors c ON pv.colorId = c.colorId "
-            + "WHERE wi.importPrice = 0 ");
+                "SELECT wi.importId, wi.variantId, wi.quantity, wi.importPrice, "
+                        + "wi.employeeId AS importedBy, wi.importedAt, e.fullName AS exporterName, "
+                        + "p.name AS productName, s.sizeName, c.colorName, p.productId, CAST('' AS NVARCHAR(255)) AS note "
+                        + "FROM WarehouseImports wi "
+                        + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                        + "JOIN ProductVariants pv ON wi.variantId = pv.variantId "
+                        + "JOIN Products p ON pv.productId = p.productId "
+                        + "JOIN Sizes s ON pv.sizeId = s.sizeId "
+                        + "JOIN Colors c ON pv.colorId = c.colorId "
+                        + "WHERE wi.importPrice = 0 ");
 
         List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -829,9 +888,11 @@ public class WarehouseDAO extends DBContext {
 
         int totalRecords = 0;
         try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
-            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            for (int i = 0; i < countParams.size(); i++)
+                ps.setObject(i + 1, countParams.get(i));
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) totalRecords = rs.getInt(1);
+                if (rs.next())
+                    totalRecords = rs.getInt(1);
             }
         } catch (SQLException ex) {
             System.out.println("getRecentExportsPaginated count error: " + ex.getMessage());
@@ -842,7 +903,8 @@ public class WarehouseDAO extends DBContext {
         sql.append(" ORDER BY wi.importedAt DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
             ps.setInt(params.size() + 1, offset);
             ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
@@ -880,9 +942,11 @@ public class WarehouseDAO extends DBContext {
     /**
      * Group imports into "bills" using importedAt (second precision) +
      * employeeId as the bill key. Excludes export rows (importPrice = 0).
-     * Returns [billKey, importedAt, employeeId, employeeName, itemCount, totalQty, totalPrice].
+     * Returns [billKey, importedAt, employeeId, employeeName, itemCount, totalQty,
+     * totalPrice].
      */
-    public Map<String, Object> getImportBillsPaginated(String importerFilter, String dateFrom, String dateTo, String search, int page, int pageSize) {
+    public Map<String, Object> getImportBillsPaginated(String importerFilter, String dateFrom, String dateTo,
+            String search, int page, int pageSize) {
         Map<String, Object> result = new HashMap<>();
         List<Object[]> bills = new ArrayList<>();
         if (connection == null) {
@@ -893,21 +957,21 @@ public class WarehouseDAO extends DBContext {
         }
 
         StringBuilder countSql = new StringBuilder(
-            "SELECT COUNT(*) FROM ("
-            + "SELECT 1 FROM WarehouseImports wi "
-            + "JOIN Employees e ON wi.employeeId = e.employeeId "
-            + "WHERE wi.importPrice > 0 ");
+                "SELECT COUNT(*) FROM ("
+                        + "SELECT 1 FROM WarehouseImports wi "
+                        + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                        + "WHERE wi.importPrice > 0 ");
         StringBuilder sql = new StringBuilder(
-            "SELECT billKey, importedAt, employeeId, employeeName, itemCount, totalQty, totalPrice FROM ("
-            + "SELECT CONVERT(VARCHAR(20), wi.importedAt, 120) + '|' + wi.employeeId AS billKey, "
-            + "MIN(wi.importedAt) AS importedAt, wi.employeeId, "
-            + "e.fullName AS employeeName, "
-            + "COUNT(*) AS itemCount, "
-            + "SUM(wi.quantity) AS totalQty, "
-            + "SUM(wi.quantity * wi.importPrice) AS totalPrice "
-            + "FROM WarehouseImports wi "
-            + "JOIN Employees e ON wi.employeeId = e.employeeId "
-            + "WHERE wi.importPrice > 0 ");
+                "SELECT billKey, importedAt, employeeId, employeeName, itemCount, totalQty, totalPrice FROM ("
+                        + "SELECT CONVERT(VARCHAR(20), wi.importedAt, 120) + '|' + wi.employeeId AS billKey, "
+                        + "MIN(wi.importedAt) AS importedAt, wi.employeeId, "
+                        + "e.fullName AS employeeName, "
+                        + "COUNT(*) AS itemCount, "
+                        + "SUM(wi.quantity) AS totalQty, "
+                        + "SUM(wi.quantity * wi.importPrice) AS totalPrice "
+                        + "FROM WarehouseImports wi "
+                        + "JOIN Employees e ON wi.employeeId = e.employeeId "
+                        + "WHERE wi.importPrice > 0 ");
 
         List<Object> countParams = new ArrayList<>();
         List<Object> params = new ArrayList<>();
@@ -943,13 +1007,16 @@ public class WarehouseDAO extends DBContext {
         }
 
         countSql.append(" GROUP BY CONVERT(VARCHAR(20), wi.importedAt, 120), wi.employeeId, e.fullName) g");
-        sql.append(" GROUP BY CONVERT(VARCHAR(20), wi.importedAt, 120), wi.employeeId, e.fullName) bills ORDER BY importedAt DESC");
+        sql.append(
+                " GROUP BY CONVERT(VARCHAR(20), wi.importedAt, 120), wi.employeeId, e.fullName) bills ORDER BY importedAt DESC");
 
         int totalRecords = 0;
         try (PreparedStatement ps = connection.prepareStatement(countSql.toString())) {
-            for (int i = 0; i < countParams.size(); i++) ps.setObject(i + 1, countParams.get(i));
+            for (int i = 0; i < countParams.size(); i++)
+                ps.setObject(i + 1, countParams.get(i));
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) totalRecords = rs.getInt(1);
+                if (rs.next())
+                    totalRecords = rs.getInt(1);
             }
         } catch (SQLException ex) {
             System.out.println("getImportBillsPaginated count error: " + ex.getMessage());
@@ -958,10 +1025,12 @@ public class WarehouseDAO extends DBContext {
         int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
         int offset = (page - 1) * pageSize;
         String paginated = " OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
-        sql = new StringBuilder(sql.toString().replace("ORDER BY importedAt DESC", "ORDER BY importedAt DESC" + paginated));
+        sql = new StringBuilder(
+                sql.toString().replace("ORDER BY importedAt DESC", "ORDER BY importedAt DESC" + paginated));
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) ps.setObject(i + 1, params.get(i));
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
             ps.setInt(params.size() + 1, offset);
             ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
@@ -993,10 +1062,12 @@ public class WarehouseDAO extends DBContext {
      */
     public List<Object[]> getImportBillDetail(String billKey) {
         List<Object[]> rows = new ArrayList<>();
-        if (connection == null || isBlank(billKey)) return rows;
+        if (connection == null || isBlank(billKey))
+            return rows;
 
         int sep = billKey.indexOf('|');
-        if (sep < 0) return rows;
+        if (sep < 0)
+            return rows;
         String importedAtStr = billKey.substring(0, sep);
         String employeeId = billKey.substring(sep + 1);
 
