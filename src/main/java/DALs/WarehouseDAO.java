@@ -51,11 +51,15 @@ public class WarehouseDAO extends DBContext {
         StringBuilder sql = new StringBuilder(
                 "SELECT pv.variantId, pv.productId, p.name AS productName, "
                 + "pv.sizeId, s.sizeName, pv.colorId, c.colorName, pv.sku, "
-                + "pv.stockQty, pv.reservedQty, pv.priceOverride, pv.createdAt "
+                + "pv.stockQty, pv.reservedQty, pv.priceOverride, pv.createdAt, "
+                + "p.basePrice AS productBasePrice, cat.name AS categoryName, "
+                + "(SELECT TOP 1 imageUrl FROM ProductImages WHERE variantId = pv.variantId "
+                + "ORDER BY isPrimary DESC, imageId ASC) AS imageUrl "
                 + "FROM ProductVariants pv "
                 + "JOIN Products p ON pv.productId = p.productId "
                 + "JOIN Sizes s ON pv.sizeId = s.sizeId "
                 + "JOIN Colors c ON pv.colorId = c.colorId "
+                + "JOIN Categories cat ON p.categoryId = cat.categoryId "
                 + "WHERE 1=1 ");
 
         List<Object> countParams = new ArrayList<>();
@@ -113,7 +117,7 @@ public class WarehouseDAO extends DBContext {
             ps.setInt(params.size() + 2, pageSize);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Object[] row = new Object[12];
+                    Object[] row = new Object[15];
                     row[0] = rs.getString("variantId");
                     row[1] = rs.getString("productId");
                     row[2] = rs.getString("productName");
@@ -126,6 +130,9 @@ public class WarehouseDAO extends DBContext {
                     row[9] = rs.getInt("reservedQty");
                     row[10] = rs.getBigDecimal("priceOverride");
                     row[11] = rs.getTimestamp("createdAt");
+                    row[12] = rs.getBigDecimal("productBasePrice");
+                    row[13] = rs.getString("categoryName");
+                    row[14] = rs.getString("imageUrl");
                     summary.add(row);
                 }
             }

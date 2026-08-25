@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,12 +34,6 @@ body { background: #f8f9fa; }
         .sidebar .nav-item { list-style: none; }
         .sidebar .nav-item.mt-auto { margin-top: auto; }
         .main-content { padding: 20px 30px; }
-        .stat-card {
-            background: #fff; border-radius: 12px; padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 4px solid #1abc9c;
-        }
-        .stat-card .stat-number { font-size: 2rem; font-weight: 700; }
-        .stat-card .stat-label { color: #6c757d; text-transform: uppercase; font-size: 0.9rem; }
         .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .card-header { background: #f8f9fa; font-weight: 600; }
         .table th { background: #f1f3f5; border-top: none; }
@@ -58,13 +53,6 @@ body { background: #f8f9fa; }
             background: linear-gradient(135deg, #1abc9c, #16a085);
             color: #fff;
         }
-        .stat-block {
-            background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px;
-        }
-        .stat-block .label { font-size: 0.82rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-        .stat-block .value { font-size: 2rem; font-weight: 800; color: #0f172a; }
-        .stat-block.warning { background: #fffbeb; border-color: #fde68a; }
-        .stat-block.warning .value { color: #d97706; }
         .alert { padding: 14px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 18px; }
         .alert-success { background: rgba(22, 163, 74, 0.12); color: #166534; border: 1px solid rgba(22, 163, 74, 0.2); }
         .alert-error { background: rgba(220, 38, 38, 0.12); color: #991b1b; border: 1px solid rgba(220, 38, 38, 0.2); }
@@ -81,8 +69,17 @@ body { background: #f8f9fa; }
         .reset-btn { padding: 10px 18px; border-radius: 10px; border: 1px solid #dbe3f0; background: #fff; color: #334155; font-weight: 600; font-size: 0.88rem; text-decoration: none; }
         .reset-btn:hover { background: #f8fafc; }
         .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        table { width: 100%; min-width: 1100px; table-layout: fixed; border-collapse: collapse; }
+        th, td { padding: 14px 12px; text-align: center; vertical-align: middle; border-bottom: 1px solid #f1f5f9; overflow-wrap: anywhere; }
+        th:nth-child(1), td:nth-child(1) { width: 16%; }
+        th:nth-child(2), td:nth-child(2) { width: 12%; }
+        th:nth-child(3), td:nth-child(3) { width: 18%; }
+        th:nth-child(4), td:nth-child(4) { width: 14%; }
+        th:nth-child(5), td:nth-child(5) { width: 10%; }
+        th:nth-child(6), td:nth-child(6) { width: 14%; }
+        th:nth-child(7), td:nth-child(7) { width: 8%; }
+        th:nth-child(8), td:nth-child(8) { width: 8%; }
+        td:nth-child(2) img { display: block; margin: 0 auto; }
         th { background: #f8f9fa; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700; white-space: nowrap; }
         tr:hover { background: #fafbff; }
         .stock-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 60px; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
@@ -102,7 +99,7 @@ body { background: #f8f9fa; }
         .page-link-inv.active { background: linear-gradient(135deg, #1abc9c, #16a085); color: #ffffff; border-color: transparent; }
         .page-link-inv.disabled { opacity: 0.4; pointer-events: none; }
         @media (max-width: 1024px) { .warehouse-shell { grid-template-columns: 1fr !important; } }
-        @media (max-width: 768px) { .sidebar { min-height: auto; height: auto; } .main-content { padding: 15px; } .stat-block .value { font-size: 1.5rem; } }
+        @media (max-width: 768px) { .sidebar { min-height: auto; height: auto; } .main-content { padding: 15px; } }
         </style>
     </head>
     <body>
@@ -138,8 +135,7 @@ body { background: #f8f9fa; }
 
             <div class="warehouse-subtabs">
                 <a class="${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Inventory</a>
-                <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">Stock In</a>
-                <a class="${activeTab eq 'import-bills' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import-bills">Import Bills</a>
+                <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">Update quantity</a>
             </div>
 
             <div class="mb-3">
@@ -150,16 +146,9 @@ body { background: #f8f9fa; }
                 <div class="alert ${messageType eq 'error' ? 'alert-error' : 'alert-success'}">${message}</div>
             </c:if>
 
-            <div class="row g-3 mb-4">
-                <div class="col-md-3 col-6"><div class="stat-block"><div class="label">Total Variants</div><div class="value">${totalItems}</div></div></div>
-                <div class="col-md-3 col-6"><div class="stat-block"><div class="label">Total Physical Stock</div><div class="value">${totalStock}</div></div></div>
-                <div class="col-md-3 col-6"><div class="stat-block"><div class="label">Total Available</div><div class="value">${totalAvailable}</div></div></div>
-                <div class="col-md-3 col-6"><div class="stat-block warning"><div class="label">Low Stock</div><div class="value">${lowStockCount}</div></div></div>
-            </div>
-
             <div class="card">
                 <div class="card-header">
-                    <span>Stock List</span>
+                    <span>Variant List</span>
                 </div>
                 <div class="card-body">
                     <form class="search-toolbar mb-3" method="get" action="${pageContext.request.contextPath}/staff/warehouse/inventory">
@@ -183,20 +172,21 @@ body { background: #f8f9fa; }
                         <table class="table table-hover mb-0">
                             <thead>
                                 <tr>
-                                    <th>SKU</th>
-                                    <th>Product</th>
-                                    <th>Size / Color</th>
-                                    <th class="text-end">Physical</th>
-                                    <th class="text-end">Reserved</th>
-                                    <th class="text-end">Available</th>
-                                    <th class="text-end">Status</th>
+                                    <th>ID PRODUCT</th>
+                                    <th>IMAGE</th>
+                                    <th>PRODUCT NAME</th>
+                                    <th>PRODUCT PRICE</th>
+                                    <th class="text-end">AVAILABLE</th>
+                                    <th>CATEGORY NAME</th>
+                                    <th>SIZE</th>
+                                    <th>COLOR</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <c:choose>
                                     <c:when test="${empty inventory}">
                                         <tr>
-                                            <td colspan="7">
+                                            <td colspan="8">
                                                 <div class="empty-state">
                                                     <h4>No data</h4>
                                                     <p>No products in inventory</p>
@@ -210,28 +200,21 @@ body { background: #f8f9fa; }
                                             <c:set var="reserved" value="${item[9]}" />
                                             <c:set var="available" value="${physical - reserved}" />
                                             <tr>
-                                                <td><code>${item[7]}</code></td>
-                                                <td><strong>${item[2]}</strong></td>
-                                                <td>${item[4]} / ${item[6]}</td>
-                                                <td class="text-end"><strong>${physical}</strong></td>
-                                                <td class="text-end"><span class="reserved-badge">${reserved}</span></td>
-                                                <td class="text-end"><strong>${available}</strong></td>
-                                                <td class="text-end">
+                                                <td>${item[1]}</td>
+                                                <td>
                                                     <c:choose>
-                                                        <c:when test="${available == 0}">
-                                                            <span class="stock-badge stock-zero">Out of Stock</span>
+                                                        <c:when test="${not empty item[14]}">
+                                                            <img src="${pageContext.request.contextPath}${item[14]}" alt="${item[2]}" style="width: 90px; height: 90px; object-fit: contain;">
                                                         </c:when>
-                                                        <c:when test="${available <= 5}">
-                                                            <span class="stock-badge stock-low">Low</span>
-                                                        </c:when>
-                                                        <c:when test="${available <= 20}">
-                                                            <span class="stock-badge stock-medium">Medium</span>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <span class="stock-badge stock-high">In Stock</span>
-                                                        </c:otherwise>
+                                                        <c:otherwise><span class="empty-state" style="padding: 0;">No image</span></c:otherwise>
                                                     </c:choose>
                                                 </td>
+                                                <td><strong>${item[2]}</strong></td>
+                                                <td><fmt:formatNumber value="${empty item[10] ? item[12] : item[10]}" type="number" groupingUsed="true" /> VND</td>
+                                                <td><strong>${available}</strong></td>
+                                                <td>${item[13]}</td>
+                                                <td>${item[4]}</td>
+                                                <td>${item[6]}</td>
                                             </tr>
                                         </c:forEach>
                                     </c:otherwise>

@@ -19,14 +19,10 @@ import jakarta.servlet.http.HttpServletResponse;
     "/admin/warehouse/inventory",
     "/admin/warehouse/import",
     "/admin/warehouse/export",
-    "/admin/warehouse/import-bills",
-    "/admin/warehouse/import-bills/view",
     "/staff/warehouse",
     "/staff/warehouse/inventory",
     "/staff/warehouse/import",
-    "/staff/warehouse/export",
-    "/staff/warehouse/import-bills",
-    "/staff/warehouse/import-bills/view"
+    "/staff/warehouse/export"
 })
 public class WarehouseServlet extends HttpServlet {
 
@@ -64,14 +60,6 @@ public class WarehouseServlet extends HttpServlet {
             case "/staff/warehouse/import":
                 showImport(request, response);
                 break;
-            case "/admin/warehouse/import-bills":
-            case "/staff/warehouse/import-bills":
-                showImportBills(request, response);
-                break;
-            case "/admin/warehouse/import-bills/view":
-            case "/staff/warehouse/import-bills/view":
-                showImportBillDetail(request, response);
-                break;
             default:
                 showInventory(request, response);
         }
@@ -107,20 +95,20 @@ public class WarehouseServlet extends HttpServlet {
                 if (batchAttr instanceof DALs.WarehouseDAO.BatchImportResult) {
                     DALs.WarehouseDAO.BatchImportResult br = (DALs.WarehouseDAO.BatchImportResult) batchAttr;
                     if (br.allOk()) {
-                        message = "Stock in successful! Added " + br.successCount + " item(s).";
+                        message = "Quantity update successful! Updated " + br.successCount + " item(s).";
                         messageType = "success";
                     } else if (br.partial()) {
-                        message = "Stock in partially completed: " + br.successCount + " added, " + br.failCount + " failed.";
+                        message = "Quantity update partially completed: " + br.successCount + " updated, " + br.failCount + " failed.";
                         messageType = "error";
                     } else {
-                        message = "Stock in failed. Please try again.";
+                        message = "Quantity update failed. Please try again.";
                         messageType = "error";
                     }
                 } else if (importOk) {
-                    message = "Stock in successful!";
+                    message = "Quantity update successful!";
                     messageType = "success";
                 } else {
-                    message = "Stock in failed. Please try again.";
+                    message = "Quantity update failed. Please try again.";
                     messageType = "error";
                 }
                 response.sendRedirect(basePath + "/import?message=" +
@@ -179,31 +167,13 @@ public class WarehouseServlet extends HttpServlet {
         int invTotalPages = (int) invResult.get("totalPages");
 
         List<Product> products = productDAO.getAllProducts();
-        List<Object[]> lowStock = warehouseDAO.getLowStockItems(10);
         List<Object[]> allSizes = warehouseDAO.getAllSizes();
         List<Object[]> allColors = warehouseDAO.getAllColors();
 
-        int totalItems = invTotalRecords;
-        int totalStock = 0;
-        int totalAvailable = 0;
-        int lowStockCount = lowStock.size();
-
-        for (Object[] row : inventory) {
-            int stockQty = (int) row[8];
-            int reservedQty = (int) row[9];
-            totalStock += stockQty;
-            totalAvailable += (stockQty - reservedQty);
-        }
-
         request.setAttribute("inventory", inventory);
         request.setAttribute("products", products);
-        request.setAttribute("lowStock", lowStock);
         request.setAttribute("allSizes", allSizes);
         request.setAttribute("allColors", allColors);
-        request.setAttribute("totalItems", totalItems);
-        request.setAttribute("totalStock", totalStock);
-        request.setAttribute("totalAvailable", totalAvailable);
-        request.setAttribute("lowStockCount", lowStockCount);
         request.setAttribute("activeTab", "inventory");
         request.setAttribute("currentKeyword", keyword);
         request.setAttribute("currentProductFilter", productFilter);
