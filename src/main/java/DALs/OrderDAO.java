@@ -29,7 +29,8 @@ public class OrderDAO extends DBContext {
      * is in Pending state.
      */
     public int countPendingOrdersByProductId(String productId) {
-        if (connection == null || productId == null || productId.isBlank()) return 0;
+        if (connection == null || productId == null || productId.isBlank())
+            return 0;
         String sql = "SELECT COUNT(*) FROM OrderItems oi "
                 + "JOIN Orders o ON oi.orderId = o.orderId "
                 + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
@@ -37,7 +38,8 @@ public class OrderDAO extends DBContext {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, productId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
+                if (rs.next())
+                    return rs.getInt(1);
             }
         } catch (SQLException ex) {
             System.out.println("countPendingOrdersByProductId error: " + ex.getMessage());
@@ -92,22 +94,26 @@ public class OrderDAO extends DBContext {
      * An order is considered placed after the customer has selected a payment
      * method and a purchase payment record exists.
      */
-    private static final String ORDER_PLACED_EXPR
-            = "CAST(CASE WHEN o.paymentMethod IS NOT NULL AND o.orderStatus <> 'Pending' THEN 1 ELSE 0 END AS BIT)";
+    private static final String ORDER_PLACED_EXPR = "CAST(CASE WHEN o.paymentMethod IS NOT NULL "
+            + "          AND EXISTS (SELECT 1 FROM Payments p "
+            + "                       WHERE p.orderId = o.orderId "
+            + "                         AND p.paymentType = 'Purchase') "
+            + "          THEN 1 ELSE 0 END AS BIT)";
 
     public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {
         return getOrdersPaginated(keyword, null, null, null, offset, limit);
     }
 
-    public List<Order> getOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int offset, int limit) {
+    public List<Order> getOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo,
+            int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-            "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE 1=1 "
-        );
+                "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE 1=1 ");
         List<Object> params = new ArrayList<>();
 
         if (keyword != null && !keyword.trim().isEmpty()) {
-            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
+            sql.append(
+                    "AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
             String kw = "%" + keyword.trim() + "%";
             params.add(kw);
             params.add(kw);
@@ -186,7 +192,8 @@ public class OrderDAO extends DBContext {
     }
 
     public Order getOrderByIdAndCustomerId(String orderId, String customerId) {
-        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE o.orderId = ? AND o.customerId = ?";
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR
+                + " AS orderPlaced FROM Orders o WHERE o.orderId = ? AND o.customerId = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, orderId);
@@ -207,7 +214,8 @@ public class OrderDAO extends DBContext {
 
     public List<Order> getOrdersByCustomerId(String customerId) {
         List<Order> listOrders = new ArrayList<>();
-        String query = "SELECT o.*, " + ORDER_PLACED_EXPR + " AS orderPlaced FROM Orders o WHERE o.customerId = ? ORDER BY o.placedAt DESC";
+        String query = "SELECT o.*, " + ORDER_PLACED_EXPR
+                + " AS orderPlaced FROM Orders o WHERE o.customerId = ? ORDER BY o.placedAt DESC";
 
         try (PreparedStatement ps = connection.prepareStatement(query)) {
             ps.setString(1, customerId);
@@ -259,7 +267,8 @@ public class OrderDAO extends DBContext {
         return searchOrdersPaginated(keyword, null, null, null, offset, limit);
     }
 
-    public List<Order> searchOrdersPaginated(String keyword, String status, LocalDateTime dateFrom, LocalDateTime dateTo, int offset, int limit) {
+    public List<Order> searchOrdersPaginated(String keyword, String status, LocalDateTime dateFrom,
+            LocalDateTime dateTo, int offset, int limit) {
         List<Order> listOrders = new ArrayList<>();
 
         StringBuilder sql = new StringBuilder(
@@ -267,7 +276,8 @@ public class OrderDAO extends DBContext {
         List<Object> params = new ArrayList<>();
 
         if (keyword != null && !keyword.trim().isEmpty()) {
-            sql.append("AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.orderStatus LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
+            sql.append(
+                    "AND (o.orderId LIKE ? OR o.customerId LIKE ? OR o.orderStatus LIKE ? OR o.shippingPhone LIKE ? OR o.shippingAddress LIKE ?) ");
             String kw = "%" + keyword.trim() + "%";
             params.add(kw);
             params.add(kw);
@@ -428,7 +438,8 @@ public class OrderDAO extends DBContext {
                     ps.setInt(4, item.getQuantity());
                     ps.setBigDecimal(5, item.getUnitPrice());
                     ps.setBigDecimal(6, item.getDiscountAmount() == null
-                            ? BigDecimal.ZERO : item.getDiscountAmount());
+                            ? BigDecimal.ZERO
+                            : item.getDiscountAmount());
                     ps.addBatch();
                 }
 
@@ -530,7 +541,8 @@ public class OrderDAO extends DBContext {
     private static String placeholders(int count) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < count; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0)
+                sb.append(',');
             sb.append('?');
         }
         return sb.toString();
@@ -830,8 +842,7 @@ public class OrderDAO extends DBContext {
                 rs.getString("shippingAddress"),
                 rs.getString("shippingPhone"),
                 placedAt,
-                rs.getBigDecimal("totalAmount")
-        );
+                rs.getBigDecimal("totalAmount"));
         order.setOrderPlaced(rs.getBoolean("orderPlaced"));
         order.setPaymentMethod(getOptionalString(rs, "paymentMethod"));
         order.setPaymentStatus(getOptionalString(rs, "paymentStatus"));
@@ -867,7 +878,6 @@ public class OrderDAO extends DBContext {
             return null;
         }
     }
-
 
     private Map<String, Integer> getOrderQuantities(String orderId) throws SQLException {
         Map<String, Integer> quantities = new TreeMap<>();
