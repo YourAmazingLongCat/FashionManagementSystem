@@ -118,6 +118,27 @@ public class CommentDAO {
     }
 
     /**
+     * Count total active comments for a given product.
+     */
+    public int countActiveCommentsByProduct(String productId) {
+        String sql = "SELECT COUNT(*) FROM Comments c "
+                   + "JOIN ProductVariants pv ON c.variantId = pv.variantId "
+                   + "WHERE pv.productId = ? AND c.status = 'Active'";
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("countActiveCommentsByProduct error: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
      * Search comments by keyword across product name, content, or customer name/username.
      */
     public List<Comment> searchComments(String keyword) {
