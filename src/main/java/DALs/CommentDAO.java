@@ -270,9 +270,35 @@ public class CommentDAO {
     }
 
     /**
+     * Check if a customer has already submitted a comment for a given product.
+     */
+    public boolean hasCustomerCommentedOnProduct(String customerId, String productId) {
+        if (customerId == null || productId == null) return false;
+        String sql = "SELECT 1 FROM Comments c "
+                   + "JOIN ProductVariants pv ON c.variantId = pv.variantId "
+                   + "WHERE c.customerId = ? AND pv.productId = ?";
+        try (Connection conn = new DBContext().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, customerId);
+            ps.setString(2, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            System.err.println("hasCustomerCommentedOnProduct error: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
      * Find a variantId purchased by this customer in a delivered order that can be reviewed.
+     * Returns null if customer has already commented on this product.
      */
     public String getEligibleOrderItemId(String customerId, String productId) {
+        if (hasCustomerCommentedOnProduct(customerId, productId)) {
+            return null;
+        }
+
         String sql = "SELECT TOP 1 pv.variantId "
                    + "FROM OrderItems oi "
                    + "JOIN Orders o ON oi.orderId = o.orderId "
@@ -325,9 +351,10 @@ public class CommentDAO {
      */
     public EligibilityStatus checkOrderItemEligibility(String orderItemIdOrVariantId, String customerId) {
         EligibilityStatus status = new EligibilityStatus();
-        String sql = "SELECT o.orderStatus, o.placedAt "
+        String sql = "SELECT o.orderStatus, o.placedAt, pv.productId "
                    + "FROM OrderItems oi "
                    + "JOIN Orders o ON oi.orderId = o.orderId "
+                   + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
                    + "WHERE (oi.orderItemId = ? OR oi.variantId = ?) AND o.customerId = ?";
         try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -337,6 +364,15 @@ public class CommentDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     String orderStatus = rs.getString("orderStatus");
+                    String productId = rs.getString("productId");
+
+                    if (hasCustomerCommentedOnProduct(customerId, productId)) {
+                        status.setEligible(false);
+                        status.setAlreadyReviewed(true);
+                        status.setReason("You have already reviewed this product.");
+                        return status;
+                    }
+
                     if ("Delivered".equalsIgnoreCase(orderStatus)) {
                         status.setEligible(true);
                     } else {

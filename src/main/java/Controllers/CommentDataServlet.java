@@ -59,9 +59,11 @@ public class CommentDataServlet extends HttpServlet {
             comments = commentDAO.getActiveCommentsByProduct(productId);
         }
 
+        boolean hasCommented = false;
         String eligibleOrderItemId = null;
         int remainingDaysToComment = -1;
         if (isCustomer(account)) {
+            hasCommented = commentDAO.hasCustomerCommentedOnProduct(account.getAccountId(), productId);
             eligibleOrderItemId = commentDAO.getEligibleOrderItemId(account.getAccountId(), productId);
             remainingDaysToComment = commentDAO.getRemainingDaysToComment(account.getAccountId(), productId);
         }
@@ -71,6 +73,7 @@ public class CommentDataServlet extends HttpServlet {
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
+        sb.append("\"hasCommented\":").append(hasCommented).append(",");
         sb.append("\"eligibleOrderItemId\":");
         if (eligibleOrderItemId != null) {
             sb.append("\"").append(jsonEscape(eligibleOrderItemId)).append("\"");

@@ -178,6 +178,11 @@
                         <a href="${pageContext.request.contextPath}/auth/login" class="detail-chip-button" style="display: inline-block; padding: 8px 20px; background: #222; color: #fff; text-decoration: none; border-radius: 4px; font-weight: 600;">Log in</a>
                     </div>
                 </c:when>
+                <c:when test="${hasCommented}">
+                    <div style="padding: 14px 18px; background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; font-size: 0.95rem; font-weight: 500;">
+                        ✓ You have already reviewed this product. Thank you for your feedback!
+                    </div>
+                </c:when>
                 <c:when test="${not empty eligibleVariantId}">
                     <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600;">Write a Review</h3>
                     <form method="post" action="${pageContext.request.contextPath}/comment" style="display: flex; flex-direction: column; gap: 12px;">

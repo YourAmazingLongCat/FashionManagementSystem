@@ -89,6 +89,11 @@ public class CommentServlet extends HttpServlet {
             return;
         }
 
+        if (commentDAO.hasCustomerCommentedOnProduct(account.getAccountId(), productId)) {
+            resp.sendRedirect(redirectUrl + "&msg=error&detail=already_commented");
+            return;
+        }
+
         String eligibleVariantId = commentDAO.getEligibleOrderItemId(account.getAccountId(), productId);
         if (eligibleVariantId == null) {
             resp.sendRedirect(redirectUrl + "&msg=error&detail=not_purchased");

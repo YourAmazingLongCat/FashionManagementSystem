@@ -126,8 +126,10 @@ public class HomeControllers extends HttpServlet {
         List<Comment> productComments = commentDAO.getActiveCommentsByProduct(productId);
         request.setAttribute("productComments", productComments);
         Account currentUser = getLoggedInUser(request);
+        boolean hasCommented = (currentUser != null) && commentDAO.hasCustomerCommentedOnProduct(currentUser.getAccountId(), productId);
         String eligibleVariantId = (currentUser != null) ? commentDAO.getEligibleOrderItemId(currentUser.getAccountId(), productId) : null;
         request.setAttribute("eligibleVariantId", eligibleVariantId);
+        request.setAttribute("hasCommented", hasCommented);
 
         // Rating for related products
         List<String> relatedIds = collectProductIds(relatedProducts);
