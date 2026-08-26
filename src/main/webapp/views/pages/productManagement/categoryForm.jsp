@@ -218,17 +218,6 @@
                             </div>
                         </section>
 
-                        <section class="form-section">
-                            <div class="section-heading">
-                                <h3>Description</h3>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="description">Category description</label>
-                                <textarea id="description" name="description" rows="6" placeholder="Add a short description for this category...">${category.description}</textarea>
-                            </div>
-                        </section>
-
                         <div class="form-actions">
                             <a class="ghost-btn" href="${pageContext.request.contextPath}/staff/products?tab=categories">Back to categories</a>
                             <button type="submit" class="primary-btn">${formAction eq 'editCategory' ? 'Save changes' : 'Create category'}</button>

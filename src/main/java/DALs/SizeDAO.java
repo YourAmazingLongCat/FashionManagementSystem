@@ -1,12 +1,13 @@
 package DALs;
 
-import Models.Size;
-import Utils.DBContext;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import Models.Size;
+import Utils.DBContext;
 
 public class SizeDAO extends DBContext {
 
@@ -16,7 +17,7 @@ public class SizeDAO extends DBContext {
 
     public List<Size> getAllSizes() {
         List<Size> sizes = new ArrayList<>();
-        String sql = "SELECT s.sizeId, s.sizeName, s.categoryId, c.name AS categoryName FROM Sizes s INNER JOIN Categories c ON s.categoryId = c.categoryId ORDER BY c.name, s.sizeName";
+        String sql = "SELECT sizeId, sizeName FROM Sizes ORDER BY sizeName";
 
         if (connection == null) {
             return sizes;
@@ -27,10 +28,8 @@ public class SizeDAO extends DBContext {
             while (rs.next()) {
                 Size size = new Size(
                         rs.getString("sizeId"),
-                        rs.getString("sizeName"),
-                        rs.getString("categoryId")
+                        rs.getString("sizeName")
                 );
-                size.setCategoryName(rs.getString("categoryName"));
                 sizes.add(size);
             }
         } catch (SQLException e) {
@@ -40,34 +39,8 @@ public class SizeDAO extends DBContext {
         return sizes;
     }
 
-    public List<Size> getSizesByCategoryId(String categoryId) {
-        List<Size> sizes = new ArrayList<>();
-        String sql = "SELECT sizeId, sizeName, categoryId FROM Sizes WHERE categoryId = ? ORDER BY sizeName";
-
-        if (connection == null || categoryId == null || categoryId.isBlank()) {
-            return sizes;
-        }
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, categoryId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    sizes.add(new Size(
-                            rs.getString("sizeId"),
-                            rs.getString("sizeName"),
-                            rs.getString("categoryId")
-                    ));
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println("getSizesByCategoryId error: " + e.getMessage());
-        }
-
-        return sizes;
-    }
-
     public Size getSizeById(String sizeId) {
-        String sql = "SELECT s.sizeId, s.sizeName, s.categoryId, c.name AS categoryName FROM Sizes s INNER JOIN Categories c ON s.categoryId = c.categoryId WHERE s.sizeId = ?";
+        String sql = "SELECT sizeId, sizeName FROM Sizes WHERE sizeId = ?";
 
         if (connection == null) {
             return null;
@@ -79,10 +52,8 @@ public class SizeDAO extends DBContext {
                 if (rs.next()) {
                     Size size = new Size(
                             rs.getString("sizeId"),
-                            rs.getString("sizeName"),
-                            rs.getString("categoryId")
+                            rs.getString("sizeName")
                     );
-                    size.setCategoryName(rs.getString("categoryName"));
                     return size;
                 }
             }
@@ -94,7 +65,7 @@ public class SizeDAO extends DBContext {
     }
 
     public boolean createSize(Size size) throws SQLException {
-        String sql = "INSERT INTO Sizes (sizeId, sizeName, categoryId) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO Sizes (sizeId, sizeName) VALUES (?, ?)";
 
         if (connection == null) {
             throw new SQLException("Database connection is not available.");
@@ -105,13 +76,12 @@ public class SizeDAO extends DBContext {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, size.getSizeId());
             ps.setString(2, size.getSizeName());
-            ps.setString(3, size.getCategoryId());
             return ps.executeUpdate() > 0;
         }
     }
 
     public boolean updateSize(Size size) throws SQLException {
-        String sql = "UPDATE Sizes SET sizeName = ?, categoryId = ? WHERE sizeId = ?";
+        String sql = "UPDATE Sizes SET sizeName = ? WHERE sizeId = ?";
 
         if (connection == null) {
             throw new SQLException("Database connection is not available.");
@@ -119,8 +89,7 @@ public class SizeDAO extends DBContext {
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, size.getSizeName());
-            ps.setString(2, size.getCategoryId());
-            ps.setString(3, size.getSizeId());
+            ps.setString(2, size.getSizeId());
             return ps.executeUpdate() > 0;
         }
     }

@@ -175,7 +175,7 @@
                             <div class="field"><label for="productPrice">Product price</label><input id="productPrice" type="text" class="form-control" readonly></div>
                             <div class="field field-wide"><label for="productDescription">Description</label><input id="productDescription" type="text" class="form-control" readonly></div>
                             <div class="field"><label for="productCategory">Category</label><input id="productCategory" type="text" class="form-control" readonly></div>
-                            <div class="field"><label for="sizeId">Size</label><select id="sizeId" name="sizeId" class="form-select" required><option value="">-- Select size --</option><c:forEach var="size" items="${sizes}"><option value="${size.sizeId}" data-category-id="${size.categoryId}">${size.sizeName}</option></c:forEach></select></div>
+                            <div class="field"><label for="sizeId">Size</label><select id="sizeId" name="sizeId" class="form-select" required><option value="">-- Select size --</option><c:forEach var="size" items="${sizes}"><option value="${size.sizeId}">${size.sizeName}</option></c:forEach></select></div>
                             <div class="field"><label for="colorId">Color</label><select id="colorId" name="colorId" class="form-select" required><option value="">-- Select color --</option><c:forEach var="color" items="${colors}"><option value="${color.colorId}">${color.colorName}</option></c:forEach></select></div>
                             <div class="field"><label for="sku">SKU</label><input id="sku" name="sku" maxlength="100" placeholder="Optional SKU" class="form-control"></div>
                             <div class="field"><label for="priceOverride">Variant price (optional)</label><input id="priceOverride" name="priceOverride" inputmode="numeric" placeholder="Uses product price" class="form-control"></div>
@@ -188,7 +188,7 @@
                         </div>
                     </form>
                     <div id="allSizeOptions" hidden>
-                        <c:forEach var="size" items="${allSizes}"><span data-size-id="${size.sizeId}" data-size-name="${fn:escapeXml(size.sizeName)}" data-category-id="${size.categoryId}"></span></c:forEach>
+                        <c:forEach var="size" items="${allSizes}"><span data-size-id="${size.sizeId}" data-size-name="${fn:escapeXml(size.sizeName)}"></span></c:forEach>
                     </div>
                 </div>
             </div>
@@ -259,8 +259,7 @@
     const sizeSelect = document.getElementById('sizeId');
     const allSizeOptions = Array.from(document.querySelectorAll('#allSizeOptions span')).map(node => ({
         id: node.dataset.sizeId,
-        name: node.dataset.sizeName,
-        categoryId: node.dataset.categoryId
+        name: node.dataset.sizeName
     }));
     const formatPrice = value => value ? Number(value).toLocaleString('vi-VN') + ' VND' : '';
     const fillProduct = () => {
@@ -272,10 +271,8 @@
         fields.category.value = data.category || '';
     };
     const refreshSizes = () => {
-        const option = productSelect.options[productSelect.selectedIndex];
-        const categoryId = option ? option.dataset.categoryId : '';
         sizeSelect.innerHTML = '<option value="">-- Select size --</option>';
-        allSizeOptions.filter(size => size.categoryId === categoryId).forEach(size => {
+        allSizeOptions.forEach(size => {
             const sizeOption = document.createElement('option');
             sizeOption.value = size.id;
             sizeOption.textContent = size.name;

@@ -1,12 +1,13 @@
 package DALs;
 
-import Models.Category;
-import Utils.DBContext;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import Models.Category;
+import Utils.DBContext;
 
 /**
  * DAO for Categories used in Product Management screens.
@@ -19,7 +20,7 @@ public class CategoryDAO extends DBContext {
 
     public List<Category> getAllCategories() {
         List<Category> categories = new ArrayList<>();
-        String sql = "SELECT categoryId, name, description FROM Categories ORDER BY name";
+        String sql = "SELECT categoryId, name FROM Categories ORDER BY name";
 
         if (connection == null) {
             System.out.println("getAllCategories error: database connection is not available.");
@@ -40,7 +41,7 @@ public class CategoryDAO extends DBContext {
     }
 
     public Category getCategoryById(String categoryId) {
-        String sql = "SELECT categoryId, name, description FROM Categories WHERE categoryId = ?";
+        String sql = "SELECT categoryId, name FROM Categories WHERE categoryId = ?";
 
         if (connection == null) {
             System.out.println("getCategoryById error: database connection is not available.");
@@ -63,7 +64,7 @@ public class CategoryDAO extends DBContext {
     }
 
     public boolean createCategory(Category category) throws SQLException {
-        String sql = "INSERT INTO Categories (categoryId, name, description) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO Categories (categoryId, name) VALUES (?, ?)";
 
         if (connection == null) {
             throw new SQLException("Database connection is not available.");
@@ -74,13 +75,12 @@ public class CategoryDAO extends DBContext {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, category.getCategoryId());
             ps.setString(2, category.getName());
-            ps.setString(3, category.getDescription());
             return ps.executeUpdate() > 0;
         }
     }
 
     public boolean updateCategory(Category category) throws SQLException {
-        String sql = "UPDATE Categories SET name = ?, description = ? WHERE categoryId = ?";
+        String sql = "UPDATE Categories SET name = ? WHERE categoryId = ?";
 
         if (connection == null) {
             throw new SQLException("Database connection is not available.");
@@ -88,8 +88,7 @@ public class CategoryDAO extends DBContext {
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, category.getName());
-            ps.setString(2, category.getDescription());
-            ps.setString(3, category.getCategoryId());
+            ps.setString(2, category.getCategoryId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -130,7 +129,6 @@ public class CategoryDAO extends DBContext {
         Category category = new Category();
         category.setCategoryId(rs.getString("categoryId"));
         category.setName(rs.getString("name"));
-        category.setDescription(rs.getString("description"));
         return category;
     }
 }

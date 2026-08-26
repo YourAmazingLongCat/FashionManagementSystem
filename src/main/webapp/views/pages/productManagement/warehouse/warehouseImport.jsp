@@ -453,6 +453,8 @@
 
             <!-- Subtabs -->
             <div class="warehouse-subtabs">
+            <!-- Subtabs -->
+            <div class="warehouse-subtabs">
                 <a class="${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
                     <i class="fa-solid fa-boxes-stacked"></i> Inventory
                 </a>
@@ -470,6 +472,7 @@
                     <h1 class="page-title">Stock In (Batch Import)</h1>
                     <p class="page-subtitle">Select variants, specify incoming quantities and unit cost to generate an import batch.</p>
                 </div>
+            </div>
             </div>
 
             <c:if test="${not empty message}">

@@ -191,45 +191,46 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
         }
-        .stat-card-modern .stat-label {
-            font-size: 0.8rem;
+        .stat-label {
+            font-size: 0.82rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             color: var(--text-muted);
             margin-bottom: 6px;
         }
-        .stat-card-modern .stat-value {
-            font-size: 2.1rem;
+        .stat-value {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-size: 1.85rem;
             font-weight: 800;
             color: var(--text-dark);
-            line-height: 1.1;
+            line-height: 1;
         }
-        .stat-card-modern .stat-icon-wrap {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
+        .stat-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.35rem;
-            flex-shrink: 0;
+            font-size: 1.3rem;
         }
         .stat-icon-blue { background: #eff6ff; color: #2563eb; }
         .stat-icon-purple { background: #f5f3ff; color: #7c3aed; }
         .stat-icon-emerald { background: #ecfdf5; color: #059669; }
         .stat-icon-amber { background: #fffbeb; color: #d97706; }
 
-        /* Main Table Panel */
+        /* Surface Card & Toolbar */
         .surface-card {
             background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: 18px;
             box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
             overflow: hidden;
+            margin-bottom: 24px;
         }
         .surface-header {
-            padding: 22px 28px;
+            padding: 20px 28px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
@@ -245,7 +246,6 @@
             color: var(--text-dark);
         }
 
-        /* Search & Filters Toolbar */
         .search-toolbar-modern {
             display: flex;
             align-items: center;
@@ -254,7 +254,7 @@
         }
         .input-group-search {
             position: relative;
-            min-width: 280px;
+            min-width: 260px;
         }
         .input-group-search i {
             position: absolute;
@@ -267,48 +267,47 @@
         }
         .search-input-modern {
             width: 100%;
-            padding: 10px 16px 10px 38px;
+            padding: 9px 14px 9px 36px;
             border-radius: 10px;
             border: 1px solid #cbd5e1;
-            background: #f8fafc;
+            background: #ffffff;
             font-family: inherit;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             color: var(--text-dark);
             outline: none;
             transition: all 0.2s ease;
         }
         .search-input-modern:focus {
-            background: #ffffff;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
         }
         .select-filter-modern {
-            padding: 10px 36px 10px 14px;
+            padding: 9px 34px 9px 14px;
             border-radius: 10px;
             border: 1px solid #cbd5e1;
-            background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") no-repeat right 12px center;
-            background-size: 16px;
+            background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") no-repeat right 10px center;
+            background-size: 14px;
             font-family: inherit;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             font-weight: 500;
             color: var(--text-dark);
             outline: none;
-            appearance: none;
             cursor: pointer;
+            appearance: none;
             transition: all 0.2s ease;
         }
         .select-filter-modern:focus {
-            background-color: #ffffff;
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
         }
         .btn-search-modern {
-            padding: 10px 22px;
+            padding: 9px 18px;
             border-radius: 10px;
             border: none;
             background: var(--primary);
             color: #ffffff;
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -318,16 +317,15 @@
         .btn-search-modern:hover {
             background: #1e293b;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
         }
         .btn-reset-modern {
-            padding: 10px 18px;
+            padding: 9px 16px;
             border-radius: 10px;
             border: 1px solid #cbd5e1;
             background: #ffffff;
             color: var(--text-muted);
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             text-decoration: none;
             transition: all 0.2s ease;
         }
@@ -358,17 +356,31 @@
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
         }
-        .modern-table tbody tr {
-            transition: background 0.15s ease;
-        }
         .modern-table tbody tr:hover {
             background: #f8fafc;
         }
-        .modern-table tbody tr:last-child td {
-            border-bottom: none;
+
+        .product-thumb-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+        }
+        .no-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.75rem;
         }
 
-        /* SKU Pill */
         .sku-tag {
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-size: 0.82rem;
@@ -381,43 +393,46 @@
             display: inline-block;
         }
 
-        /* Stock Badges */
         .badge-stock {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 12px;
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.8rem;
-            letter-spacing: 0.02em;
-        }
-        .badge-stock::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-        }
-        .badge-in-stock { background: #dcfce7; color: #15803d; }
-        .badge-in-stock::before { background: #22c55e; }
-
-        .badge-medium { background: #fef3c7; color: #b45309; }
-        .badge-medium::before { background: #f59e0b; }
-
-        .badge-low { background: #ffedd5; color: #c2410c; }
-        .badge-low::before { background: #ea580c; }
-
-        .badge-out-of-stock { background: #fee2e2; color: #b91c1c; }
-        .badge-out-of-stock::before { background: #ef4444; }
-
-        .reserved-pill {
-            background: #eff6ff;
-            color: #1d4ed8;
             padding: 4px 10px;
             border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .badge-in-stock { background: #ecfdf5; color: #059669; }
+        .badge-medium { background: #fefce8; color: #ca8a04; }
+        .badge-low { background: #fff7ed; color: #ea580c; }
+        .badge-out-of-stock { background: #fef2f2; color: #dc2626; }
+
+        .reserved-pill {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 2px 8px;
+            border-radius: 6px;
             font-weight: 700;
             font-size: 0.82rem;
-            display: inline-block;
+        }
+
+        /* Empty State */
+        .empty-state-modern {
+            padding: 56px 24px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .empty-state-icon {
+            font-size: 2.5rem;
+            color: #cbd5e1;
+            margin-bottom: 12px;
+        }
+        .empty-state-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 6px;
         }
 
         /* Pagination */
@@ -426,13 +441,13 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
-            padding: 24px;
+            padding: 20px;
         }
         .page-btn-modern {
-            min-width: 38px;
-            height: 38px;
-            padding: 0 14px;
-            border-radius: 10px;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 12px;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
             background: #ffffff;
             color: var(--text-dark);
@@ -441,13 +456,12 @@
             justify-content: center;
             text-decoration: none;
             font-weight: 700;
-            font-size: 0.88rem;
+            font-size: 0.86rem;
             transition: all 0.2s ease;
         }
         .page-btn-modern:hover {
             background: #f1f5f9;
             color: var(--primary);
-            border-color: #cbd5e1;
         }
         .page-btn-modern.active {
             background: var(--primary);
@@ -455,28 +469,13 @@
             border-color: var(--primary);
         }
 
-        /* Empty State */
-        .empty-state-modern {
-            padding: 64px 20px;
-            text-align: center;
-            color: var(--text-muted);
-        }
-        .empty-state-icon {
-            font-size: 3rem;
-            color: #cbd5e1;
-            margin-bottom: 16px;
-        }
-        .empty-state-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin: 0 0 6px;
-        }
-
         @media (max-width: 992px) {
             .sidebar { height: auto; position: relative; }
             .sidebar .nav { min-height: auto; }
             .main-content { padding: 20px; }
+            .surface-header { flex-direction: column; align-items: stretch; }
+            .search-toolbar-modern { width: 100%; }
+            .input-group-search { min-width: 100%; }
         }
     </style>
 </head>
@@ -639,8 +638,11 @@
                     <table class="modern-table">
                         <thead>
                             <tr>
+                                <th style="width: 60px;">Image</th>
                                 <th>SKU</th>
                                 <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
                                 <th>Size & Color</th>
                                 <th class="text-end">Physical Stock</th>
                                 <th class="text-end">Reserved</th>
@@ -652,7 +654,7 @@
                             <c:choose>
                                 <c:when test="${empty inventory}">
                                     <tr>
-                                        <td colspan="7">
+                                        <td colspan="10">
                                             <div class="empty-state-modern">
                                                 <div class="empty-state-icon">
                                                     <i class="fa-solid fa-box-open"></i>
@@ -669,8 +671,22 @@
                                         <c:set var="reserved" value="${item[9]}" />
                                         <c:set var="available" value="${physical - reserved}" />
                                         <tr>
+                                            <td>
+                                                <c:choose>
+                                                    <c:when test="${not empty item[14]}">
+                                                        <img class="product-thumb-img" src="${pageContext.request.contextPath}${item[14]}" alt="${item[2]}">
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <div class="no-thumb"><i class="fa-solid fa-image"></i></div>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </td>
                                             <td><span class="sku-tag">${item[7]}</span></td>
                                             <td><strong style="color: var(--text-dark);">${item[2]}</strong></td>
+                                            <td><span style="color: var(--text-muted); font-size: 0.88rem;">${item[13]}</span></td>
+                                            <td class="font-monospace fw-bold" style="color: var(--text-dark); font-size: 0.9rem;">
+                                                <fmt:formatNumber value="${empty item[10] ? item[12] : item[10]}" type="number" groupingUsed="true" /> đ
+                                            </td>
                                             <td>
                                                 <span style="color: var(--text-muted); font-weight: 500;">Size ${item[4]} &bull; ${item[6]}</span>
                                             </td>
@@ -720,7 +736,7 @@
                             </a>
                         </c:if>
                         <c:forEach begin="1" end="${invTotalPages > 5 ? 5 : invTotalPages}" var="i">
-                            <c:set var="invStart" value="${invTotalPages > 5 ? (invPage > 3 ? (invPage + 2 > invTotalPages ? invTotalPages - 4 : invPage - 2) : 1) : 1}"/>
+                            <c:set var="invStart" value="${invTotalPages > 5 ? (invPage > 3 ? invPage - 2 : 1) : 1}"/>
                             <a class="page-btn-modern ${(invStart + i - 1) == invPage ? 'active' : ''}" href="?activeTab=inventory&invPage=${invStart + i - 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}">
                                 ${invStart + i - 1}
                             </a>

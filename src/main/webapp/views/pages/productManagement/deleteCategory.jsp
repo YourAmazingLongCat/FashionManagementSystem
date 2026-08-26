@@ -277,7 +277,6 @@
                         </div>
                         <div class="delete-row">
                             <span>Description</span>
-                            <strong>${empty category.description ? 'No description available' : category.description}</strong>
                         </div>
                     </div>
 
