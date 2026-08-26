@@ -8,398 +8,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock In - Warehouse - Fashion X Store</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>Update Quantity - Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        :root {
-            --bg-page: #f8fafc;
-            --sidebar-bg: #0f172a;
-            --sidebar-hover: #1e293b;
-            --sidebar-active: #334155;
-            --sidebar-text: #94a3b8;
-            --sidebar-text-active: #ffffff;
-            --primary: #0f172a;
-            --accent: #2563eb;
-            --border-color: #e2e8f0;
-            --card-bg: #ffffff;
-            --text-dark: #0f172a;
-            --text-muted: #64748b;
-        }
-
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: var(--text-dark);
-            background: var(--bg-page);
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Sidebar */
+        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.9rem; color: #2c3e50; background: #f8f9fa; }
+        .container-fluid { padding: 0; }
+        .row { margin: 0; }
+        .row > * { padding: 0; }
         .sidebar {
-            background: var(--sidebar-bg);
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
-            align-self: flex-start;
-            padding: 0;
-            color: #ecf0f1;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.08);
-            z-index: 100;
+            background: linear-gradient(180deg, #2c3e50, #1a252f);
+            position: sticky; top: 0; height: 100vh; overflow-y: auto;
+            align-self: flex-start; padding: 0; color: #ecf0f1;
         }
         .sidebar .brand {
-            padding: 24px 20px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #ffffff;
-        }
-        .sidebar .brand .brand-badge {
-            background: #ef4444;
-            color: #fff;
-            padding: 2px 7px;
-            border-radius: 4px;
-            font-size: 0.78rem;
-            font-weight: 900;
-        }
-        .sidebar .nav {
-            display: flex;
-            flex-direction: column;
-            min-height: calc(100vh - 85px);
-            padding: 16px 12px;
-            margin: 0;
-            list-style: none;
-            gap: 4px;
+            padding: 20px 15px; font-size: 1.5rem; font-weight: 600;
+            border-bottom: 1px solid #34495e; text-align: center; color: #fff;
         }
         .sidebar .nav-link {
-            color: var(--sidebar-text);
-            padding: 12px 16px;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-            font-weight: 600;
-            font-size: 0.92rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
+            color: #b0c4de; padding: 12px 20px; border-left: 3px solid transparent;
+            transition: 0.3s; font-weight: 500; display: block;
+            text-decoration: none; font-size: 1rem; line-height: 1.5;
         }
-        .sidebar .nav-link:hover {
-            background: var(--sidebar-hover);
-            color: #f1f5f9;
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: #34495e; color: #fff; border-left-color: #1abc9c;
         }
-        .sidebar .nav-link.active {
-            background: var(--sidebar-active);
-            color: var(--sidebar-text-active);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-        }
-        .sidebar .nav-link i {
-            width: 20px;
-            text-align: center;
-            font-size: 1.05rem;
-            opacity: 0.85;
-        }
+        .sidebar .nav { display: flex; flex-direction: column; min-height: calc(100vh - 130px); padding: 0; margin: 0; list-style: none; }
+        .sidebar .nav-item { list-style: none; }
         .sidebar .nav-item.mt-auto { margin-top: auto; }
-        .sidebar .nav-divider {
-            height: 1px;
-            background: rgba(255,255,255,0.08);
-            margin: 12px 0;
-        }
-
-        /* Main Content */
-        .main-content {
-            padding: 32px 36px;
-            max-width: 1600px;
-        }
+        .main-content { padding: 20px 30px; }
 
         /* Subtabs */
         .warehouse-subtabs {
-            display: inline-flex;
-            gap: 6px;
-            padding: 6px;
-            background: #ffffff;
-            border-radius: 14px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-            margin-bottom: 28px;
+            display: inline-flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
         }
         .warehouse-subtabs a {
-            padding: 10px 22px;
-            border-radius: 10px;
-            text-decoration: none;
-            color: var(--text-muted);
-            font-weight: 700;
-            font-size: 0.92rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
+            padding: 8px 18px; border-radius: 8px; text-decoration: none;
+            color: #334155; font-weight: 600; font-size: 0.88rem;
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #dbe3f0; transition: all 0.2s ease;
         }
         .warehouse-subtabs a:hover {
-            background: #f1f5f9;
-            color: var(--text-dark);
+            background: #f8fafc; color: #1abc9c; border-color: #1abc9c;
         }
         .warehouse-subtabs a.active {
-            background: var(--primary);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+            background: #1abc9c; color: #fff; border-color: #1abc9c;
+            box-shadow: 0 4px 12px rgba(26, 188, 156, 0.25);
         }
 
-        /* Header */
-        .page-header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .page-title {
-            font-family: 'Space Grotesk', 'Inter', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            margin: 0;
-            color: var(--text-dark);
-        }
-        .page-subtitle {
-            margin: 4px 0 0;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
+        /* Page Title */
+        .page-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-title-row h1 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #2c3e50; }
+        .page-title-row p { margin: 4px 0 0; color: #64748b; font-size: 0.85rem; }
 
         /* Surface Card */
         .surface-card {
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: 18px;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
-            overflow: hidden;
-            margin-bottom: 24px;
+            background: #ffffff; border: 1px solid #e2e8f0;
+            border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden; margin-bottom: 20px;
         }
         .surface-header {
-            padding: 20px 28px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 16px;
-            background: #ffffff;
+            padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 12px; background: #f8f9fa;
         }
-        .surface-header-title {
-            font-size: 1.15rem;
-            font-weight: 800;
-            margin: 0;
-            color: var(--text-dark);
-        }
+        .surface-header-title { font-size: 1.15rem; font-weight: 700; margin: 0; color: #2c3e50; }
 
         /* Filter Toolbar */
         .filter-bar-modern {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            padding: 18px 28px;
-            background: #f8fafc;
-            border-bottom: 1px solid var(--border-color);
+            padding: 16px 20px; background: #fff; border-bottom: 1px solid #e2e8f0;
+            display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
         }
-        .input-group-search {
-            position: relative;
-            min-width: 240px;
-        }
-        .input-group-search i {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
+        .input-group-search { position: relative; min-width: 220px; }
+        .input-group-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
         .search-input-modern {
-            width: 100%;
-            padding: 9px 14px 9px 36px;
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            font-family: inherit;
-            font-size: 0.88rem;
-            color: var(--text-dark);
-            outline: none;
-            transition: all 0.2s ease;
+            width: 100%; min-height: 38px; padding: 8px 12px 8px 36px;
+            border-radius: 8px; border: 1px solid #cbd5e1; background: #fff;
+            font: inherit; font-size: 0.9rem; color: #2c3e50; outline: none; transition: 0.2s;
         }
-        .search-input-modern:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
-        }
+        .search-input-modern:focus { border-color: #1abc9c; box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.15); }
         .select-filter-modern {
-            padding: 9px 34px 9px 12px;
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") no-repeat right 10px center;
-            background-size: 14px;
-            font-family: inherit;
-            font-size: 0.88rem;
-            font-weight: 500;
-            color: var(--text-dark);
-            outline: none;
-            appearance: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            min-height: 38px; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1;
+            background: #fff; font: inherit; font-size: 0.9rem; color: #2c3e50; outline: none; cursor: pointer;
         }
-        .btn-action-primary {
-            padding: 9px 20px;
-            border-radius: 10px;
-            border: none;
-            background: var(--primary);
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 0.88rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-action-primary:hover {
-            background: #1e293b;
-            transform: translateY(-1px);
-        }
-        .btn-action-secondary {
-            padding: 9px 16px;
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.88rem;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-        .btn-action-secondary:hover {
-            background: #f1f5f9;
-            color: var(--text-dark);
-        }
+        .select-filter-modern:focus { border-color: #1abc9c; box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.15); }
 
-        /* Modern Table */
-        .modern-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.92rem;
+        /* Buttons */
+        .btn-action-primary {
+            padding: 8px 18px; border-radius: 8px; border: none;
+            background: #1abc9c; color: #fff; font-weight: 600; font-size: 0.88rem;
+            display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s;
         }
+        .btn-action-primary:hover { background: #16a085; transform: translateY(-1px); color: #fff; }
+        .btn-action-secondary {
+            padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1;
+            background: #fff; color: #64748b; font-weight: 600; font-size: 0.88rem;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-action-secondary:hover { background: #f8fafc; color: #2c3e50; }
+
+        /* Table */
+        .modern-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .modern-table th {
-            background: #f8fafc;
-            color: #475569;
-            font-size: 0.76rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border-color);
-            white-space: nowrap;
+            background: #f1f3f5; color: #2c3e50; font-size: 0.8rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 14px;
+            border: 1px solid #d9dee5; text-align: center; vertical-align: middle;
         }
         .modern-table td {
-            padding: 14px 20px;
-            border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
+            padding: 12px 14px; border: 1px solid #e9ecef;
+            vertical-align: middle; text-align: center; color: #334155;
         }
-        .modern-table tbody tr:hover {
-            background: #f8fafc;
-        }
-        .modern-table tbody tr.selected {
-            background: #eff6ff;
-        }
-
+        .modern-table tr:hover td { background: #f8fafc; }
+        
         .sku-tag {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            font-size: 0.82rem;
-            font-weight: 700;
-            background: #f1f5f9;
-            color: #0f172a;
-            padding: 4px 8px;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            display: inline-block;
+            background: #f1f5f9; color: #475569; font-weight: 700;
+            font-size: 0.78rem; padding: 4px 8px; border-radius: 6px;
+            font-family: monospace; display: inline-block; border: 1px solid #e2e8f0;
         }
 
         .badge-stock {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 10px;
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.78rem;
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.76rem;
+            text-transform: uppercase; letter-spacing: 0.04em;
         }
-        .badge-in-stock { background: #dcfce7; color: #15803d; }
-        .badge-low { background: #fee2e2; color: #b91c1c; }
+        .badge-in-stock { background: #dcfce7; color: #166534; }
+        .badge-low { background: #fef3c7; color: #92400e; }
+        .badge-out-of-stock { background: #fee2e2; color: #991b1b; }
 
-        .import-inputs {
-            display: flex;
-            gap: 8px;
-            align-items: center;
+        .import-inputs { display: flex; gap: 8px; justify-content: center; align-items: center; }
+        .qty-input, .price-input {
+            height: 36px; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1;
+            font-size: 0.88rem; outline: none; transition: 0.2s; width: 100px;
         }
-        .import-inputs input {
-            padding: 7px 10px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            font-size: 0.88rem;
-            font-weight: 600;
-            outline: none;
-        }
-        .import-inputs input:focus {
-            border-color: var(--primary);
-        }
-        .import-inputs .qty-input { width: 85px; }
-        .import-inputs .price-input { width: 120px; }
+        .price-input { width: 140px; }
+        .qty-input:focus, .price-input:focus { border-color: #1abc9c; box-shadow: 0 0 0 2px rgba(26,188,156,0.15); }
+        .qty-input:disabled, .price-input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
 
         /* Pagination */
         .pagination-modern {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            padding: 20px;
+            padding: 16px 20px; display: flex; justify-content: center; gap: 6px;
+            background: #fff; border-top: 1px solid #e2e8f0;
         }
         .page-btn-modern {
-            min-width: 36px;
-            height: 36px;
-            padding: 0 12px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            background: #ffffff;
-            color: var(--text-dark);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 0.86rem;
-            transition: all 0.2s ease;
+            min-width: 36px; height: 36px; padding: 0 10px; border-radius: 6px;
+            border: 1px solid #cbd5e1; background: #fff; color: #334155;
+            display: inline-flex; align-items: center; justify-content: center;
+            text-decoration: none; font-weight: 700; font-size: 0.86rem; transition: 0.2s;
         }
-        .page-btn-modern:hover {
-            background: #f1f5f9;
-            color: var(--primary);
-        }
-        .page-btn-modern.active {
-            background: var(--primary);
-            color: #ffffff;
-            border-color: var(--primary);
-        }
+        .page-btn-modern:hover { background: #f8fafc; color: #1abc9c; border-color: #1abc9c; }
+        .page-btn-modern.active { background: #1abc9c; color: #fff; border-color: #1abc9c; }
 
-        @media (max-width: 992px) {
-            .sidebar { height: auto; position: relative; }
-            .sidebar .nav { min-height: auto; }
-            .main-content { padding: 20px; }
+        @media (max-width: 768px) {
+            .sidebar { min-height: auto; height: auto; position: static; }
+            .main-content { padding: 15px; }
         }
     </style>
 </head>
@@ -407,76 +168,33 @@
 <div class="container-fluid p-0">
     <div class="row g-0">
         <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 sidebar">
-            <div class="brand">
-                <span>FASHION</span>
-                <span class="brand-badge">X</span>
-                <span>STORE</span>
-            </div>
-            <ul class="nav">
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">
-                        <i class="fa-solid fa-cart-shopping"></i> Manage Orders
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">
-                        <i class="fa-solid fa-shirt"></i> Manage Products
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">
-                        <i class="fa-solid fa-layer-group"></i> Manage Variants
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
-                        <i class="fa-solid fa-warehouse"></i> Manage Warehouse
-                    </a>
-                </li>
-                <li class="nav-divider"></li>
-                <li class="nav-item mt-auto">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/profile">
-                        <i class="fa-solid fa-user"></i> Profile
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/auth/logout">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
-                    </a>
-                </li>
-            </ul>
-        </div>
+        <jsp:include page="/views/common/staffSidebar.jsp">
+            <jsp:param name="activeMenu" value="warehouse" />
+        </jsp:include>
 
         <!-- Main Content -->
         <div class="col-md-9 col-lg-10 main-content">
 
             <!-- Subtabs -->
             <div class="warehouse-subtabs">
-            <!-- Subtabs -->
-            <div class="warehouse-subtabs">
                 <a class="${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
-                    <i class="fa-solid fa-boxes-stacked"></i> Inventory
+                    <i class="fas fa-boxes"></i> Inventory
                 </a>
                 <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">
-                    <i class="fa-solid fa-dolly"></i> Stock In
-                </a>
-                <a class="${activeTab eq 'import-bills' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import-bills">
-                    <i class="fa-solid fa-file-invoice-dollar"></i> Import Bills
+                    <i class="fas fa-edit"></i> Update Quantity
                 </a>
             </div>
 
             <!-- Page Title -->
-            <div class="page-header-row">
+            <div class="page-title-row">
                 <div>
-                    <h1 class="page-title">Stock In (Batch Import)</h1>
-                    <p class="page-subtitle">Select variants, specify incoming quantities and unit cost to generate an import batch.</p>
+                    <h1>Update Quantity</h1>
+                    <p>Select variants, specify added quantities and unit cost to update inventory.</p>
                 </div>
-            </div>
             </div>
 
             <c:if test="${not empty message}">
-                <div class="alert ${messageType eq 'error' ? 'alert-danger' : 'alert-success'} mb-4" style="border-radius: 12px; font-weight: 600;">
+                <div class="alert ${messageType eq 'error' ? 'alert-danger' : 'alert-success'} mb-4" style="border-radius: 8px; font-weight: 600;">
                     ${message}
                 </div>
             </c:if>
@@ -485,7 +203,7 @@
                 <!-- Filter Bar -->
                 <form method="get" action="${pageContext.request.contextPath}/staff/warehouse/import" class="filter-bar-modern" id="inventoryFilterForm">
                     <div class="input-group-search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <i class="fas fa-search"></i>
                         <input type="text" class="search-input-modern" name="keyword" placeholder="Search SKU / product..." value="${fn:escapeXml(currentKeyword)}"/>
                     </div>
                     <select class="select-filter-modern" name="productFilter">
@@ -501,7 +219,7 @@
                         </c:forEach>
                     </select>
                     <button type="submit" class="btn-action-primary">
-                        <i class="fa-solid fa-filter"></i> Filter
+                        <i class="fas fa-filter"></i> Filter
                     </button>
                     <a href="${pageContext.request.contextPath}/staff/warehouse/import" class="btn-action-secondary">Clear</a>
                 </form>
@@ -510,13 +228,13 @@
                     <input type="hidden" name="action" value="import">
                     
                     <div class="surface-header">
-                        <h2 class="surface-header-title">Select Variants to Stock In</h2>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <span id="selectedCount" style="font-size: 0.88rem; color: var(--text-muted); font-weight: 700;">0 selected</span>
+                        <h2 class="surface-header-title">Select Variants to Update Quantity</h2>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <span id="selectedCount" style="font-size: 0.88rem; color: #64748b; font-weight: 700;">0 selected</span>
                             <button type="button" class="btn-action-secondary" id="selectAllBtn">Select all</button>
                             <button type="button" class="btn-action-secondary" id="clearAllBtn">Clear</button>
                             <button type="submit" class="btn-action-primary" id="batchSubmitBtn" style="background: #16a34a;">
-                                <i class="fa-solid fa-plus"></i> Import Selected
+                                <i class="fas fa-check"></i> Update Selected
                             </button>
                         </div>
                     </div>
@@ -527,19 +245,19 @@
                                 <tr>
                                     <th style="width: 48px; text-align: center;"><input type="checkbox" id="selectAllCheckbox" style="transform: scale(1.2); cursor: pointer;"></th>
                                     <th>SKU</th>
-                                    <th>Product</th>
+                                    <th style="text-align: left;">Product</th>
                                     <th>Size / Color</th>
                                     <th class="text-end">Physical</th>
                                     <th class="text-end">Reserved</th>
                                     <th class="text-end">Available</th>
-                                    <th>Import Details</th>
+                                    <th>Update Details</th>
                                 </tr>
                             </thead>
                             <tbody id="inventoryTableBody">
                                 <c:choose>
                                     <c:when test="${empty inventory}">
                                         <tr>
-                                            <td colspan="8" style="padding: 48px 20px; text-align: center; color: var(--text-muted);">
+                                            <td colspan="8" style="padding: 48px 20px; text-align: center; color: #64748b;">
                                                 No product variants found.
                                             </td>
                                         </tr>
@@ -554,10 +272,10 @@
                                                     <input type="checkbox" class="row-check" name="selectedVariants" value="${item[0]}" style="transform: scale(1.2); cursor: pointer;">
                                                 </td>
                                                 <td><span class="sku-tag">${item[7]}</span></td>
-                                                <td><strong style="color: var(--text-dark);">${item[2]}</strong></td>
-                                                <td><span style="color: var(--text-muted); font-weight: 500;">Size ${item[4]} &bull; ${item[6]}</span></td>
+                                                <td style="text-align: left;"><strong style="color: #2c3e50;">${item[2]}</strong></td>
+                                                <td><span style="color: #64748b; font-weight: 500;">Size ${item[4]} &bull; ${item[6]}</span></td>
                                                 <td class="text-end font-monospace fw-bold">${physical}</td>
-                                                <td class="text-end font-monospace" style="color: var(--text-muted);">${reserved}</td>
+                                                <td class="text-end font-monospace fw-bold" style="color: #2c3e50;">${reserved}</td>
                                                 <td class="text-end">
                                                     <span class="badge-stock ${available <= 10 ? 'badge-low' : 'badge-in-stock'}">${available}</span>
                                                 </td>
@@ -580,7 +298,7 @@
                         <div class="pagination-modern">
                             <c:if test="${invPage > 1}">
                                 <a href="?tab=import&invPage=${invPage - 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}" class="page-btn-modern">
-                                    <i class="fa-solid fa-chevron-left"></i>
+                                    <i class="fas fa-chevron-left"></i>
                                 </a>
                             </c:if>
                             <c:forEach begin="1" end="${invTotalPages > 5 ? 5 : invTotalPages}" var="i">
@@ -591,7 +309,7 @@
                             </c:forEach>
                             <c:if test="${invPage < invTotalPages}">
                                 <a href="?tab=import&invPage=${invPage + 1}&keyword=${fn:escapeXml(currentKeyword)}&productFilter=${currentProductFilter}&colorFilter=${currentColorFilter}" class="page-btn-modern">
-                                    <i class="fa-solid fa-chevron-right"></i>
+                                    <i class="fas fa-chevron-right"></i>
                                 </a>
                             </c:if>
                         </div>

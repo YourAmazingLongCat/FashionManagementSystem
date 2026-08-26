@@ -73,14 +73,6 @@ public class WarehouseServlet extends HttpServlet {
             case "/staff/warehouse/import":
                 showImport(request, response);
                 break;
-            case "/admin/warehouse/import-bills":
-            case "/staff/warehouse/import-bills":
-                showImportBills(request, response);
-                break;
-            case "/admin/warehouse/import-bills/view":
-            case "/staff/warehouse/import-bills/view":
-                showImportBillDetail(request, response);
-                break;
             default:
                 showInventory(request, response);
         }
