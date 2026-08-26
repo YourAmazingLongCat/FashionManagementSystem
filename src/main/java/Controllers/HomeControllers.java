@@ -15,6 +15,7 @@ import Models.Account;
 import Models.Cart;
 import Models.CartItemView;
 import Models.Category;
+import Models.Comment;
 import Models.Product;
 import Utils.SessionCartUtil;
 import jakarta.servlet.ServletException;
@@ -120,10 +121,16 @@ public class HomeControllers extends HttpServlet {
         request.setAttribute("wishlistProductIds", getWishlistProductIds(request));
         request.setAttribute("cartCount", getCartCount(request));
 
-        // Rating for current product
+        // Rating and comments for current product
         double[] ratingSummary = commentDAO.getRatingSummary(productId);
         request.setAttribute("ratingSummary", ratingSummary);
-        request.setAttribute("productComments", commentDAO.getActiveCommentsByProduct(productId));
+        List<Comment> productComments = commentDAO.getActiveCommentsByProduct(productId);
+        request.setAttribute("productComments", productComments);
+        Account currentUser = getLoggedInUser(request);
+        boolean hasCommented = (currentUser != null) && commentDAO.hasCustomerCommentedOnProduct(currentUser.getAccountId(), productId);
+        String eligibleVariantId = (currentUser != null) ? commentDAO.getEligibleOrderItemId(currentUser.getAccountId(), productId) : null;
+        request.setAttribute("eligibleVariantId", eligibleVariantId);
+        request.setAttribute("hasCommented", hasCommented);
 
         // Rating for related products
         List<String> relatedIds = collectProductIds(relatedProducts);

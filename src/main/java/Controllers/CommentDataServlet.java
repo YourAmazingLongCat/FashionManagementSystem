@@ -9,16 +9,23 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
+/**
+ * AJAX Data Endpoint for Product Comments.
+ * Returns JSON formatted comment list, rating summary, and review eligibility.
+ * 
+ * @author ngocpace191049-cmyk
+ */
 @WebServlet("/comment-data")
 public class CommentDataServlet extends HttpServlet {
 
-    private CommentDAO commentDAO = new CommentDAO();
-    private SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+    private final CommentDAO commentDAO = new CommentDAO();
+    private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
@@ -33,18 +40,18 @@ public class CommentDataServlet extends HttpServlet {
         HttpSession session = req.getSession(false);
         Account account = (session != null) ? (Account) session.getAttribute("USER") : null;
 
-        // Check eligibility for specific order item (from order detail page)
-        if ("checkOrderItem".equals(action) && orderItemId != null && !orderItemId.isEmpty()) {
+        // Check eligibility for specific order item (called from order detail page)
+        if ("checkOrderItem".equals(action) && orderItemId != null && !orderItemId.isBlank()) {
             handleCheckOrderItemEligibility(resp, account, orderItemId);
             return;
         }
 
-        if (productId == null || productId.trim().isEmpty()) {
+        if (productId == null || productId.isBlank()) {
             resp.getWriter().write("{\"error\":\"Missing productId\",\"comments\":[],\"eligibleOrderItemId\":null}");
             return;
         }
 
-        // Admin/Staff thấy tất cả kể cả ẩn, người khác chỉ thấy Active
+        // Staff/Admin sees both Active & Hidden comments; Guests & Customers see only Active comments
         List<Comment> comments;
         if (isStaffOrAdmin(account)) {
             comments = commentDAO.getAllCommentsByProduct(productId);
@@ -52,10 +59,11 @@ public class CommentDataServlet extends HttpServlet {
             comments = commentDAO.getActiveCommentsByProduct(productId);
         }
 
-        // Customer: kiểm tra có đơn hàng đủ điều kiện comment không
+        boolean hasCommented = false;
         String eligibleOrderItemId = null;
         int remainingDaysToComment = -1;
         if (isCustomer(account)) {
+            hasCommented = commentDAO.hasCustomerCommentedOnProduct(account.getAccountId(), productId);
             eligibleOrderItemId = commentDAO.getEligibleOrderItemId(account.getAccountId(), productId);
             remainingDaysToComment = commentDAO.getRemainingDaysToComment(account.getAccountId(), productId);
         }
@@ -65,6 +73,7 @@ public class CommentDataServlet extends HttpServlet {
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
+        sb.append("\"hasCommented\":").append(hasCommented).append(",");
         sb.append("\"eligibleOrderItemId\":");
         if (eligibleOrderItemId != null) {
             sb.append("\"").append(jsonEscape(eligibleOrderItemId)).append("\"");
@@ -78,19 +87,13 @@ public class CommentDataServlet extends HttpServlet {
             Comment c = comments.get(i);
             if (i > 0) sb.append(",");
 
-            // Tính canEdit: còn trong 7 ngày không
             boolean canEdit = false;
+            long daysLeft = 0;
             if (c.getCreatedAt() != null) {
                 long diff = now - c.getCreatedAt().getTime();
                 canEdit = diff <= editLimitMs;
-            }
-
-            // Tính số ngày còn lại để edit
-            long daysLeft = 0;
-            if (canEdit && c.getCreatedAt() != null) {
-                long diff = now - c.getCreatedAt().getTime();
                 long totalDaysPassed = diff / (1000 * 60 * 60 * 24);
-                daysLeft = 7 - totalDaysPassed;
+                daysLeft = Math.max(0, 7 - totalDaysPassed);
             }
 
             sb.append("{");
@@ -114,16 +117,6 @@ public class CommentDataServlet extends HttpServlet {
         out.flush();
     }
 
-    private boolean isStaffOrAdmin(Account account) {
-        if (account == null) return false;
-        String role = account.getRole();
-        return "Admin".equalsIgnoreCase(role) || "Staff".equalsIgnoreCase(role);
-    }
-
-    private boolean isCustomer(Account account) {
-        return account != null && "Customer".equalsIgnoreCase(account.getRole());
-    }
-
     private void handleCheckOrderItemEligibility(HttpServletResponse resp,
             Account account, String orderItemId) throws IOException {
         if (account == null) {
@@ -143,6 +136,16 @@ public class CommentDataServlet extends HttpServlet {
         sb.append("}");
 
         resp.getWriter().write(sb.toString());
+    }
+
+    private boolean isStaffOrAdmin(Account account) {
+        if (account == null) return false;
+        String role = account.getRole();
+        return "Admin".equalsIgnoreCase(role) || "Staff".equalsIgnoreCase(role);
+    }
+
+    private boolean isCustomer(Account account) {
+        return account != null && "Customer".equalsIgnoreCase(account.getRole());
     }
 
     private String jsonEscape(String s) {

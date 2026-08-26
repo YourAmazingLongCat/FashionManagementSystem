@@ -7,11 +7,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Import Bill Detail - Warehouse</title>
+    <title>Import Bill Detail - Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body { background: #f8f9fa; }
+        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.9rem; color: #2c3e50; background: #f8f9fa; }
+        .container-fluid { padding: 0; }
+        .row { margin: 0; }
+        .row > * { padding: 0; }
         .sidebar {
             background: linear-gradient(180deg, #2c3e50, #1a252f);
             position: sticky; top: 0; height: 100vh; overflow-y: auto;
@@ -19,142 +22,187 @@
         }
         .sidebar .brand {
             padding: 20px 15px; font-size: 1.5rem; font-weight: 600;
-            border-bottom: 1px solid #34495e; text-align: center;
+            border-bottom: 1px solid #34495e; text-align: center; color: #fff;
         }
         .sidebar .nav-link {
             color: #b0c4de; padding: 12px 20px; border-left: 3px solid transparent;
-            transition: 0.3s; font-weight: 500; display: flex; align-items: center;
-            text-decoration: none;
+            transition: 0.3s; font-weight: 500; display: block;
+            text-decoration: none; font-size: 1rem; line-height: 1.5;
         }
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
             background: #34495e; color: #fff; border-left-color: #1abc9c;
         }
-        .sidebar .nav-link i { width: 24px; margin-right: 10px; }
         .sidebar .nav { display: flex; flex-direction: column; min-height: calc(100vh - 130px); padding: 0; margin: 0; list-style: none; }
         .sidebar .nav-item { list-style: none; }
         .sidebar .nav-item.mt-auto { margin-top: auto; }
         .main-content { padding: 20px 30px; }
+
+        /* Subtabs */
         .warehouse-subtabs {
-            display: flex; gap: 6px; padding: 6px;
-            background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; flex-wrap: wrap;
+            display: inline-flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
         }
         .warehouse-subtabs a {
-            padding: 10px 18px; border-radius: 8px; text-decoration: none;
-            color: #475569; font-weight: 600; font-size: 0.9rem;
+            padding: 8px 18px; border-radius: 8px; text-decoration: none;
+            color: #334155; font-weight: 600; font-size: 0.88rem;
             display: inline-flex; align-items: center; gap: 8px;
-            transition: 0.2s;
+            background: #fff; border: 1px solid #dbe3f0; transition: all 0.2s ease;
         }
-        .warehouse-subtabs a:hover { background: #f1f5f9; color: #1e293b; }
+        .warehouse-subtabs a:hover {
+            background: #f8fafc; color: #1abc9c; border-color: #1abc9c;
+        }
         .warehouse-subtabs a.active {
-            background: linear-gradient(135deg, #1abc9c, #16a085);
-            color: #fff;
+            background: #1abc9c; color: #fff; border-color: #1abc9c;
+            box-shadow: 0 4px 12px rgba(26, 188, 156, 0.25);
         }
+
+        /* Bill Header Card */
         .bill-header-card {
-            background: #ffffff;
-            color: #1e293b; padding: 20px 24px; border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            margin-bottom: 20px;
+            background: #ffffff; border: 1px solid #e2e8f0;
+            border-radius: 12px; padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;
         }
-        .bill-header-card h2 { margin: 0 0 6px; font-weight: 700; font-size: 1.4rem; }
-        .bill-meta { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 14px; }
-        .bill-meta-item { background: #f8fafc; padding: 10px 16px; border-radius: 8px; min-width: 140px; border: 1px solid #e2e8f0; }
-        .bill-meta-item .lbl { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-        .bill-meta-item .val { font-size: 1.05rem; font-weight: 700; margin-top: 4px; color: #1e293b; }
-        .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .table-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-        .table-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; }
-        .table-header h3 { margin: 0; font-size: 1.05rem; }
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-        th { background: #f8fafc; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700; white-space: nowrap; }
-        tr:hover { background: #fafbff; }
-        .product-name { color: #0f172a; font-weight: 600; }
-        .sku-tag { font-family: monospace; color: #475569; font-size: 0.85rem; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; }
-        .qty-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 70px; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 0.9rem; background: rgba(26, 188, 156, 0.14); color: #0f766e; }
-        .price-cell { color: #0f172a; font-weight: 600; }
-        .total-cell { color: #0f766e; font-weight: 800; }
-        .summary-card {
-            margin-top: 20px; padding: 18px 22px;
-            background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
-            border: 1px solid #5eead4; border-radius: 14px;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
+        .bill-title-row {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 14px; margin-bottom: 18px;
         }
-        .summary-card .lbl { font-size: 0.85rem; color: #115e59; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-        .summary-card .val { font-size: 1.5rem; font-weight: 800; color: #0f766e; }
-        .empty-state { padding: 40px 20px; text-align: center; color: #64748b; }
-        @media (max-width: 768px) { .sidebar { min-height: auto; height: auto; } .main-content { padding: 15px; } .bill-meta { gap: 10px; } }
+        .bill-title {
+            font-size: 1.4rem; font-weight: 700; margin: 0; color: #2c3e50;
+        }
+        .bill-meta-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;
+        }
+        .bill-meta-item {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 10px; padding: 12px 16px;
+        }
+        .bill-meta-item .lbl {
+            font-size: 0.76rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px;
+        }
+        .bill-meta-item .val {
+            font-size: 1.05rem; font-weight: 700; color: #2c3e50;
+        }
+
+        /* Surface Card */
+        .surface-card {
+            background: #ffffff; border: 1px solid #e2e8f0;
+            border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden; margin-bottom: 20px;
+        }
+        .surface-header {
+            padding: 16px 20px; border-bottom: 1px solid #e2e8f0; background: #f8f9fa;
+        }
+        .surface-header-title { font-size: 1.15rem; font-weight: 700; margin: 0; color: #2c3e50; }
+
+        /* Modern Table */
+        .modern-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .modern-table th {
+            background: #f1f3f5; color: #2c3e50; font-size: 0.8rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 14px;
+            border: 1px solid #d9dee5; text-align: center; vertical-align: middle;
+        }
+        .modern-table td {
+            padding: 12px 14px; border: 1px solid #d9dee5; vertical-align: middle; text-align: center;
+        }
+        .modern-table tbody tr:hover { background: #fafbfc; }
+
+        .sku-tag {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.82rem; font-weight: 700; background: #f1f5f9; color: #2c3e50;
+            padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; display: inline-block;
+        }
+
+        .qty-pill-modern {
+            background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.85rem;
+        }
+
+        /* Summary Banner */
+        .summary-banner {
+            margin-top: 20px; padding: 18px 24px;
+            background: linear-gradient(135deg, #2c3e50, #1a252f);
+            border-radius: 12px; color: #ffffff;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 16px; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+        }
+        .summary-banner .lbl {
+            font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 4px;
+        }
+        .summary-banner .val { font-size: 1.5rem; font-weight: 800; color: #ffffff; }
+
+        .btn-back-modern {
+            padding: 8px 16px; border-radius: 8px; border: 1px solid #cbd5e1;
+            background: #ffffff; color: #334155; font-weight: 600; font-size: 0.9rem;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-back-modern:hover { background: #f8fafc; color: #2c3e50; }
+
+        @media (max-width: 768px) {
+            .sidebar { min-height: auto; height: auto; position: static; }
+            .main-content { padding: 15px; }
+        }
     </style>
 </head>
 <body>
 <div class="container-fluid p-0">
     <div class="row g-0">
         <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 sidebar">
-            <div class="brand">Management</div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Manage Warehouse</a>
-                </li>
-                <li class="nav-item mt-auto">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/auth/logout">Logout</a>
-                </li>
-            </ul>
-        </div>
+        <jsp:include page="/views/common/staffSidebar.jsp">
+            <jsp:param name="activeMenu" value="warehouse" />
+        </jsp:include>
 
         <!-- Main Content -->
         <div class="col-md-9 col-lg-10 main-content">
 
+            <!-- Subtabs -->
             <div class="warehouse-subtabs">
-                <a class="${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Inventory</a>
-                <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">Stock In</a>
-                <a class="${activeTab eq 'import-bills' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import-bills">Import Bills</a>
+                <a class="${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">
+                    <i class="fas fa-boxes"></i> Inventory
+                </a>
+                <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">
+                    <i class="fas fa-dolly"></i> Stock In
+                </a>
+                <a class="${activeTab eq 'import-bills' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import-bills">
+                    <i class="fas fa-file-invoice-dollar"></i> Import Bills
+                </a>
             </div>
 
             <div class="bill-header-card">
-                <h2>Import Bill Detail</h2>
-                <div class="bill-meta">
+                <div class="bill-title-row">
+                    <h1 class="bill-title">Import Bill Details</h1>
+                    <a class="btn-back-modern" href="${pageContext.request.contextPath}/staff/warehouse/import-bills">
+                        <i class="fas fa-arrow-left"></i> Back to Bills
+                    </a>
+                </div>
+                <div class="bill-meta-grid">
                     <div class="bill-meta-item">
-                        <div class="lbl">Imported By</div>
+                        <div class="lbl">Imported By Staff</div>
                         <div class="val">${billEmployeeName}</div>
                     </div>
                     <div class="bill-meta-item">
-                        <div class="lbl">Date</div>
+                        <div class="lbl">Timestamp</div>
                         <div class="val"><fmt:formatDate value="${billImportedAt}" pattern="dd/MM/yyyy HH:mm:ss" /></div>
                     </div>
                     <div class="bill-meta-item">
-                        <div class="lbl">Items</div>
+                        <div class="lbl">Distinct Variants</div>
                         <div class="val">${billRows.size()}</div>
                     </div>
                 </div>
             </div>
 
-            <div class="table-panel">
-                <div class="table-header">
-                    <h3>Imported Items</h3>
+            <div class="surface-card">
+                <div class="surface-header">
+                    <h2 class="surface-header-title">Imported Items Breakdown</h2>
                 </div>
-                <div class="table-wrapper">
-                    <table>
+                <div class="table-responsive">
+                    <table class="modern-table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Product</th>
+                                <th style="width: 50px;">#</th>
+                                <th style="text-align: left;">Product Name</th>
                                 <th>SKU</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-end">Import Price</th>
+                                <th class="text-end">Imported Quantity</th>
+                                <th class="text-end">Unit Cost</th>
                                 <th class="text-end">Line Total</th>
                             </tr>
                         </thead>
@@ -162,11 +210,8 @@
                             <c:choose>
                                 <c:when test="${empty billRows}">
                                     <tr>
-                                        <td colspan="6">
-                                            <div class="empty-state">
-                                                <h4>Bill not found</h4>
-                                                <p>This bill may have been deleted or the link is invalid</p>
-                                            </div>
+                                        <td colspan="6" style="padding: 48px 20px; text-align: center; color: #64748b;">
+                                            Bill details not found or deleted.
                                         </td>
                                     </tr>
                                 </c:when>
@@ -177,12 +222,14 @@
                                         <c:set var="grandQty" value="${grandQty + row[4]}" />
                                         <c:set var="grandTotal" value="${grandTotal + row[6]}" />
                                         <tr>
-                                            <td>${loop.count}</td>
-                                            <td><span class="product-name">${row[2]}</span></td>
+                                            <td style="color: #64748b; font-weight: 600;">${loop.count}</td>
+                                            <td style="text-align: left;"><strong style="color: #2c3e50;">${row[2]}</strong></td>
                                             <td><span class="sku-tag">${row[3]}</span></td>
-                                            <td class="text-end"><span class="qty-pill">${row[4]}</span></td>
-                                            <td class="text-end price-cell"><fmt:formatNumber value="${row[5]}" pattern="#,##0"/> VND</td>
-                                            <td class="text-end total-cell"><fmt:formatNumber value="${row[6]}" pattern="#,##0"/> VND</td>
+                                            <td class="text-end"><span class="qty-pill-modern">${row[4]}</span></td>
+                                            <td class="text-end font-monospace fw-bold"><fmt:formatNumber value="${row[5]}" pattern="#,##0"/> đ</td>
+                                            <td class="text-end font-monospace fw-bold" style="color: #16a34a; font-size: 0.98rem;">
+                                                <fmt:formatNumber value="${row[6]}" pattern="#,##0"/> đ
+                                            </td>
                                         </tr>
                                     </c:forEach>
                                 </c:otherwise>
@@ -193,14 +240,14 @@
             </div>
 
             <c:if test="${not empty billRows}">
-                <div class="summary-card">
+                <div class="summary-banner">
                     <div>
-                        <div class="lbl">Total Quantity Imported</div>
-                        <div class="val">${grandQty}</div>
+                        <div class="lbl">Total Units Added</div>
+                        <div class="val">${grandQty} units</div>
                     </div>
                     <div class="text-end">
-                        <div class="lbl">Total Import Cost</div>
-                        <div class="val"><fmt:formatNumber value="${grandTotal}" pattern="#,##0"/> VND</div>
+                        <div class="lbl">Total Inbound Cost</div>
+                        <div class="val"><fmt:formatNumber value="${grandTotal}" pattern="#,##0"/> đ</div>
                     </div>
                 </div>
             </c:if>

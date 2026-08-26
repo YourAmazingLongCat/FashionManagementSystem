@@ -13,12 +13,19 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
+/**
+ * Controller for Favorite Product Management (Wishlist).
+ * - View favorite products list with pagination
+ * - Displays active cart count and user status
+ * 
+ * @author ngocpace191049-cmyk
+ */
 @WebServlet(name = "WishlistServlet", urlPatterns = {"/wishlist"})
 public class WishlistServlet extends HttpServlet {
 

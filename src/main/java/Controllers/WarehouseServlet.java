@@ -14,15 +14,28 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * Controller for Warehouse & Stock Management Module:
+ * - View product stock & availability in warehouse
+ * - Search & filter products by size, color, name
+ * - Update stock quantity via Stock In (import) and Stock Out (export)
+ * - View import history & warehouse bills
+ * 
+ * @author ngocpace191049-cmyk
+ */
 @WebServlet(name = "WarehouseServlet", urlPatterns = {
     "/admin/warehouse",
     "/admin/warehouse/inventory",
     "/admin/warehouse/import",
     "/admin/warehouse/export",
+    "/admin/warehouse/import-bills",
+    "/admin/warehouse/import-bills/view",
     "/staff/warehouse",
     "/staff/warehouse/inventory",
     "/staff/warehouse/import",
-    "/staff/warehouse/export"
+    "/staff/warehouse/export",
+    "/staff/warehouse/import-bills",
+    "/staff/warehouse/import-bills/view"
 })
 public class WarehouseServlet extends HttpServlet {
 
@@ -404,6 +417,11 @@ public class WarehouseServlet extends HttpServlet {
         DALs.WarehouseDAO.BatchImportResult result = warehouseDAO.exportStockBatch(items, exportedBy, defaultReason);
         request.setAttribute("batchResult", result);
         return result.successCount > 0;
+    }
+
+    private String parseDateParam(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) return null;
+        return dateStr.trim();
     }
 
     private Account getLoggedInUser(HttpServletRequest request) {

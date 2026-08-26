@@ -14,7 +14,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class CartDAO extends DBContext {
 
     private static final String CUSTOMER_ID_PREFIX = "CART_";
@@ -22,7 +21,6 @@ public class CartDAO extends DBContext {
     public CartDAO() {
         super();
     }
-
 
     public Cart getActiveCart(String accountId) {
         String sql = "SELECT customerId, COUNT(*) AS itemCount FROM Cart WHERE customerId = ? GROUP BY customerId";
@@ -34,8 +32,7 @@ public class CartDAO extends DBContext {
                 return new Cart(
                         "CART_" + accountId,
                         accountId,
-                        "Active"
-                );
+                        "Active");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -63,7 +60,8 @@ public class CartDAO extends DBContext {
     }
 
     private static String customerIdFromCartId(String cartId) {
-        if (cartId == null) return null;
+        if (cartId == null)
+            return null;
         if (cartId.startsWith(CUSTOMER_ID_PREFIX)) {
             return cartId.substring(CUSTOMER_ID_PREFIX.length());
         }
@@ -72,7 +70,8 @@ public class CartDAO extends DBContext {
 
     private String resolveCartId(String cartId) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || customerId.isBlank()) return cartId;
+        if (customerId == null || customerId.isBlank())
+            return cartId;
         String sql = "SELECT TOP 1 cartId FROM Cart WHERE customerId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, customerId);
@@ -89,7 +88,8 @@ public class CartDAO extends DBContext {
 
     public boolean existsItem(String cartId, String variantId) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || variantId == null) return false;
+        if (customerId == null || variantId == null)
+            return false;
 
         String sql = "SELECT 1 FROM Cart WHERE customerId = ? AND variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -106,7 +106,8 @@ public class CartDAO extends DBContext {
 
     public void addItem(String cartId, String variantId, int quantity) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || variantId == null || quantity <= 0) return;
+        if (customerId == null || variantId == null || quantity <= 0)
+            return;
 
         String newCartItemId = Utils.generateId("CART");
         String sql = "INSERT INTO Cart (cartId, customerId, variantId, quantity) VALUES (?, ?, ?, ?)";
@@ -124,7 +125,8 @@ public class CartDAO extends DBContext {
 
     public void increaseQuantity(String cartId, String variantId, int quantity) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || variantId == null || quantity <= 0) return;
+        if (customerId == null || variantId == null || quantity <= 0)
+            return;
 
         String sql = "UPDATE Cart SET quantity = quantity + ? WHERE customerId = ? AND variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -139,7 +141,8 @@ public class CartDAO extends DBContext {
 
     public int getQuantityInCart(String cartId, String variantId) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || variantId == null) return 0;
+        if (customerId == null || variantId == null)
+            return 0;
 
         String sql = "SELECT quantity FROM Cart WHERE customerId = ? AND variantId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -157,7 +160,8 @@ public class CartDAO extends DBContext {
     }
 
     public String getVariantIdByCartItemId(String cartItemId) {
-        if (cartItemId == null || cartItemId.isBlank()) return null;
+        if (cartItemId == null || cartItemId.isBlank())
+            return null;
 
         String sql = "SELECT variantId FROM Cart WHERE cartId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -176,10 +180,10 @@ public class CartDAO extends DBContext {
     public List<CartItemView> getCartItems(String cartId) {
         List<CartItemView> list = new ArrayList<>();
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null) return list;
+        if (customerId == null)
+            return list;
 
-        String sql =
-                "SELECT "
+        String sql = "SELECT "
                 + "ci.cartId AS cartItemId, "
                 + "ci.variantId, "
                 + "ci.quantity, "
@@ -187,10 +191,7 @@ public class CartDAO extends DBContext {
                 + "s.sizeName, "
                 + "c.colorName, "
                 + "ISNULL(pv.priceOverride, p.basePrice) AS price, "
-                + "COALESCE("
-                + "    (SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.variantId = ci.variantId ORDER BY pi.imageId ASC), "
-                + "    (SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId AND pi.isPrimary = 1) "
-                + ") AS imageUrl "
+                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS imageUrl "
                 + "FROM Cart ci "
                 + "JOIN ProductVariants pv ON ci.variantId = pv.variantId "
                 + "JOIN Products p ON pv.productId = p.productId "
@@ -225,9 +226,9 @@ public class CartDAO extends DBContext {
         return list;
     }
 
-  
     public void updateQuantity(String cartItemId, int quantity) {
-        if (cartItemId == null || cartItemId.isBlank()) return;
+        if (cartItemId == null || cartItemId.isBlank())
+            return;
 
         String sql = "UPDATE Cart SET quantity = ? WHERE cartId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -240,7 +241,8 @@ public class CartDAO extends DBContext {
     }
 
     public void deleteItem(String cartItemId) {
-        if (cartItemId == null || cartItemId.isBlank()) return;
+        if (cartItemId == null || cartItemId.isBlank())
+            return;
 
         String sql = "DELETE FROM Cart WHERE cartId = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -253,7 +255,8 @@ public class CartDAO extends DBContext {
 
     public int cleanupInvalidItems(String cartId) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null) return 0;
+        if (customerId == null)
+            return 0;
 
         String sql = "DELETE FROM Cart WHERE customerId = ? AND variantId NOT IN (SELECT variantId FROM ProductVariants)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -267,10 +270,10 @@ public class CartDAO extends DBContext {
 
     public double getCartTotal(String cartId) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null) return 0;
+        if (customerId == null)
+            return 0;
 
-        String sql =
-                "SELECT SUM(ISNULL(pv.priceOverride, p.basePrice) * ci.quantity) AS total "
+        String sql = "SELECT SUM(ISNULL(pv.priceOverride, p.basePrice) * ci.quantity) AS total "
                 + "FROM Cart ci "
                 + "JOIN ProductVariants pv ON ci.variantId = pv.variantId "
                 + "JOIN Products p ON pv.productId = p.productId "
@@ -292,11 +295,13 @@ public class CartDAO extends DBContext {
     public List<CartItemView> getCartItemsByIds(String cartId, String[] cartItemIds) {
         List<CartItemView> list = new ArrayList<>();
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || cartItemIds == null || cartItemIds.length == 0) return list;
+        if (customerId == null || cartItemIds == null || cartItemIds.length == 0)
+            return list;
 
         StringBuilder placeholders = new StringBuilder();
         for (int i = 0; i < cartItemIds.length; i++) {
-            if (i > 0) placeholders.append(",");
+            if (i > 0)
+                placeholders.append(",");
             placeholders.append("?");
         }
 
@@ -308,10 +313,7 @@ public class CartDAO extends DBContext {
                 + "s.sizeName, "
                 + "c.colorName, "
                 + "ISNULL(pv.priceOverride, p.basePrice) AS price, "
-                + "COALESCE("
-                + "    (SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.variantId = ci.variantId ORDER BY pi.imageId ASC), "
-                + "    (SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId AND pi.isPrimary = 1) "
-                + ") AS imageUrl "
+                + "(SELECT TOP 1 pi.imageUrl FROM ProductImages pi WHERE pi.productId = p.productId ORDER BY pi.isPrimary DESC, pi.imageId ASC) AS imageUrl "
                 + "FROM Cart ci "
                 + "JOIN ProductVariants pv ON ci.variantId = pv.variantId "
                 + "JOIN Products p ON pv.productId = p.productId "
@@ -353,11 +355,13 @@ public class CartDAO extends DBContext {
 
     public boolean deleteItemsByIds(String cartId, String[] cartItemIds) {
         String customerId = customerIdFromCartId(cartId);
-        if (customerId == null || cartItemIds == null || cartItemIds.length == 0) return false;
+        if (customerId == null || cartItemIds == null || cartItemIds.length == 0)
+            return false;
 
         StringBuilder placeholders = new StringBuilder();
         for (int i = 0; i < cartItemIds.length; i++) {
-            if (i > 0) placeholders.append(",");
+            if (i > 0)
+                placeholders.append(",");
             placeholders.append("?");
         }
 

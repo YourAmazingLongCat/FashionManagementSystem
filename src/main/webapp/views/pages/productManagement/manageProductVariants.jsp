@@ -113,29 +113,9 @@
 <div class="container-fluid p-0">
     <div class="row g-0">
         <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 sidebar">
-            <div class="brand">Management</div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/orders">Manage Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/products">Manage Products</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" href="${pageContext.request.contextPath}/staff/products?action=manageVariants">Manage Variants</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Manage Warehouse</a>
-                </li>
-                <li class="nav-item mt-auto">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/profile">Profile</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="${pageContext.request.contextPath}/auth/logout">Logout</a>
-                </li>
-            </ul>
-        </div>
+        <jsp:include page="/views/common/staffSidebar.jsp">
+            <jsp:param name="activeMenu" value="variants" />
+        </jsp:include>
 
         <!-- Main Content -->
         <div class="col-md-9 col-lg-10 main-content">

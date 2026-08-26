@@ -163,6 +163,13 @@
                 loginNote.style.display = 'none';
             } else {
                 addPanel.style.display = 'none';
+                if (data.hasCommented) {
+                    loginNote.textContent = '✓ You have already reviewed this product.';
+                    loginNote.style.color = '#166534';
+                } else {
+                    loginNote.textContent = 'Only customers who purchased this product can leave a review.';
+                    loginNote.style.color = '';
+                }
                 loginNote.style.display = 'block';
             }
         };
