@@ -533,5 +533,3 @@
         refreshAvailability();
     })();
 </script>
-
-<jsp:include page="commentsModal.jsp" />

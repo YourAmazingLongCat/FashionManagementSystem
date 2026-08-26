@@ -94,11 +94,7 @@ public class OrderDAO extends DBContext {
      * An order is considered placed after the customer has selected a payment
      * method and a purchase payment record exists.
      */
-    private static final String ORDER_PLACED_EXPR = "CAST(CASE WHEN o.paymentMethod IS NOT NULL "
-            + "          AND EXISTS (SELECT 1 FROM Payments p "
-            + "                       WHERE p.orderId = o.orderId "
-            + "                         AND p.paymentType = 'Purchase') "
-            + "          THEN 1 ELSE 0 END AS BIT)";
+    private static final String ORDER_PLACED_EXPR = "CAST(CASE WHEN o.paymentMethod IS NOT NULL AND o.orderStatus <> 'Pending' THEN 1 ELSE 0 END AS BIT)";
 
     public List<Order> getOrdersPaginated(String keyword, int offset, int limit) {
         return getOrdersPaginated(keyword, null, null, null, offset, limit);
