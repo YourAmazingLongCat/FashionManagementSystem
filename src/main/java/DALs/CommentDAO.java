@@ -270,29 +270,61 @@ public class CommentDAO {
     }
 
     /**
-     * Check if a customer has already submitted a comment for a given product.
+     * Check if a customer has already submitted comments for all their delivered purchases of a given product.
+     * Returns true only if comment count >= delivered order count.
+     * If the customer buys the product again in another delivered order, they can review again.
      */
     public boolean hasCustomerCommentedOnProduct(String customerId, String productId) {
         if (customerId == null || productId == null) return false;
-        String sql = "SELECT 1 FROM Comments c "
-                   + "JOIN ProductVariants pv ON c.variantId = pv.variantId "
-                   + "WHERE c.customerId = ? AND pv.productId = ?";
-        try (Connection conn = new DBContext().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, customerId);
-            ps.setString(2, productId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
+
+        int deliveredCount = 0;
+        int commentCount = 0;
+
+        String orderSql = "SELECT COUNT(DISTINCT o.orderId) "
+                        + "FROM Orders o "
+                        + "JOIN OrderItems oi ON o.orderId = oi.orderId "
+                        + "JOIN ProductVariants pv ON oi.variantId = pv.variantId "
+                        + "WHERE o.customerId = ? AND pv.productId = ? AND o.orderStatus = 'Delivered'";
+
+        String commentSql = "SELECT COUNT(c.commentId) "
+                          + "FROM Comments c "
+                          + "JOIN ProductVariants pv ON c.variantId = pv.variantId "
+                          + "WHERE c.customerId = ? AND pv.productId = ?";
+
+        try (Connection conn = new DBContext().getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement(orderSql)) {
+                ps.setString(1, customerId.trim());
+                ps.setString(2, productId.trim());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        deliveredCount = rs.getInt(1);
+                    }
+                }
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(commentSql)) {
+                ps.setString(1, customerId.trim());
+                ps.setString(2, productId.trim());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        commentCount = rs.getInt(1);
+                    }
+                }
             }
         } catch (Exception e) {
             System.err.println("hasCustomerCommentedOnProduct error: " + e.getMessage());
         }
-        return false;
+
+        if (deliveredCount == 0) {
+            return false;
+        }
+
+        return commentCount >= deliveredCount;
     }
 
     /**
      * Find a variantId purchased by this customer in a delivered order that can be reviewed.
-     * Returns null if customer has already commented on this product.
+     * Returns null if customer has already commented for all delivered purchases.
      */
     public String getEligibleOrderItemId(String customerId, String productId) {
         if (hasCustomerCommentedOnProduct(customerId, productId)) {
@@ -307,8 +339,8 @@ public class CommentDAO {
                    + "ORDER BY o.placedAt DESC";
         try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, customerId);
-            ps.setString(2, productId);
+            ps.setString(1, customerId.trim());
+            ps.setString(2, productId.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getString("variantId");
@@ -333,8 +365,8 @@ public class CommentDAO {
         try (Connection conn = new DBContext().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, ADD_LIMIT_DAYS);
-            ps.setString(2, customerId);
-            ps.setString(3, productId);
+            ps.setString(2, customerId.trim());
+            ps.setString(3, productId.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return Math.max(0, rs.getInt("remainingDays"));
@@ -366,19 +398,20 @@ public class CommentDAO {
                     String orderStatus = rs.getString("orderStatus");
                     String productId = rs.getString("productId");
 
-                    if (hasCustomerCommentedOnProduct(customerId, productId)) {
+                    if (!"Delivered".equalsIgnoreCase(orderStatus)) {
                         status.setEligible(false);
-                        status.setAlreadyReviewed(true);
-                        status.setReason("You have already reviewed this product.");
+                        status.setReason("Review is only available for delivered orders.");
                         return status;
                     }
 
-                    if ("Delivered".equalsIgnoreCase(orderStatus)) {
-                        status.setEligible(true);
-                    } else {
+                    if (hasCustomerCommentedOnProduct(customerId, productId)) {
                         status.setEligible(false);
-                        status.setReason("Review is only available for delivered orders.");
+                        status.setAlreadyReviewed(true);
+                        status.setReason("You have already reviewed all your delivered purchases for this product.");
+                        return status;
                     }
+
+                    status.setEligible(true);
                 } else {
                     status.setEligible(false);
                     status.setReason("You have not purchased this product.");
