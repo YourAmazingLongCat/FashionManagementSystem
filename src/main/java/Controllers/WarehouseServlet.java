@@ -28,10 +28,14 @@ import jakarta.servlet.http.HttpServletResponse;
     "/admin/warehouse/inventory",
     "/admin/warehouse/import",
     "/admin/warehouse/export",
+    "/admin/warehouse/import-bills",
+    "/admin/warehouse/import-bills/view",
     "/staff/warehouse",
     "/staff/warehouse/inventory",
     "/staff/warehouse/import",
-    "/staff/warehouse/export"
+    "/staff/warehouse/export",
+    "/staff/warehouse/import-bills",
+    "/staff/warehouse/import-bills/view"
 })
 public class WarehouseServlet extends HttpServlet {
 
@@ -68,6 +72,14 @@ public class WarehouseServlet extends HttpServlet {
             case "/admin/warehouse/import":
             case "/staff/warehouse/import":
                 showImport(request, response);
+                break;
+            case "/admin/warehouse/import-bills":
+            case "/staff/warehouse/import-bills":
+                showImportBills(request, response);
+                break;
+            case "/admin/warehouse/import-bills/view":
+            case "/staff/warehouse/import-bills/view":
+                showImportBillDetail(request, response);
                 break;
             default:
                 showInventory(request, response);
