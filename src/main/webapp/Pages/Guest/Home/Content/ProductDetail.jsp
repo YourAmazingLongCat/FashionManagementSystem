@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <div class="content-page product-detail-page">
     <section class="product-detail-shell">
@@ -33,6 +34,33 @@
                     </div>
                     <h2 class="detail-description-heading">PRODUCT DESCRIPTION</h2>
                     <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
+                    <section class="detail-comments-section">
+                        <div class="detail-comments-heading">
+                            <h2>Customer reviews</h2>
+                        </div>
+                        <c:choose>
+                            <c:when test="${empty productComments}">
+                                <p class="detail-comments-empty">There are no reviews for this product yet.</p>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="detail-comments-list">
+                                    <c:forEach var="comment" items="${productComments}">
+                                        <article class="detail-comment-item">
+                                            <div class="detail-comment-body">
+                                                <strong class="detail-comment-author">${comment.accountFullName}</strong>
+                                                <div class="detail-comment-stars">
+                                                    <c:forEach begin="1" end="5" var="star">${star <= comment.rating ? '★' : '☆'}</c:forEach>
+                                                </div>
+                                                <p class="detail-comment-content">${comment.content}</p>
+                                                <span class="detail-comment-meta"><fmt:formatDate value="${comment.createdAt}" pattern="dd/MM/yyyy HH:mm" />${not empty comment.variantInfo ? ' · ' : ''}${comment.variantInfo}</span>
+                                            </div>
+                                        </article>
+                                    </c:forEach>
+                                </div>
+                                <div class="detail-comments-pagination" id="detailCommentsPagination"></div>
+                            </c:otherwise>
+                        </c:choose>
+                    </section>
                 </div>
             </div>
         </div>
@@ -40,7 +68,6 @@
         <div class="detail-content-card">
             
             <h1 class="detail-title">${product.name}</h1>
-            <span id="commentCountBadge" style="display:none;">0</span>
             <div class="detail-rating-row">
                 <c:choose>
                     <c:when test="${not empty ratingSummary && ratingSummary[1] > 0}">
@@ -53,7 +80,6 @@
                             </c:forEach>
                         </span>
                         <span class="detail-rating-value"><fmt:formatNumber value="${ratingSummary[0]}" maxFractionDigits="1"/></span>
-                        <span class="detail-review-count">(${ratingSummary[1]} reviews)</span>
                     </c:when>
                     <c:otherwise>
                         <span class="detail-no-rating">No reviews yet</span>
@@ -186,8 +212,52 @@
         </section>
     </c:if>
 
-    <jsp:include page="commentsModal.jsp" />
 </div>
+
+<script>
+(function () {
+    const reviews = Array.from(document.querySelectorAll('.detail-comment-item'));
+    const pagination = document.getElementById('detailCommentsPagination');
+    const pageSize = 5;
+    let currentPage = 1;
+    const totalPages = Math.ceil(reviews.length / pageSize);
+
+    function renderReviews() {
+        reviews.forEach((review, index) => {
+            const first = (currentPage - 1) * pageSize;
+            review.style.display = index >= first && index < first + pageSize ? 'flex' : 'none';
+        });
+
+        if (!pagination || totalPages <= 1) return;
+        pagination.innerHTML = '';
+
+        const previous = document.createElement('button');
+        previous.type = 'button';
+        previous.textContent = 'Previous';
+        previous.disabled = currentPage === 1;
+        previous.addEventListener('click', () => { currentPage--; renderReviews(); });
+        pagination.appendChild(previous);
+
+        for (let page = 1; page <= totalPages; page++) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = page;
+            button.className = page === currentPage ? 'active' : '';
+            button.addEventListener('click', () => { currentPage = page; renderReviews(); });
+            pagination.appendChild(button);
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.addEventListener('click', () => { currentPage++; renderReviews(); });
+        pagination.appendChild(next);
+    }
+
+    renderReviews();
+})();
+</script>
 
 <script>
     function clearQtyValidity(input) {

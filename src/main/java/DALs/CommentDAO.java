@@ -1,13 +1,18 @@
 package DALs;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import Models.Comment;
 import Utils.DBContext;
 import Utils.Utils;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 public class CommentDAO {
 
@@ -403,7 +408,7 @@ public class CommentDAO {
     public EligibilityStatus checkOrderItemEligibility(String variantId, String accountId) {
         String sql
                 = "SELECT TOP 1 o.orderStatus, o.placedAt, o.customerId, "
-                + "       (SELECT COUNT(*) FROM Comments WHERE variantId = ?) AS commentCount "
+                + "       (SELECT COUNT(*) FROM Comments WHERE variantId = ? AND customerId = ?) AS commentCount "
                 + "FROM OrderItems oi "
                 + "JOIN Orders o ON oi.orderId = o.orderId "
                 + "WHERE oi.variantId = ? "
@@ -416,7 +421,8 @@ public class CommentDAO {
             }
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, variantId);
-            ps.setString(2, variantId);
+            ps.setString(2, accountId);
+            ps.setString(3, variantId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 String orderStatus = rs.getString("orderStatus");

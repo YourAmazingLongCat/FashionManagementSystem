@@ -68,15 +68,6 @@
                                     <label for="sizeName">Size name</label>
                                     <input id="sizeName" name="sizeName" type="text" maxlength="50" value="${size.sizeName}" placeholder="Example: S, M, L, XL, 38, 39" required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="categoryId">Applies to category</label>
-                                    <select id="categoryId" name="categoryId" required>
-                                        <option value="">-- Select category --</option>
-                                        <c:forEach var="category" items="${categories}">
-                                            <option value="${category.categoryId}" ${size.categoryId eq category.categoryId ? 'selected' : ''}>${category.name}</option>
-                                        </c:forEach>
-                                    </select>
-                                </div>
                             </div>
                         </section>
 

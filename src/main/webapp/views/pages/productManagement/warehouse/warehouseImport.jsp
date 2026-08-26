@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock In - Warehouse</title>
+    <title>Update quantity - Warehouse</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -129,12 +129,11 @@
 
             <div class="warehouse-subtabs">
                 <a class="${activeTab eq 'inventory' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/inventory">Inventory</a>
-                <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">Stock In</a>
-                <a class="${activeTab eq 'import-bills' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import-bills">Import Bills</a>
+                <a class="${activeTab eq 'import' ? 'active' : ''}" href="${pageContext.request.contextPath}/staff/warehouse/import">Update quantity</a>
             </div>
 
             <div class="mb-3">
-                <h4 class="mb-0">Stock In</h4>
+                <h4 class="mb-0">Update quantity</h4>
             </div>
 
             <c:if test="${not empty message}">
@@ -178,7 +177,7 @@
                                 <span id="selectedCount" style="font-size: 0.85rem; color: #64748b; font-weight: 600;">0 selected</span>
                                 <button type="button" class="btn" style="background:#fff; color:#64748b; border:1px solid #dbe3f0;" id="selectAllBtn">Select all</button>
                                 <button type="button" class="btn" style="background:#fff; color:#64748b; border:1px solid #dbe3f0;" id="clearAllBtn">Clear</button>
-                                <button type="submit" class="btn btn-primary" id="batchSubmitBtn">+ Add selected</button>
+                                <button type="submit" class="btn btn-primary" id="batchSubmitBtn">Update selected</button>
                             </div>
                         </div>
                         <div class="table-wrapper">
@@ -192,7 +191,7 @@
                                         <th class="text-end">Physical</th>
                                         <th class="text-end">Reserved</th>
                                         <th class="text-end">Available</th>
-                                        <th>Add Stock</th>
+                                        <th>Update quantity</th>
                                     </tr>
                                 </thead>
                                 <tbody id="inventoryTableBody">
@@ -338,7 +337,7 @@
                 alert('Please enter a valid quantity (>0) for each selected variant.');
                 return false;
             }
-            submitBtn.textContent = 'Adding...';
+            submitBtn.textContent = 'Updating...';
             submitBtn.disabled = true;
             return true;
         };

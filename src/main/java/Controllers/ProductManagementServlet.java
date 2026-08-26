@@ -94,9 +94,6 @@ public class ProductManagementServlet extends HttpServlet {
             case "getProductJson":
                 writeProductJson(request, response);
                 break;
-            case "sizesByCategory":
-                writeSizesByCategoryJson(request, response);
-                break;
             case "getCategoryJson":
                 writeCategoryJson(request, response);
                 break;
@@ -222,7 +219,7 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("currentPage", variantPage.currentPage());
         request.setAttribute("totalPages", variantPage.totalPages());
         request.setAttribute("selectedProduct", selectedProduct);
-        request.setAttribute("sizes", selectedProduct == null ? List.of() : sizeDAO.getSizesByCategoryId(selectedProduct.getCategoryId()));
+        request.setAttribute("sizes", sizeDAO.getAllSizes());
         request.setAttribute("allSizes", sizeDAO.getAllSizes());
         request.setAttribute("colors", colorDAO.getAllColors());
         request.setAttribute("categories", categoryDAO.getAllCategories());
@@ -252,7 +249,6 @@ public class ProductManagementServlet extends HttpServlet {
         if (product == null) error = "Please choose a valid product.";
         else if (isBlank(sizeId)) error = "Please choose a size.";
         else if (isBlank(colorId)) error = "Please choose a color.";
-        else if (!isSizeInCategory(sizeId, product.getCategoryId())) error = "The selected size does not belong to this product category.";
         else if (imagePart == null || imagePart.getSize() <= 0) error = "Please choose an image for the variant.";
 
         BigDecimal priceOverride = parseBigDecimal(normalizeCurrencyValue(getTrimmedParam(request, "priceOverride")));
@@ -294,20 +290,12 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("currentPage", variantPage.currentPage());
         request.setAttribute("totalPages", variantPage.totalPages());
         request.setAttribute("selectedProduct", selectedProduct);
-        request.setAttribute("sizes", selectedProduct == null ? List.of() : sizeDAO.getSizesByCategoryId(selectedProduct.getCategoryId()));
+        request.setAttribute("sizes", sizeDAO.getAllSizes());
         request.setAttribute("allSizes", sizeDAO.getAllSizes());
         request.setAttribute("colors", colorDAO.getAllColors());
         request.setAttribute("selectedProductId", productId);
         request.setAttribute("formError", error == null ? "Unable to create variant." : error);
         request.getRequestDispatcher("/views/pages/productManagement/manageProductVariants.jsp").forward(request, response);
-    }
-
-    private boolean isSizeInCategory(String sizeId, String categoryId) {
-        if (isBlank(sizeId) || isBlank(categoryId)) return false;
-        for (Size size : sizeDAO.getSizesByCategoryId(categoryId)) {
-            if (sizeId.equals(size.getSizeId())) return true;
-        }
-        return false;
     }
 
     private void showProductList(HttpServletRequest request, HttpServletResponse response)
@@ -331,17 +319,6 @@ public class ProductManagementServlet extends HttpServlet {
         List<Category> allCategories = categoryDAO.getAllCategories();
         List<Color> allColors = colorDAO.getAllColors();
         List<Size> allSizes = sizeDAO.getAllSizes();
-
-        // Group sizes by category
-        Map<String, List<Size>> sizesByCategory = new LinkedHashMap<>();
-        for (Category cat : allCategories) {
-            sizesByCategory.put(cat.getCategoryId(), new ArrayList<>());
-        }
-        for (Size size : allSizes) {
-            if (size.getCategoryId() != null && sizesByCategory.containsKey(size.getCategoryId())) {
-                sizesByCategory.get(size.getCategoryId()).add(size);
-            }
-        }
 
         // Paginate each tab
         PageSlice<Category> categoryPage = paginate(allCategories, currentPage, DEFAULT_PAGE_SIZE);
@@ -371,7 +348,6 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("totalColors", allColors.size());
         request.setAttribute("sizeItems", sizePage.items());
         request.setAttribute("totalSizes", allSizes.size());
-        request.setAttribute("sizesByCategory", sizesByCategory);
         request.setAttribute("currentPage", activePage.currentPage());
         request.setAttribute("totalPages", activePage.totalPages());
         request.setAttribute("productQuery", buildQuery(request));
@@ -741,7 +717,6 @@ public class ProductManagementServlet extends HttpServlet {
         request.setAttribute("size", size);
         request.setAttribute("formAction", formAction);
         request.setAttribute("pageTitle", pageTitle);
-        request.setAttribute("categories", categoryDAO.getAllCategories());
         request.getRequestDispatcher("/views/pages/productManagement/sizeForm.jsp").forward(request, response);
     }
 
@@ -874,7 +849,6 @@ public class ProductManagementServlet extends HttpServlet {
         Category category = new Category();
         category.setCategoryId(getTrimmedParam(request, "categoryId"));
         category.setName(getTrimmedParam(request, "name"));
-        category.setDescription(getTrimmedParam(request, "description"));
         return category;
     }
 
@@ -890,7 +864,6 @@ public class ProductManagementServlet extends HttpServlet {
         Size size = new Size();
         size.setSizeId(getTrimmedParam(request, "sizeId"));
         size.setSizeName(getTrimmedParam(request, "sizeName"));
-        size.setCategoryId(getTrimmedParam(request, "categoryId"));
         return size;
     }
 
@@ -937,7 +910,6 @@ public class ProductManagementServlet extends HttpServlet {
         if (size == null) return "Size is missing.";
         if (isBlank(size.getSizeName())) return "Please enter size name.";
         if (size.getSizeName().length() > 50) return "Size name is too long (max 50 characters).";
-        if (isBlank(size.getCategoryId())) return "Please choose a category for this size.";
         return null;
     }
 
@@ -946,30 +918,9 @@ public class ProductManagementServlet extends HttpServlet {
     private void loadReferenceData(HttpServletRequest request, String categoryId) {
         request.setAttribute("categories", categoryDAO.getAllCategories());
         request.setAttribute("statuses", VALID_STATUSES);
-        request.setAttribute("sizes", sizeDAO.getSizesByCategoryId(categoryId));
+        request.setAttribute("sizes", sizeDAO.getAllSizes());
         request.setAttribute("allSizes", sizeDAO.getAllSizes());
         request.setAttribute("colors", colorDAO.getAllColors());
-    }
-
-    // ============ Return JSON sizes by category ============
-
-    private void writeSizesByCategoryJson(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String categoryId = getTrimmedParam(request, "categoryId");
-        List<Size> sizes = sizeDAO.getSizesByCategoryId(categoryId);
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
-        StringBuilder json = new StringBuilder("[");
-        for (int i = 0; i < sizes.size(); i++) {
-            if (i > 0) json.append(",");
-            Size size = sizes.get(i);
-            json.append("{\"sizeId\":\"").append(escapeJson(size.getSizeId()))
-                    .append("\",\"sizeName\":\"").append(escapeJson(size.getSizeName()))
-                    .append("\"}");
-        }
-        json.append("]");
-        response.getWriter().write(json.toString());
     }
 
     /**
@@ -1095,8 +1046,7 @@ public class ProductManagementServlet extends HttpServlet {
         }
         response.getWriter().write("{"
                 + "\"categoryId\":\"" + escapeJson(category.getCategoryId()) + "\","
-                + "\"name\":\"" + escapeJson(category.getName()) + "\","
-                + "\"description\":\"" + escapeJson(category.getDescription()) + "\""
+                + "\"name\":\"" + escapeJson(category.getName()) + "\""
                 + "}");
     }
 
@@ -1127,8 +1077,7 @@ public class ProductManagementServlet extends HttpServlet {
         }
         response.getWriter().write("{"
                 + "\"sizeId\":\"" + escapeJson(size.getSizeId()) + "\","
-                + "\"sizeName\":\"" + escapeJson(size.getSizeName()) + "\","
-                + "\"categoryId\":\"" + escapeJson(size.getCategoryId()) + "\""
+            + "\"sizeName\":\"" + escapeJson(size.getSizeName()) + "\""
                 + "}");
     }
 

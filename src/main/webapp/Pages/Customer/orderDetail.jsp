@@ -162,6 +162,13 @@
                                     <h2>Items</h2>
                                     <p>${fn:length(orderItems)} product(s)</p>
                                 </div>
+                                <c:if test="${order.orderStatus eq 'Delivered'}">
+                                    <div class="co-rating-header-actions">
+                                        <c:forEach var="item" items="${orderItems}">
+                                            <button type="button" class="co-rate-item-btn" data-rating-open-for="${item.variantId}">Rate this item</button>
+                                        </c:forEach>
+                                    </div>
+                                </c:if>
                             </div>
 
                             <c:choose>
@@ -222,6 +229,25 @@
                                             </tbody>
                                         </table>
                                     </div>
+                                    <c:if test="${order.orderStatus eq 'Delivered'}">
+                                        <c:forEach var="item" items="${orderItems}">
+                                            <form class="co-rating-form" data-rating-form="${item.variantId}" hidden>
+                                                <button type="button" class="co-rating-close" data-rating-close aria-label="Close">&times;</button>
+                                                <input type="hidden" name="orderItemId" value="${item.variantId}" />
+                                                <div class="co-rating-stars" role="group" aria-label="Choose rating">
+                                                    <button type="button" data-rating="1" aria-label="1 star">★</button>
+                                                    <button type="button" data-rating="2" aria-label="2 stars">★</button>
+                                                    <button type="button" data-rating="3" aria-label="3 stars">★</button>
+                                                    <button type="button" data-rating="4" aria-label="4 stars">★</button>
+                                                    <button type="button" data-rating="5" aria-label="5 stars">★</button>
+                                                </div>
+                                                <input type="hidden" name="rating" value="" required />
+                                                <textarea name="content" class="co-input co-textarea" rows="2" maxlength="1000" placeholder="Your comment" required></textarea>
+                                                <button type="submit" class="co-primary-btn co-rating-submit">Submit rating</button>
+                                                <span class="co-rating-message" role="status"></span>
+                                            </form>
+                                        </c:forEach>
+                                    </c:if>
                                 </c:otherwise>
                             </c:choose>
                         </div>
@@ -483,6 +509,62 @@
     </c:choose>
 </div>
 </section>
+
+<script>
+(function () {
+    var contextPath = '${pageContext.request.contextPath}';
+    document.querySelectorAll('[data-rating-open-for]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var form = document.querySelector('[data-rating-form="' + button.dataset.ratingOpenFor + '"]');
+            if (form) form.hidden = false;
+        });
+    });
+    document.querySelectorAll('[data-rating-form]').forEach(function (form) {
+        var closeButton = form.querySelector('[data-rating-close]');
+        var stars = form.querySelectorAll('[data-rating]');
+        var ratingInput = form.querySelector('input[name="rating"]');
+        var message = form.querySelector('.co-rating-message');
+        closeButton.addEventListener('click', function () { form.hidden = true; });
+        stars.forEach(function (star) {
+            star.addEventListener('click', function () {
+                ratingInput.value = star.dataset.rating;
+                stars.forEach(function (item) {
+                    item.classList.toggle('selected', Number(item.dataset.rating) <= Number(ratingInput.value));
+                });
+            });
+        });
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            if (!ratingInput.value) {
+                message.textContent = 'Please choose a rating.';
+                return;
+            }
+            var submit = form.querySelector('.co-rating-submit');
+            submit.disabled = true;
+            message.textContent = 'Submitting...';
+            var submitted = false;
+            var data = new URLSearchParams(new FormData(form));
+            data.set('action', 'addFromOrder');
+            fetch(contextPath + '/comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: data
+            }).then(function (response) { return response.json(); })
+              .then(function (result) {
+                  message.textContent = result.message || (result.success ? 'Rating submitted.' : 'Unable to submit rating.');
+                  if (result.success) {
+                      submitted = true;
+                      form.querySelectorAll('button, textarea').forEach(function (field) { field.disabled = true; });
+                  }
+              }).catch(function () {
+                  message.textContent = 'Unable to submit rating.';
+              }).finally(function () {
+                  if (!submitted) submit.disabled = false;
+              });
+        });
+    });
+})();
+</script>
 
 <script>
 (function () {
