@@ -189,7 +189,6 @@
             <div class="page-title-row">
                 <div>
                     <h1>Update Quantity</h1>
-                    <p>Select variants, specify added quantities and unit cost to update inventory.</p>
                 </div>
             </div>
 

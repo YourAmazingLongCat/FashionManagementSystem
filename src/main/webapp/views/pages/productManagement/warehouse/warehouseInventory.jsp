@@ -197,7 +197,6 @@
             <div class="page-title-row">
                 <div>
                     <h1>Warehouse Inventory</h1>
-                    <p>Track physical stock, reserved units, and real-time available stock.</p>
                 </div>
             </div>
 
@@ -207,33 +206,6 @@
                 </div>
             </c:if>
 
-            <!-- Stat Metric Cards -->
-            <div class="row g-3 mb-4">
-                <div class="col-xl-3 col-sm-6">
-                    <div class="stat-card teal">
-                        <div class="stat-label">Total Variants</div>
-                        <div class="stat-number">${totalItems}</div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-sm-6">
-                    <div class="stat-card blue">
-                        <div class="stat-label">Total Physical Stock</div>
-                        <div class="stat-number">${totalStock}</div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-sm-6">
-                    <div class="stat-card green">
-                        <div class="stat-label">Total Available</div>
-                        <div class="stat-number">${totalAvailable}</div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-sm-6">
-                    <div class="stat-card amber">
-                        <div class="stat-label">Low Stock Items</div>
-                        <div class="stat-number" style="${lowStockCount > 0 ? 'color: #d97706;' : ''}">${lowStockCount}</div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Table Card -->
             <div class="surface-card">
