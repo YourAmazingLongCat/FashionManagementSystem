@@ -34,33 +34,6 @@
                     </div>
                     <h2 class="detail-description-heading">PRODUCT DESCRIPTION</h2>
                     <p class="detail-description">${empty product.description ? 'No description available for this product yet.' : product.description}</p>
-                    <section class="detail-comments-section">
-                        <div class="detail-comments-heading">
-                            <h2>Customer reviews</h2>
-                        </div>
-                        <c:choose>
-                            <c:when test="${empty productComments}">
-                                <p class="detail-comments-empty">There are no reviews for this product yet.</p>
-                            </c:when>
-                            <c:otherwise>
-                                <div class="detail-comments-list">
-                                    <c:forEach var="comment" items="${productComments}">
-                                        <article class="detail-comment-item">
-                                            <div class="detail-comment-body">
-                                                <strong class="detail-comment-author">${comment.accountFullName}</strong>
-                                                <div class="detail-comment-stars">
-                                                    <c:forEach begin="1" end="5" var="star">${star <= comment.rating ? '★' : '☆'}</c:forEach>
-                                                </div>
-                                                <p class="detail-comment-content">${comment.content}</p>
-                                                <span class="detail-comment-meta"><fmt:formatDate value="${comment.createdAt}" pattern="dd/MM/yyyy HH:mm" />${not empty comment.variantInfo ? ' · ' : ''}${comment.variantInfo}</span>
-                                            </div>
-                                        </article>
-                                    </c:forEach>
-                                </div>
-                                <div class="detail-comments-pagination" id="detailCommentsPagination"></div>
-                            </c:otherwise>
-                        </c:choose>
-                    </section>
                 </div>
             </div>
         </div>
@@ -207,7 +180,7 @@
                 </c:when>
                 <c:when test="${hasCommented}">
                     <div style="padding: 14px 18px; background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; font-size: 0.95rem; font-weight: 500;">
-                        ✓ You have already reviewed this product. Thank you for your feedback!
+                        You have already reviewed this product. Thank you for your feedback!
                     </div>
                 </c:when>
                 <c:when test="${not empty eligibleVariantId}">
@@ -241,7 +214,7 @@
                 </c:when>
                 <c:otherwise>
                     <div style="padding: 12px 16px; background: #f8fafc; border-left: 4px solid #3b82f6; color: #475569; font-size: 0.95rem;">
-                        ℹ️ Only customers who have purchased and received this product can write a review.
+                        Only customers who have purchased and received this product can write a review.
                     </div>
                 </c:otherwise>
             </c:choose>
@@ -263,7 +236,7 @@
                                             ${empty c.accountFullName ? c.accountUsername : c.accountFullName}
                                         </div>
                                         <c:if test="${not empty c.variantInfo}">
-                                            <div style="font-size: 0.82rem; color: #64748b;">Purchased: ${c.variantInfo}</div>
+                                             <div style="font-size: 0.82rem; color: #64748b;">Purchased: ${c.variantInfo}</div>
                                         </c:if>
                                     </div>
                                 </div>
@@ -282,7 +255,6 @@
                 </c:when>
                 <c:otherwise>
                     <div style="text-align: center; padding: 40px 20px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b;">
-                        <span style="font-size: 2rem; display: block; margin-bottom: 8px;">💬</span>
                         <p style="margin: 0; font-size: 1rem; font-weight: 500;">No reviews yet for this product.</p>
                         <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: #94a3b8;">Be the first to share your experience!</p>
                     </div>
@@ -336,46 +308,16 @@
 
 <script>
 (function () {
-    const reviews = Array.from(document.querySelectorAll('.detail-comment-item'));
-    const pagination = document.getElementById('detailCommentsPagination');
-    const pageSize = 5;
-    let currentPage = 1;
-    const totalPages = Math.ceil(reviews.length / pageSize);
-
-    function renderReviews() {
-        reviews.forEach((review, index) => {
-            const first = (currentPage - 1) * pageSize;
-            review.style.display = index >= first && index < first + pageSize ? 'flex' : 'none';
+    const openCommentsBtn = document.getElementById('openCommentsBtn');
+    if (openCommentsBtn) {
+        openCommentsBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const reviewsSection = document.getElementById('reviewsSection');
+            if (reviewsSection) {
+                reviewsSection.scrollIntoView({ behavior: 'smooth' });
+            }
         });
-
-        if (!pagination || totalPages <= 1) return;
-        pagination.innerHTML = '';
-
-        const previous = document.createElement('button');
-        previous.type = 'button';
-        previous.textContent = 'Previous';
-        previous.disabled = currentPage === 1;
-        previous.addEventListener('click', () => { currentPage--; renderReviews(); });
-        pagination.appendChild(previous);
-
-        for (let page = 1; page <= totalPages; page++) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.textContent = page;
-            button.className = page === currentPage ? 'active' : '';
-            button.addEventListener('click', () => { currentPage = page; renderReviews(); });
-            pagination.appendChild(button);
-        }
-
-        const next = document.createElement('button');
-        next.type = 'button';
-        next.textContent = 'Next';
-        next.disabled = currentPage === totalPages;
-        next.addEventListener('click', () => { currentPage++; renderReviews(); });
-        pagination.appendChild(next);
     }
-
-    renderReviews();
 })();
 </script>
 
