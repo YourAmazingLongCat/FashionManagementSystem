@@ -1,0 +1,127 @@
+[1mdiff --git a/src/main/webapp/Pages/Customer/orderDetail.jsp b/src/main/webapp/Pages/Customer/orderDetail.jsp[m
+[1mdeleted file mode 100644[m
+[1mindex 0a92ba3..0000000[m
+[1m--- a/src/main/webapp/Pages/Customer/orderDetail.jsp[m
+[1m+++ /dev/null[m
+[36m@@ -1,788 +0,0 @@[m
+[31m-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>[m
+[31m-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>[m
+[31m-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>[m
+[31m-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>[m
+[31m-[m
+[31m-<c:if test="${empty requestScope.contentPage}">[m
+[31m-    <c:redirect url="${pageContext.request.contextPath}/customer/order-history" />[m
+[31m-</c:if>[m
+[31m-[m
+[31m-<section class="customer-order-page">[m
+[31m-    <div class="co-container">[m
+[31m-        <c:choose>[m
+[31m-            <c:when test="${empty order}">[m
+[31m-                <div class="co-empty-card">[m
+[31m-                    <span class="material-symbols-outlined">error</span>[m
+[31m-                    <h2>Order not found</h2>[m
+[31m-                    <p><c:out value="${errorMessage}" /></p>[m
+[31m-                </div>[m
+[31m-            </c:when>[m
+[31m-[m
+[31m-            <c:otherwise>[m
+[31m-                <c:if test="${not orderPlaced and order.orderStatus eq 'Pending'}">[m
+[31m-                    <div class="co-notice co-notice-warning">[m
+[31m-                        <div class="co-notice-icon">[m
+[31m-                            <span class="material-symbols-outlined">schedule</span>[m
+[31m-                        </div>[m
+[31m-                        <div class="co-notice-content">[m
+[31m-                            <strong>Order confirmation expires in</strong>[m
+[31m-                            <span id="order-confirmation-countdown"[m
+[31m-                                  class="co-notice-countdown"[m
+[31m-                                  data-order-expiry="${order.confirmationExpiresAt}">Calculating...</span>[m
+[31m-                            <p>The order will be cancelled automatically when this time ends.</p>[m
+[31m-                        </div>[m
+[31m-                    </div>[m
+[31m-                </c:if>[m
+[31m-[m
+[31m-                <c:if test="${orderPlaced and order.orderStatus eq 'Pending'}">[m
+[31m-                    <div class="co-notice co-notice-info">[m
+[31m-                        <div class="co-notice-icon">[m
+[31m-                            <span class="material-symbols-outlined">hourglass_top</span>[m
+[31m-                        </div>[m
+[31m-                        <div class="co-notice-content">[m
+[31m-                            <c:choose>[m
+[31m-                                <c:when test="${not empty payment and payment.paymentMethod eq 'VNPay' and payment.paymentStatus ne 'Paid'}">[m
+[31m-                                    <strong>Complete your VNPay payment</strong>[m
+[31m-                                    <p>Your order has been saved. Complete the payment so it can be confirmed.</p>[m
+[31m-                                </c:when>[m
+[31m-                                <c:otherwise>[m
+[31m-                                    <strong>Your order is waiting for confirmation</strong>[m
+[31m-                                    <p>We have received your order and will update its status after it is reviewed.</p>[m
+[31m-                                </c:otherwise>[m
+[31m-                            </c:choose>[m
+[31m-                        </div>[m
+[31m-                    </div>[m
+[31m-                </c:if>[m
+[31m-[m
+[31m-                <div class="co-progress-card">[m
+[31m-                    <c:choose>[m
+[31m-                        <c:when test="${order.orderStatus eq 'Cancelled'}">[m
+[31m-                            <div class="co-cancelled-message">[m
+[31m-                                <span class="material-symbols-outlined">cancel</span>[m
+[31m-                                This order has been cancelled.[m
+[31m-                            </div>[m
+[31m-                            <c:if test="${not empty order.cancellationReason}">[m
+[31m-                                <div class="co-cancellation-audit">[m
+[31m-                                    <div>[m
+[31m-                                        <span>Reason</span>[m
+[31m-                                        <strong><c:out value="${order.cancellationReason}" /></strong>[m
+[31m-                                    </div>[m
+[31m-                                    <div>[m
+[31m-                                        <span>Cancelled by</span>[m
+[31m-                                        <strong><c:out value="${order.cancelledBy}" /></strong>[m
+[31m-                                    </div>[m
+[31m-                                    <div>[m
+[31m-                                        <span>Cancelled at</span>[m
+[31m-                                        <strong><c:out value="${order.cancelledAt}" /></strong>[m
+[31m-                                    </div>[m
+[31m-                                </div>[m
+[31m-                            </c:if>[m
+[31m-                        </c:when>[m
+[31m-                        <c:otherwise>[m
+[31m-                            <div class="co-progress co-progress-${fn:toLowerCase(order.orderStatus)}">[m
+[31m-                                <div class="co-progress-step">[m
+[31m-                                    <span class="co-progress-icon"><span class="material-symbols-outlined">receipt_long</span></span>[m
+[31m-                                    <span>Pending</span>[m
+[31m-                                </div>[m
+[31m-                                <div class="co-progress-line"></div>[m
+[31m-                                <div class="co-progress-step">[m
+[31m-                                    <span class="co-progress-icon"><span class="material-symbols-outlined">task_alt</span></span>[m
+[31m-                                    <span>Confirmed</span>[m
+[31m-                                </div>[m
+[31m-                                <div class="co-progress-line"></div>[m
+[31m-                                <div class="co-progress-step">[m
+[31m-                                    <span class="co-progress-icon"><span class="material-symbols-outlined">inventory_2</span></span>[m
+[31m-                                    <span>Processing</span>[m
+[31m-                                </div>[m
+[31m-                                <div class="co-progress-line"></div>[m
+[31m-                                <div class="co-progress-step">[m
+[31m-                                    <span class="co-progress-icon"><span class="material-symbols-outlined">local_shipping</span></span>[m
+[31m-                                    <span>Shipping</span>[m
+[31m-                                </div>[m
+[31m-                                <div class="co-progress-line"></div>[m
+[31m-                                <div class="co-progress-step">[m
+[31m-                                    <span class="co-progress-icon"><span class="material-symbols-outlined">home</span></span>[m
+[31m-                                    <span>Delivered</span>[m
+[31m-                                </div>[m
+[31m-                            </div>[m
+[31m-                        </c:otherwise>[m
+[31m-                    </c:choose>[m
+[31m-                </div>[m
+[31m-[m
+[31m-                <div class="co-detail-grid">[m
+[31m-                    <div class="co-detail-main">[m
+[31m-                        <div class="co-card">[m
+[31m-                            <div class="co-card-head">[m
+[31m-                                <div>[m
+[31m-                                    <h2>Order summary</h2>[m
+[31m-                                </div>[m
+[31m-                                <span class="co-date-chip">[m
+[31m-                                    <span class="material-symbols-outlined">calendar_today</span>[m
+[31m-    
