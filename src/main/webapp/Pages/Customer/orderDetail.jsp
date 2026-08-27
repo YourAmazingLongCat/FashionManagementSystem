@@ -265,7 +265,7 @@
                                         <span class="material-symbols-outlined co-card-head-icon">shopping_bag</span>
                                     </div>
 
-                                    <form class="co-form" action="${pageContext.request.contextPath}/customer/order-detail" method="post">
+                                    <form class="co-form" id="placeOrderForm" action="${pageContext.request.contextPath}/customer/order-detail" method="post">
                                         <input type="hidden" name="action" value="placeOrder" />
                                         <input type="hidden" name="orderId" value="${order.orderId}" />
 
@@ -276,6 +276,38 @@
                                                       class="co-input co-textarea"
                                                       placeholder="Enter your full delivery address"
                                                       required><c:out value="${order.shippingAddress}" /></textarea>
+
+                                            <c:choose>
+                                                <c:when test="${not empty sessionScope.USER.address}">
+                                                    <div class="co-address-suggestion" data-address-suggestion>
+                                                        <div class="co-address-suggestion-main">
+                                                            <span class="material-symbols-outlined co-address-suggestion-icon" aria-hidden="true">home_pin</span>
+                                                            <div class="co-address-suggestion-copy">
+                                                                <span class="co-address-suggestion-label">Suggested from your profile</span>
+                                                                <strong class="co-address-suggestion-value"><c:out value="${sessionScope.USER.address}" /></strong>
+                                                            </div>
+                                                        </div>
+                                                        <button type="button"
+                                                                class="co-address-suggestion-btn"
+                                                                data-address-target="shippingAddress">
+                                                            <span class="material-symbols-outlined" aria-hidden="true">near_me</span>
+                                                            <span class="co-address-suggestion-btn-text">Use this address</span>
+                                                        </button>
+                                                    </div>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <div class="co-address-suggestion co-address-suggestion-empty">
+                                                        <div class="co-address-suggestion-main">
+                                                            <span class="material-symbols-outlined co-address-suggestion-icon" aria-hidden="true">person_pin_circle</span>
+                                                            <div class="co-address-suggestion-copy">
+                                                                <span class="co-address-suggestion-label">No saved address yet</span>
+                                                                <span class="co-address-suggestion-help">Add an address to your profile to reuse it for future orders.</span>
+                                                            </div>
+                                                        </div>
+                                                        <a class="co-address-profile-link" href="${pageContext.request.contextPath}/profile">Add in Profile</a>
+                                                    </div>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </div>
 
                                         <div class="co-form-group">
@@ -427,6 +459,24 @@
                                                               name="shippingAddress"
                                                               class="co-input co-textarea"
                                                               required><c:out value="${order.shippingAddress}" /></textarea>
+
+                                                    <c:if test="${not empty sessionScope.USER.address}">
+                                                        <div class="co-address-suggestion" data-address-suggestion>
+                                                            <div class="co-address-suggestion-main">
+                                                                <span class="material-symbols-outlined co-address-suggestion-icon" aria-hidden="true">home_pin</span>
+                                                                <div class="co-address-suggestion-copy">
+                                                                    <span class="co-address-suggestion-label">Saved profile address</span>
+                                                                    <strong class="co-address-suggestion-value"><c:out value="${sessionScope.USER.address}" /></strong>
+                                                                </div>
+                                                            </div>
+                                                            <button type="button"
+                                                                    class="co-address-suggestion-btn"
+                                                                    data-address-target="updateShippingAddress">
+                                                                <span class="material-symbols-outlined" aria-hidden="true">near_me</span>
+                                                                <span class="co-address-suggestion-btn-text">Use this address</span>
+                                                            </button>
+                                                        </div>
+                                                    </c:if>
                                                 </div>
 
                                                 <div class="co-form-group">
@@ -471,6 +521,62 @@
                     </c:choose>
                     </aside>
                 </div>
+                <c:if test="${not orderPlaced and order.orderStatus eq 'Pending'}">
+                    <div class="co-payment-confirm-modal" id="customerPaymentConfirmModal" hidden>
+                        <div class="co-payment-confirm-backdrop" data-close-payment-modal></div>
+                        <div class="co-payment-confirm-dialog"
+                             role="dialog"
+                             aria-modal="true"
+                             aria-labelledby="customerPaymentConfirmTitle"
+                             aria-describedby="customerPaymentConfirmDescription">
+                            <div class="co-payment-confirm-head">
+                                <div class="co-payment-confirm-icon" aria-hidden="true">
+                                    <span class="material-symbols-outlined">payments</span>
+                                </div>
+                                <div class="co-payment-confirm-heading">
+                                    <p class="co-eyebrow">Secure checkout</p>
+                                    <h2 id="customerPaymentConfirmTitle">Confirm payment</h2>
+                                    <p id="customerPaymentConfirmDescription">Please review the payment details before placing your order.</p>
+                                </div>
+                                <button type="button"
+                                        class="co-payment-confirm-close"
+                                        data-close-payment-modal
+                                        aria-label="Close payment confirmation">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div class="co-payment-confirm-summary">
+                                <div>
+                                    <span>Order ID</span>
+                                    <strong><c:out value="${order.orderId}" /></strong>
+                                </div>
+                                <div>
+                                    <span>Payment method</span>
+                                    <strong id="paymentConfirmMethod">Cash On Delivery</strong>
+                                </div>
+                                <div class="co-payment-confirm-total">
+                                    <span>Total payment</span>
+                                    <strong><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" /> VND</strong>
+                                </div>
+                            </div>
+
+                            <div class="co-payment-confirm-note" id="paymentConfirmNote">
+                                <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+                                <p>You will pay when the order is delivered. No online payment will be charged now.</p>
+                            </div>
+
+                            <div class="co-payment-confirm-actions">
+                                <button type="button" class="co-secondary-btn" data-close-payment-modal>Back</button>
+                                <button type="button" class="co-primary-btn" id="confirmPaymentButton">
+                                    <span class="material-symbols-outlined">check_circle</span>
+                                    <span id="confirmPaymentButtonText">Confirm payment</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </c:if>
+
                 <c:if test="${canCancel}">
                     <div class="co-cancel-modal" id="customerCancelModal" hidden>
                         <div class="co-cancel-modal-backdrop" data-close-cancel-modal></div>
@@ -597,6 +703,132 @@
 
         updateCountdown();
         window.setInterval(updateCountdown, 1000);
+    }
+
+    var addressSuggestionButtons = document.querySelectorAll('[data-address-target]');
+
+    for (var addressIndex = 0; addressIndex < addressSuggestionButtons.length; addressIndex++) {
+        addressSuggestionButtons[addressIndex].addEventListener('click', function () {
+            var targetId = this.getAttribute('data-address-target');
+            var target = document.getElementById(targetId);
+            var suggestion = this.closest('[data-address-suggestion]');
+            var addressValue = suggestion ? suggestion.querySelector('.co-address-suggestion-value') : null;
+
+            if (!target || !addressValue) {
+                return;
+            }
+
+            target.value = addressValue.textContent.trim();
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.focus();
+
+            var buttonText = this.querySelector('.co-address-suggestion-btn-text');
+            if (buttonText) {
+                buttonText.textContent = 'Address applied';
+            }
+            this.classList.add('is-applied');
+        });
+    }
+
+    var placeOrderForm = document.getElementById('placeOrderForm');
+    var paymentModal = document.getElementById('customerPaymentConfirmModal');
+    var paymentMethodSelect = document.getElementById('paymentMethod');
+    var paymentMethodText = document.getElementById('paymentConfirmMethod');
+    var paymentNote = document.getElementById('paymentConfirmNote');
+    var confirmPaymentButton = document.getElementById('confirmPaymentButton');
+    var confirmPaymentButtonText = document.getElementById('confirmPaymentButtonText');
+    var paymentSubmitApproved = false;
+    var paymentModalTrigger = null;
+
+    if (placeOrderForm && paymentModal && paymentMethodSelect && confirmPaymentButton) {
+        var paymentCloseButtons = paymentModal.querySelectorAll('[data-close-payment-modal]');
+
+        function updatePaymentConfirmation() {
+            var method = paymentMethodSelect.value;
+            var selectedOption = paymentMethodSelect.options[paymentMethodSelect.selectedIndex];
+            var methodLabel = selectedOption ? selectedOption.text : method;
+
+            if (paymentMethodText) {
+                paymentMethodText.textContent = methodLabel;
+            }
+
+            if (method === 'VNPay') {
+                if (paymentNote) {
+                    paymentNote.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">account_balance_wallet</span>'
+                            + '<p>You will be redirected to VNPay Sandbox to complete your online payment after confirmation.</p>';
+                }
+                if (confirmPaymentButtonText) {
+                    confirmPaymentButtonText.textContent = 'Continue to VNPay';
+                }
+            } else {
+                if (paymentNote) {
+                    paymentNote.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>'
+                            + '<p>You will pay when the order is delivered. No online payment will be charged now.</p>';
+                }
+                if (confirmPaymentButtonText) {
+                    confirmPaymentButtonText.textContent = 'Confirm payment';
+                }
+            }
+        }
+
+        function openPaymentModal(trigger) {
+            paymentModalTrigger = trigger || document.activeElement;
+            updatePaymentConfirmation();
+            paymentModal.hidden = false;
+            document.body.classList.add('co-modal-open');
+            window.setTimeout(function () {
+                confirmPaymentButton.focus();
+            }, 0);
+        }
+
+        function closePaymentModal() {
+            paymentModal.hidden = true;
+            document.body.classList.remove('co-modal-open');
+            if (paymentModalTrigger && typeof paymentModalTrigger.focus === 'function') {
+                paymentModalTrigger.focus();
+            }
+        }
+
+        placeOrderForm.addEventListener('submit', function (event) {
+            if (paymentSubmitApproved) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (!placeOrderForm.checkValidity()) {
+                placeOrderForm.reportValidity();
+                return;
+            }
+
+            openPaymentModal(event.submitter);
+        });
+
+        paymentMethodSelect.addEventListener('change', updatePaymentConfirmation);
+
+        confirmPaymentButton.addEventListener('click', function () {
+            paymentSubmitApproved = true;
+            confirmPaymentButton.disabled = true;
+            confirmPaymentButton.classList.add('co-btn-loading');
+
+            if (confirmPaymentButtonText) {
+                confirmPaymentButtonText.textContent = paymentMethodSelect.value === 'VNPay'
+                        ? 'Opening VNPay...'
+                        : 'Placing order...';
+            }
+
+            placeOrderForm.requestSubmit();
+        });
+
+        for (var paymentCloseIndex = 0; paymentCloseIndex < paymentCloseButtons.length; paymentCloseIndex++) {
+            paymentCloseButtons[paymentCloseIndex].addEventListener('click', closePaymentModal);
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !paymentModal.hidden) {
+                closePaymentModal();
+            }
+        });
     }
 
     var cancelModal = document.getElementById('customerCancelModal');

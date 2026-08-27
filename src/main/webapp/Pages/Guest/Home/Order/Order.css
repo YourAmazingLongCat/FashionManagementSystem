@@ -1537,6 +1537,113 @@
     box-shadow: 0 0 0 3px rgba(238, 77, 45, 0.12);
 }
 
+.co-address-suggestion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    background: #fff7ed;
+    padding: 11px 12px;
+}
+
+.co-address-suggestion-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    min-width: 0;
+}
+
+.co-address-suggestion-icon {
+    flex: 0 0 auto;
+    color: var(--co-accent);
+    font-size: 21px;
+    line-height: 1.25;
+}
+
+.co-address-suggestion-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.co-address-suggestion-label {
+    color: #9a3412;
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.co-address-suggestion-value,
+.co-address-suggestion-help {
+    color: #374151;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.co-address-suggestion-value {
+    font-weight: 650;
+}
+
+.co-address-suggestion-help {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.co-address-suggestion-btn,
+.co-address-profile-link {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    border: 1px solid #fdba74;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #c2410c;
+    padding: 7px 9px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 750;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.co-address-suggestion-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.co-address-suggestion-btn:hover,
+.co-address-profile-link:hover {
+    border-color: var(--co-accent);
+    background: #fffaf7;
+    color: var(--co-accent);
+}
+
+.co-address-suggestion-btn.is-applied {
+    border-color: #86efac;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.co-address-suggestion-empty {
+    border-color: #e5e7eb;
+    background: #f9fafb;
+}
+
+.co-address-suggestion-empty .co-address-suggestion-icon,
+.co-address-suggestion-empty .co-address-suggestion-label {
+    color: #6b7280;
+}
+
 .co-textarea {
     min-height: 104px;
     resize: vertical;
@@ -1675,6 +1782,16 @@
 }
 
 @media (max-width: 520px) {
+    .co-address-suggestion {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .co-address-suggestion-btn,
+    .co-address-profile-link {
+        width: 100%;
+    }
+
     .co-page-title {
         font-size: 2rem;
     }
@@ -2486,6 +2603,232 @@
 
     .co-cancel-dialog-actions .co-secondary-btn,
     .co-cancel-dialog-actions .co-cancel-btn {
+        width: 100%;
+    }
+}
+
+/* ======================================================================
+   CUSTOMER PAYMENT CONFIRMATION MODAL
+   ====================================================================== */
+.co-payment-confirm-modal[hidden] {
+    display: none !important;
+}
+
+.co-payment-confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1650;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.co-payment-confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.co-payment-confirm-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(520px, 100%);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.24);
+}
+
+.co-payment-confirm-head {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 40px;
+    gap: 14px;
+    align-items: start;
+    border-bottom: 1px solid #edf0f3;
+    padding: 22px 22px 18px;
+}
+
+.co-payment-confirm-icon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--co-soft-accent);
+    color: var(--co-accent);
+}
+
+.co-payment-confirm-icon .material-symbols-outlined {
+    font-size: 26px;
+}
+
+.co-payment-confirm-heading .co-eyebrow {
+    margin-bottom: 4px;
+}
+
+.co-payment-confirm-heading h2 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.35rem;
+    font-weight: 750;
+    letter-spacing: -0.025em;
+}
+
+.co-payment-confirm-heading > p:last-child {
+    margin: 7px 0 0;
+    color: #6b7280;
+    font-size: 0.84rem;
+    line-height: 1.55;
+}
+
+.co-payment-confirm-close {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #6b7280;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.co-payment-confirm-close:hover {
+    border-color: #ffd1c5;
+    background: #fff7f4;
+    color: var(--co-accent);
+}
+
+.co-payment-confirm-summary {
+    margin: 20px 22px 0;
+    overflow: hidden;
+    border: 1px solid #edf0f3;
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.co-payment-confirm-summary > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    border-bottom: 1px solid #edf0f3;
+    padding: 13px 14px;
+}
+
+.co-payment-confirm-summary > div:last-child {
+    border-bottom: 0;
+}
+
+.co-payment-confirm-summary span {
+    color: #7b8491;
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.co-payment-confirm-summary strong {
+    color: #28313d;
+    font-size: 0.86rem;
+    font-weight: 750;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.co-payment-confirm-summary .co-payment-confirm-total {
+    background: var(--co-soft-accent);
+}
+
+.co-payment-confirm-summary .co-payment-confirm-total strong {
+    color: var(--co-accent);
+    font-size: 1.05rem;
+}
+
+.co-payment-confirm-note {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 14px 22px 0;
+    border-radius: 10px;
+    background: #fff8f5;
+    color: #9a3412;
+    padding: 12px 13px;
+}
+
+.co-payment-confirm-note .material-symbols-outlined {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: var(--co-accent);
+    font-size: 20px;
+}
+
+.co-payment-confirm-note p {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+.co-payment-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 22px 22px;
+}
+
+.co-payment-confirm-actions .co-primary-btn,
+.co-payment-confirm-actions .co-secondary-btn {
+    min-width: 132px;
+}
+
+.co-btn-loading {
+    cursor: wait;
+    opacity: 0.82;
+}
+
+.co-btn-loading .material-symbols-outlined {
+    animation: co-payment-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes co-payment-pulse {
+    from { opacity: 0.45; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .co-payment-confirm-modal {
+        padding: 14px;
+    }
+
+    .co-payment-confirm-dialog {
+        border-radius: 14px;
+    }
+
+    .co-payment-confirm-head {
+        grid-template-columns: 44px minmax(0, 1fr) 38px;
+        gap: 11px;
+        padding: 18px 16px 16px;
+    }
+
+    .co-payment-confirm-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .co-payment-confirm-summary,
+    .co-payment-confirm-note {
+        margin-left: 16px;
+        margin-right: 16px;
+    }
+
+    .co-payment-confirm-actions {
+        flex-direction: column-reverse;
+        padding: 18px 16px 16px;
+    }
+
+    .co-payment-confirm-actions .co-primary-btn,
+    .co-payment-confirm-actions .co-secondary-btn {
         width: 100%;
     }
 }
